@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { supabase } from '@/lib/supabase'; // Reutilizando sua conexão (apenas se precisar validar algo)
 
 // Substitua pelo seu ACCESS TOKEN de produção ou teste do Mercado Pago
 // Pegue em: https://www.mercadopago.com.br/developers/panel
