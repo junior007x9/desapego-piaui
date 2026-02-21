@@ -35,7 +35,8 @@ export default function DetalhesAnuncio() {
           return;
         }
 
-        const adData = { id: adSnapshot.id, ...adSnapshot.data() };
+        // CORREÇÃO: Usamos o ': any' para o TypeScript não bloquear a compilação no Vercel
+        const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(adData);
 
         // Busca os dados do vendedor na coleção 'users'
@@ -74,7 +75,6 @@ export default function DetalhesAnuncio() {
       
       let existingChatId = null;
       querySnapshot.forEach((doc) => {
-        // Verifica se o vendedor também está na lista de participantes
         if (doc.data().participantes.includes(ad.vendedorId)) {
           existingChatId = doc.id;
         }
@@ -87,7 +87,9 @@ export default function DetalhesAnuncio() {
 
       // 2. Se não existe, busca o nome do usuário logado e cria um novo Chat
       const meuPerfilDoc = await getDoc(doc(db, 'users', user.uid));
-      const meuNome = meuPerfilDoc.exists() ? meuPerfilDoc.data().nome : 'Comprador';
+      
+      // CORREÇÃO: Usamos o 'as any' para ler o 'nome' sem erros no Build
+      const meuNome = meuPerfilDoc.exists() ? (meuPerfilDoc.data() as any).nome : 'Comprador';
       const nomeVendedor = vendedor?.nome || 'Vendedor';
 
       const novoChatRef = await addDoc(collection(db, 'chats'), {
