@@ -38,7 +38,8 @@ export default function PagamentoPage() {
           return
         }
 
-        const anuncio = { id: adSnapshot.id, ...adSnapshot.data() };
+        // CORREÇÃO AQUI: Adicionado ": any" para o TypeScript não reclamar no Build da Vercel
+        const anuncio: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(anuncio)
 
         // Encontra o plano escolhido no array local
@@ -46,8 +47,13 @@ export default function PagamentoPage() {
         setPlano(planoEscolhido)
 
         // Tenta pegar o email do vendedor na coleção 'users' para enviar para o Mercado Pago
-        const userDoc = await getDoc(doc(db, 'users', anuncio.vendedorId));
-        const emailComprador = userDoc.exists() ? userDoc.data().email : 'email@teste.com';
+        let emailComprador = 'email@teste.com';
+        if (anuncio.vendedorId) {
+            const userDoc = await getDoc(doc(db, 'users', anuncio.vendedorId));
+            if (userDoc.exists()) {
+                emailComprador = (userDoc.data() as any).email || 'email@teste.com';
+            }
+        }
 
         // Gera o PIX
         gerarPix(anuncio, planoEscolhido, emailComprador)
