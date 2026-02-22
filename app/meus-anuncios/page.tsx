@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Trash2, Eye, CheckCircle, Clock, Ban, ShoppingBag } from 'lucide-react'
@@ -34,7 +34,7 @@ export default function MeusAnuncios() {
       });
       
       // Ordena no cliente para evitar erros de índice composto no Firebase
-      lista.sort((a, b) => b.criadoEm - a.criadoEm);
+      lista.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
       
       setAds(lista)
       setLoading(false)
@@ -44,7 +44,7 @@ export default function MeusAnuncios() {
   }, [router])
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este anúncio?")) return
+    if (!confirm("Tem certeza que deseja excluir este anúncio permanentemente?")) return
     try {
       await deleteDoc(doc(db, 'anuncios', id));
       setAds(ads.filter(ad => ad.id !== id));
@@ -139,7 +139,12 @@ export default function MeusAnuncios() {
                     </button>
                   )}
 
-                  <button onClick={() => handleDelete(ad.id)} className="bg-white border border-red-200 text-red-500 hover:bg-red-50 p-2 rounded-xl transition flex justify-center items-center" title="Excluir">
+                  {/* BOTÃO DE EDITAR ADICIONADO AQUI */}
+                  <Link href={`/editar-anuncio/${ad.id}`} className="bg-white border border-blue-200 text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition flex justify-center items-center" title="Editar Anúncio">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  </Link>
+
+                  <button onClick={() => handleDelete(ad.id)} className="bg-white border border-red-200 text-red-500 hover:bg-red-50 p-2 rounded-xl transition flex justify-center items-center" title="Excluir Permanente">
                     <Trash2 size={18} />
                   </button>
                 </div>

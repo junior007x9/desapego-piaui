@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { PlusCircle, User, LogOut, MessageCircle } from 'lucide-react';
+import { PlusCircle, User, LogOut, MessageCircle, ShoppingBag } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
@@ -54,8 +54,13 @@ export default function Navbar() {
                 </Link>
 
                 <Link href="/meus-anuncios" className="text-gray-600 hover:text-purple-600 transition-colors flex flex-col items-center">
+                  <ShoppingBag className="w-6 h-6" />
+                  <span className="text-[10px] hidden sm:block mt-1 font-medium">Anúncios</span>
+                </Link>
+
+                <Link href="/perfil" className="text-gray-600 hover:text-purple-600 transition-colors flex flex-col items-center">
                   <User className="w-6 h-6" />
-                  <span className="text-[10px] hidden sm:block mt-1 font-medium">Conta</span>
+                  <span className="text-[10px] hidden sm:block mt-1 font-medium">Perfil</span>
                 </Link>
 
                 <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition-colors flex flex-col items-center">
