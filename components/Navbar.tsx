@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [hasUnread, setHasUnread] = useState(false); // NOVO: Estado para a bolinha vermelha
+  const [hasUnread, setHasUnread] = useState(false); // Estado para a bolinha vermelha
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function Navbar() {
       setUser(currentUser);
 
       if (currentUser) {
-        // NOVO: Fica a escutar os chats deste utilizador em tempo real
+        // Fica a escutar os chats deste utilizador em tempo real
         const q = query(
           collection(db, 'chats'), 
           where('participantes', 'array-contains', currentUser.uid)
@@ -49,12 +49,18 @@ export default function Navbar() {
     };
   }, []);
 
+  // NOVO: Função de Logout com confirmação e alerta de sucesso
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/');
-    } catch (error) {
-      console.error('Erro ao sair da conta:', error);
+    const confirmarSaida = window.confirm("Tem certeza que deseja sair da sua conta?");
+    
+    if (confirmarSaida) {
+      try {
+        await signOut(auth);
+        alert("👋 Você saiu da sua conta com sucesso. Até logo!");
+        router.push('/');
+      } catch (error) {
+        console.error('Erro ao sair da conta:', error);
+      }
     }
   };
 
@@ -76,7 +82,7 @@ export default function Navbar() {
                 <Link href="/chat" className="text-gray-600 hover:text-purple-600 transition-colors flex flex-col items-center relative group">
                   <div className="relative">
                     <MessageCircle className="w-6 h-6" />
-                    {/* NOVO: Bolinha Vermelha com animação de pulso */}
+                    {/* Bolinha Vermelha com animação de pulso */}
                     {hasUnread && (
                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
