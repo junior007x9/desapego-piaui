@@ -21,7 +21,6 @@ export default function MeusAnuncios() {
       }
       setUser(currentUser)
 
-      // Busca os anúncios do Firebase
       const q = query(
         collection(db, 'anuncios'), 
         where('vendedorId', '==', currentUser.uid)
@@ -33,7 +32,6 @@ export default function MeusAnuncios() {
         lista.push({ id: doc.id, ...doc.data() });
       });
       
-      // Ordena no cliente para evitar erros de índice composto no Firebase
       lista.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
       
       setAds(lista)
@@ -118,6 +116,12 @@ export default function MeusAnuncios() {
                   <p className="text-2xl font-extrabold text-purple-600">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
+                  
+                  {/* NOVO: CONTADOR DE VIEWS AQUI */}
+                  <div className="flex items-center justify-center md:justify-start gap-1 text-sm text-gray-500 font-medium">
+                    <Eye size={16} className="text-purple-400" />
+                    {ad.visualizacoes || 0} pessoas viram este anúncio
+                  </div>
                 </div>
 
                 <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto">
@@ -139,7 +143,6 @@ export default function MeusAnuncios() {
                     </button>
                   )}
 
-                  {/* BOTÃO DE EDITAR ADICIONADO AQUI */}
                   <Link href={`/editar-anuncio/${ad.id}`} className="bg-white border border-blue-200 text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition flex justify-center items-center" title="Editar Anúncio">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </Link>
