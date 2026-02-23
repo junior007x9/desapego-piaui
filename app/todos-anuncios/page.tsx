@@ -3,13 +3,16 @@ import { useState, useEffect, Suspense } from 'react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+// CORREÇÃO: Adicionamos o useRouter na importação abaixo
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, Filter, MapPin, X, ShoppingBag } from 'lucide-react'
 
 const CATEGORIAS = ["Todas", "Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
 function ConteudoAnuncios() {
   const searchParams = useSearchParams()
+  const router = useRouter() // CORREÇÃO: Inicializamos o router aqui
+  
   // Pega o termo "q" ou a categoria "cat" que vieram da Home
   const queryBusca = searchParams.get('q')
   const queryCategoria = searchParams.get('cat')
