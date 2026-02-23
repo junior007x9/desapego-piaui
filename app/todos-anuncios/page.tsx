@@ -1,26 +1,37 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { db } from '@/lib/firebase'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Search, Filter, MapPin, X, ShoppingBag } from 'lucide-react'
 
 const CATEGORIAS = ["Todas", "Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-export default function TodosAnuncios() {
+function ConteudoAnuncios() {
+  const searchParams = useSearchParams()
+  // Pega o termo "q" ou a categoria "cat" que vieram da Home
+  const queryBusca = searchParams.get('q')
+  const queryCategoria = searchParams.get('cat')
+
   const [allAds, setAllAds] = useState<any[]>([])
   const [filteredAds, setFilteredAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
-  const [busca, setBusca] = useState('')
-  const [categoria, setCategoria] = useState('Todas')
+  const [busca, setBusca] = useState(queryBusca || '')
+  const [categoria, setCategoria] = useState(queryCategoria || 'Todas')
   const [ordem, setOrdem] = useState('recentes')
 
-  // 1. Busca todos os anúncios ATIVOS do Firebase uma única vez
+  // Se a URL mudar de repente, atualizamos o estado
+  useEffect(() => {
+    if (queryBusca) setBusca(queryBusca)
+    if (queryCategoria) setCategoria(queryCategoria)
+  }, [queryBusca, queryCategoria])
+
   useEffect(() => {
     async function fetchAds() {
       try {
-        const q = query(collection(db, 'anuncios'), where('status', 'in', ['ativo', 'pagamento_pendente'])); // Inclui pagamento_pendente para testes, mude para 'ativo' depois
+        const q = query(collection(db, 'anuncios'), where('status', 'in', ['ativo', 'pagamento_pendente'])); 
         const snapshot = await getDocs(q);
         
         const data: any[] = [];
@@ -36,7 +47,6 @@ export default function TodosAnuncios() {
     fetchAds()
   }, [])
 
-  // 2. Aplica Filtros e Ordenação no lado do cliente
   useEffect(() => {
     let result = [...allAds];
 
@@ -53,8 +63,7 @@ export default function TodosAnuncios() {
     } else if (ordem === 'maior_preco') {
       result.sort((a, b) => b.preco - a.preco);
     } else {
-      // Mais recentes (assume-se que criadoEm tem segundos/nanosegundos)
-      result.sort((a, b) => b.criadoEm?.seconds - a.criadoEm?.seconds);
+      result.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
     }
 
     setFilteredAds(result);
@@ -130,7 +139,7 @@ export default function TodosAnuncios() {
              <Filter size={48} className="mx-auto text-purple-300 mb-4" />
              <h3 className="text-xl font-bold text-gray-800">Nenhum anúncio encontrado</h3>
              <p className="text-gray-500 mt-2">Tente mudar os termos da busca ou a categoria.</p>
-             <button onClick={() => {setBusca(''); setCategoria('Todas')}} className="mt-4 text-purple-600 font-bold hover:underline">
+             <button onClick={() => {setBusca(''); setCategoria('Todas'); router.replace('/todos-anuncios')}} className="mt-4 text-purple-600 font-bold hover:underline">
                Limpar filtros
              </button>
            </div>
@@ -171,5 +180,14 @@ export default function TodosAnuncios() {
         )}
       </div>
     </div>
+  )
+}
+
+// O componente de Suspense exigido pela Vercel para ler a URL
+export default function TodosAnunciosPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-purple-600 font-bold animate-pulse">Carregando...</div>}>
+      <ConteudoAnuncios />
+    </Suspense>
   )
 }

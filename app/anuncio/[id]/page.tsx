@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
-import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
+import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
 
 export default function DetalhesAnuncio() {
   const params = useParams()
@@ -14,17 +14,26 @@ export default function DetalhesAnuncio() {
   const [user, setUser] = useState<FirebaseUser | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [loadingChat, setLoadingChat] = useState(false)
+  
+  // NOVO: Estado para saber se o anúncio é favorito
+  const [isFavorite, setIsFavorite] = useState(false)
 
   useEffect(() => {
-    // 1. Escuta o usuário logado
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
+      
+      // Se estiver logado, verifica se este anúncio já está nos favoritos dele
+      if (currentUser && params.id) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+        if (userDoc.exists()) {
+          const favoritos = userDoc.data().favoritos || []
+          setIsFavorite(favoritos.includes(params.id as string))
+        }
+      }
     })
 
-    // 2. Busca o anúncio e o vendedor
     async function getData() {
       if (!params.id) return;
-      
       try {
         const adDocRef = doc(db, 'anuncios', params.id as string);
         const adSnapshot = await getDoc(adDocRef);
@@ -35,11 +44,9 @@ export default function DetalhesAnuncio() {
           return;
         }
 
-        // Mantemos o ': any' para o TypeScript não bloquear na Vercel
         const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(adData);
 
-        // Busca os dados do vendedor na coleção 'users'
         if (adData.vendedorId) {
           const vendedorDoc = await getDoc(doc(db, 'users', adData.vendedorId));
           if (vendedorDoc.exists()) {
@@ -55,7 +62,30 @@ export default function DetalhesAnuncio() {
     return () => unsubscribe()
   }, [params.id, router])
 
-  // --- FUNÇÃO PARA INICIAR CHAT NO FIREBASE ---
+  // NOVO: Função para Adicionar/Remover dos Favoritos
+  const toggleFavorite = async () => {
+    if (!user) {
+      alert("Faça login para salvar seus favoritos!")
+      router.push('/login')
+      return
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid)
+      if (isFavorite) {
+        // Remove dos favoritos
+        await setDoc(userRef, { favoritos: arrayRemove(ad.id) }, { merge: true })
+        setIsFavorite(false)
+      } else {
+        // Adiciona aos favoritos
+        await setDoc(userRef, { favoritos: arrayUnion(ad.id) }, { merge: true })
+        setIsFavorite(true)
+      }
+    } catch (error) {
+      console.error("Erro ao favoritar:", error)
+    }
+  }
+
   const handleStartChat = async () => {
     if (!user) {
       alert("Faça login para negociar!")
@@ -65,7 +95,6 @@ export default function DetalhesAnuncio() {
 
     setLoadingChat(true)
     try {
-      // 1. Verifica se o chat já existe
       const q = query(
         collection(db, 'chats'), 
         where('anuncioId', '==', ad.id),
@@ -85,7 +114,6 @@ export default function DetalhesAnuncio() {
         return
       }
 
-      // 2. Cria um novo Chat
       const meuPerfilDoc = await getDoc(doc(db, 'users', user.uid));
       const meuNome = meuPerfilDoc.exists() ? (meuPerfilDoc.data() as any).nome : 'Comprador';
       const nomeVendedor = vendedor?.nome || 'Vendedor';
@@ -125,9 +153,8 @@ export default function DetalhesAnuncio() {
       <div className="container mx-auto px-4 pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* --- GALERIA DE FOTOS --- */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative h-[400px] md:h-[500px] bg-black">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative h-[400px] md:h-[500px] bg-black group">
               {ad.fotos && ad.fotos.length > 0 ? (
                 <>
                   <img 
@@ -158,9 +185,16 @@ export default function DetalhesAnuncio() {
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400">Sem fotos</div>
               )}
+
+              {/* NOVO: Botão de Favorito sobre a imagem */}
+              <button 
+                onClick={toggleFavorite}
+                className="absolute top-4 right-4 bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
+              >
+                <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-500"} size={24} />
+              </button>
             </div>
 
-            {/* Descrição */}
             <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-4">Descrição</h2>
               <p className="whitespace-pre-wrap text-gray-600 leading-relaxed">
@@ -176,7 +210,6 @@ export default function DetalhesAnuncio() {
             </div>
           </div>
 
-          {/* --- INFORMAÇÕES (DIREITA) --- */}
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <span className="text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-3 py-1 rounded-full mb-4 inline-block">
@@ -194,14 +227,12 @@ export default function DetalhesAnuncio() {
                  <span>Teresina, Piauí</span>
               </div>
 
-              {/* LÓGICA DE BOTÕES ATUALIZADA */}
               {user?.uid === ad.vendedorId ? (
                  <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center text-gray-600 font-bold">
                     Este é o seu anúncio
                  </div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {/* Botão de WhatsApp aparece apenas se o vendedor preencheu o telefone no perfil */}
                   {vendedor?.telefone && (
                     <a 
                       href={`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no DesapegoPI.`}
@@ -214,7 +245,6 @@ export default function DetalhesAnuncio() {
                     </a>
                   )}
 
-                  {/* Botão de Chat Interno sempre disponível */}
                   <button 
                     onClick={handleStartChat}
                     disabled={loadingChat}

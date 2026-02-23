@@ -1,27 +1,36 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Clock, ShoppingBag, Car, Home as HomeIcon, Smartphone, ChevronRight } from 'lucide-react'
-import { db } from '@/lib/firebase' // Importação do Firebase
+import { useRouter } from 'next/navigation'
+import { MapPin, Clock, ShoppingBag, Car, Home as HomeIcon, Smartphone, ChevronRight, Search } from 'lucide-react'
+import { db } from '@/lib/firebase'
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
 
-// Definição dos tipos atualizada para combinar com o seu Firestore
 interface Ad {
   id: string
   titulo: string
   preco: number
   categoria: string
-  imagemUrl?: string // Usamos a imagemUrl que configuramos no botão de anunciar
+  imagemUrl?: string
   criadoEm?: any
 }
 
 export default function Home() {
+  const router = useRouter()
   const [recentAds, setRecentAds] = useState<Ad[]>([])
   const [location, setLocation] = useState<string>("Localizando...")
   const [currentTime, setCurrentTime] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("") // NOVO: Guarda o que o usuário digita
 
-  // Configura Relógio e Busca Anúncios do FIREBASE
+  // NOVO: Função que dispara ao apertar Enter na pesquisa
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchTerm.trim()) {
+      router.push(`/todos-anuncios?q=${encodeURIComponent(searchTerm)}`)
+    }
+  }
+
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date()
@@ -32,7 +41,6 @@ export default function Home() {
 
     async function fetchAds() {
       try {
-        // Busca os 6 anúncios mais recentes na coleção 'anuncios' do Firestore
         const q = query(
           collection(db, 'anuncios'), 
           orderBy('criadoEm', 'desc'), 
@@ -58,7 +66,6 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [])
 
-  // Configura Geolocalização (Mantido intacto, está perfeito!)
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(async (position) => {
@@ -76,9 +83,8 @@ export default function Home() {
   return (
     <div className="flex flex-col w-full">
       
-      {/* --- SEÇÃO HERO (Topo Roxo) --- */}
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-900 via-purple-800 to-purple-600">
-        {/* Camada do Vídeo (Opcional) */}
+      {/* --- SEÇÃO HERO --- */}
+      <section className="relative h-[650px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-900 via-purple-800 to-purple-600">
         <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
           <video autoPlay loop muted className="w-full h-full object-cover">
             <source src="/video/videodesa.mp4" type="video/mp4" />
@@ -96,19 +102,29 @@ export default function Home() {
           </h1>
           
           <p className="text-lg md:text-xl mb-8 text-purple-100 max-w-2xl mx-auto">
-            Compre, venda e negocie com facilidade. O jeito mais rápido de transformar seus desapegos em dinheiro extra.
+            Compre, venda e negocie com facilidade.
           </p>
+
+          {/* NOVA BARRA DE PESQUISA */}
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8 relative">
+            <input 
+              type="text" 
+              placeholder="O que você está procurando? (Ex: iPhone, Carro...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-6 pr-16 py-4 rounded-full text-gray-900 focus:outline-none shadow-2xl focus:ring-4 focus:ring-yellow-400 text-lg"
+            />
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full transition shadow-md">
+              <Search size={24} />
+            </button>
+          </form>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Link href="/anunciar" className="w-full sm:w-auto px-8 py-4 bg-yellow-400 text-purple-900 rounded-full font-bold hover:bg-yellow-300 transition shadow-lg transform hover:-translate-y-1">
               Quero Anunciar Grátis
             </Link>
-            <Link href="#recent-ads" className="w-full sm:w-auto px-8 py-4 bg-white/10 border border-white/30 text-white rounded-full font-bold hover:bg-white/20 transition backdrop-blur-sm">
-              Ver Ofertas
-            </Link>
           </div>
 
-          {/* Barra de Informações Flutuante */}
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 inline-flex flex-wrap gap-6 justify-center text-sm">
              <div className="flex items-center gap-2">
                <MapPin className="text-yellow-400 w-4 h-4" /> {location}
@@ -119,7 +135,6 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Onda decorativa na base */}
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
           <svg className="relative block w-[calc(100%+1.3px)] h-[50px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
               <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" className="fill-gray-100"></path>
@@ -127,7 +142,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- SEÇÃO CATEGORIAS (Ícones) --- */}
+      {/* --- SEÇÃO CATEGORIAS --- */}
       <section className="py-10 bg-gray-100 -mt-2 relative z-20">
         <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -137,7 +152,7 @@ export default function Home() {
                     { name: 'Eletrônicos', icon: Smartphone, color: 'bg-purple-100 text-purple-600' },
                     { name: 'Para Casa', icon: ShoppingBag, color: 'bg-green-100 text-green-600' },
                 ].map((cat) => (
-                    <div key={cat.name} className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer flex items-center justify-between group">
+                    <div key={cat.name} onClick={() => router.push(`/todos-anuncios?cat=${cat.name}`)} className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer flex items-center justify-between group">
                         <div className="flex items-center gap-3">
                             <div className={`p-3 rounded-lg ${cat.color} group-hover:scale-110 transition`}>
                                 <cat.icon size={24} />
@@ -213,7 +228,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- CHAMADA PARA AÇÃO (CTA) --- */}
+      {/* --- CTA --- */}
       <section className="py-20 bg-purple-800 text-white text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cube-coat.png')] opacity-10"></div>
           <div className="container mx-auto px-4 relative z-10">
@@ -224,7 +239,6 @@ export default function Home() {
               </Link>
           </div>
       </section>
-
     </div>
   )
 }
