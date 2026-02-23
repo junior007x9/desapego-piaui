@@ -5,6 +5,7 @@ import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
+import Link from 'next/link' // Importação adicionada
 
 export default function DetalhesAnuncio() {
   const params = useParams()
@@ -15,14 +16,12 @@ export default function DetalhesAnuncio() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [loadingChat, setLoadingChat] = useState(false)
   
-  // NOVO: Estado para saber se o anúncio é favorito
   const [isFavorite, setIsFavorite] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
       
-      // Se estiver logado, verifica se este anúncio já está nos favoritos dele
       if (currentUser && params.id) {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
         if (userDoc.exists()) {
@@ -62,7 +61,6 @@ export default function DetalhesAnuncio() {
     return () => unsubscribe()
   }, [params.id, router])
 
-  // NOVO: Função para Adicionar/Remover dos Favoritos
   const toggleFavorite = async () => {
     if (!user) {
       alert("Faça login para salvar seus favoritos!")
@@ -73,11 +71,9 @@ export default function DetalhesAnuncio() {
     try {
       const userRef = doc(db, 'users', user.uid)
       if (isFavorite) {
-        // Remove dos favoritos
         await setDoc(userRef, { favoritos: arrayRemove(ad.id) }, { merge: true })
         setIsFavorite(false)
       } else {
-        // Adiciona aos favoritos
         await setDoc(userRef, { favoritos: arrayUnion(ad.id) }, { merge: true })
         setIsFavorite(true)
       }
@@ -186,7 +182,6 @@ export default function DetalhesAnuncio() {
                 <div className="flex items-center justify-center h-full text-gray-400">Sem fotos</div>
               )}
 
-              {/* NOVO: Botão de Favorito sobre a imagem */}
               <button 
                 onClick={toggleFavorite}
                 className="absolute top-4 right-4 bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
@@ -257,15 +252,17 @@ export default function DetalhesAnuncio() {
               )}
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xl shrink-0">
+            {/* AQUI ESTÁ O NOVO LINK PARA O PERFIL DO VENDEDOR */}
+            <Link href={`/vendedor/${ad.vendedorId}`} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer group">
+               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xl shrink-0 group-hover:bg-purple-200 transition-colors">
                  {vendedor?.nome ? vendedor.nome.charAt(0).toUpperCase() : 'U'}
                </div>
-               <div>
-                 <p className="font-bold text-gray-900 text-lg">{vendedor?.nome || "Usuário"}</p>
+               <div className="flex-1">
+                 <p className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors">{vendedor?.nome || "Usuário"}</p>
                  <p className="text-sm text-gray-500">No DesapegoPI desde 2024</p>
                </div>
-            </div>
+               <ChevronRight className="text-gray-300 group-hover:text-purple-600 transition-colors" />
+            </Link>
           </div>
 
         </div>

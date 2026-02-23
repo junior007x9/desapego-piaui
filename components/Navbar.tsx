@@ -2,20 +2,51 @@
 
 import Link from 'next/link';
 import { PlusCircle, User, LogOut, MessageCircle, ShoppingBag, Heart } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [hasUnread, setHasUnread] = useState(false); // NOVO: Estado para a bolinha vermelha
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    let unsubscribeChats: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+
+      if (currentUser) {
+        // NOVO: Fica a escutar os chats deste utilizador em tempo real
+        const q = query(
+          collection(db, 'chats'), 
+          where('participantes', 'array-contains', currentUser.uid)
+        );
+        
+        unsubscribeChats = onSnapshot(q, (snapshot) => {
+          let unread = false;
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            // Se o último a enviar mensagem NÃO foi o utilizador atual, e a mensagem NÃO foi lida
+            if (data.ultimoRemetenteId && data.ultimoRemetenteId !== currentUser.uid && data.lido === false) {
+              unread = true;
+            }
+          });
+          setHasUnread(unread);
+        });
+      } else {
+        setHasUnread(false);
+        if (unsubscribeChats) unsubscribeChats();
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeChats) unsubscribeChats();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -42,12 +73,20 @@ export default function Navbar() {
             
             {user ? (
               <>
-                <Link href="/chat" className="text-gray-600 hover:text-purple-600 transition-colors flex flex-col items-center">
-                  <MessageCircle className="w-6 h-6" />
-                  <span className="text-[10px] hidden sm:block mt-1 font-medium">Chat</span>
+                <Link href="/chat" className="text-gray-600 hover:text-purple-600 transition-colors flex flex-col items-center relative group">
+                  <div className="relative">
+                    <MessageCircle className="w-6 h-6" />
+                    {/* NOVO: Bolinha Vermelha com animação de pulso */}
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] hidden sm:block mt-1 font-medium group-hover:text-purple-600">Chat</span>
                 </Link>
 
-                {/* NOVO: Ícone de Favoritos */}
                 <Link href="/favoritos" className="text-gray-600 hover:text-red-500 transition-colors flex flex-col items-center">
                   <Heart className="w-6 h-6" />
                   <span className="text-[10px] hidden sm:block mt-1 font-medium">Favoritos</span>
