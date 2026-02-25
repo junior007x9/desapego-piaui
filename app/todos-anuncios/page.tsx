@@ -37,16 +37,21 @@ function ConteudoAnuncios() {
     else setLoadingMore(true)
 
     try {
-      let q = query(
-        collection(db, 'anuncios'),
-        where('status', '==', 'ativo'),
-        orderBy('criadoEm', 'desc'),
-        limit(ITENS_POR_PAGINA)
-      )
+      let q;
 
-      // Se não for a primeira carga, começa depois do último documento
-      if (!isFirstLoad && lastDoc) {
-        q = query(q, startAfter(lastDoc))
+      // Lógica atualizada para filtrar a categoria diretamente no Firebase
+      if (categoria !== 'Todas') {
+         if (!isFirstLoad && lastDoc) {
+             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), where('categoria', '==', categoria), orderBy('criadoEm', 'desc'), startAfter(lastDoc), limit(ITENS_POR_PAGINA));
+         } else {
+             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), where('categoria', '==', categoria), orderBy('criadoEm', 'desc'), limit(ITENS_POR_PAGINA));
+         }
+      } else {
+         if (!isFirstLoad && lastDoc) {
+             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), startAfter(lastDoc), limit(ITENS_POR_PAGINA));
+         } else {
+             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), limit(ITENS_POR_PAGINA));
+         }
       }
 
       const snapshot = await getDocs(q)

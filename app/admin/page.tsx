@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore'
-import { DollarSign, Users, ShoppingBag, Ban, CheckCircle, Trash2, AlertTriangle } from 'lucide-react'
+import { DollarSign, Users, ShoppingBag, Ban, CheckCircle, Trash2, Loader2 } from 'lucide-react'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -50,11 +50,11 @@ export default function AdminPage() {
     }
   }
 
-  if (loading) return <div className="p-10 text-center text-purple-600 font-bold animate-pulse">A carregar painel admin...</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>
 
   return (
     <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 max-w-6xl">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Painel Administrativo</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -70,42 +70,43 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800">Gestão de Anúncios</h2>
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-800">Gestão Global de Anúncios</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 text-gray-500 text-sm">
                 <tr>
-                  <th className="p-4 font-medium">Título</th>
+                  <th className="p-4 font-medium">Título do Anúncio</th>
                   <th className="p-4 font-medium">Preço</th>
                   <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium">Ações</th>
+                  <th className="p-4 font-medium text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {ads.map(ad => (
                   <tr key={ad.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
-                      <p className="font-medium text-gray-800 line-clamp-1">{ad.titulo}</p>
-                      <p className="text-xs text-gray-500">{ad.categoria}</p>
+                      <p className="font-bold text-gray-800 line-clamp-1">{ad.titulo}</p>
+                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">{ad.categoria}</p>
                     </td>
-                    <td className="p-4 font-bold text-purple-600">
+                    <td className="p-4 font-black text-purple-600">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      <span className={`text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-bold ${
                         ad.status === 'ativo' ? 'bg-green-100 text-green-700' : 
-                        ad.status === 'pagamento_pendente' ? 'bg-yellow-100 text-yellow-700' : 
-                        'bg-gray-100 text-gray-600'
+                        ad.status === 'pendente' ? 'bg-yellow-100 text-yellow-700' : 
+                        ad.status === 'vendido' ? 'bg-gray-200 text-gray-600' :
+                        'bg-red-100 text-red-600'
                       }`}>
-                        {ad.status || 'desconhecido'}
+                        {ad.status === 'pendente' ? 'Aguardando Pag.' : ad.status || 'erro'}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 text-center">
                       <button 
                         onClick={() => handleDelete(ad.id)} 
-                        className="text-red-500 hover:bg-red-100 p-2 rounded-lg transition" 
+                        className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition" 
                         title="Excluir Anúncio"
                       >
                         <Trash2 size={18} />
@@ -116,7 +117,9 @@ export default function AdminPage() {
               </tbody>
             </table>
             {ads.length === 0 && (
-              <div className="p-8 text-center text-gray-500">Nenhum anúncio encontrado no sistema.</div>
+              <div className="p-10 text-center text-gray-500 font-medium">
+                Nenhum anúncio encontrado no sistema da plataforma.
+              </div>
             )}
           </div>
         </div>

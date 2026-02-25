@@ -5,7 +5,8 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 // Pegue em: https://www.mercadopago.com.br/developers/panel
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || ''; 
 
-const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+// Configuramos o client passando o token
+const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN, options: { timeout: 5000 } });
 
 export async function POST(request: Request) {
   try {
@@ -14,13 +15,13 @@ export async function POST(request: Request) {
 
     // Se não tiver token configurado, vamos retornar um erro amigável ou dados de teste
     if (!MP_ACCESS_TOKEN) {
-      console.warn("ATENÇÃO: Token do Mercado Pago não configurado no .env.local");
+      console.warn("ATENÇÃO: Token do Mercado Pago não configurado no .env.local. Retornando PIX de Teste.");
       // Retornando dados FALSOS apenas para você ver o layout funcionando sem travar
       return NextResponse.json({
-        qr_code: "00020126360014BR.GOV.BCB.PIX0114+558699999999520400005303986540510.005802BR5913DesapegoPiaui6008Teresina62070503***63041234",
-        qr_code_base64: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png", // Imagem de teste
+        qr_code: "00020126580014br.gov.bcb.pix0136mock-pix-key-1234-5678-abcd520400005303986540510.005802BR5915Desapego Piaui6008Teresina62070503***6304ABCD",
+        qr_code_base64: "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg", // Imagem mockada
         ticket_url: "https://www.mercadopago.com.br",
-        id: "123456789"
+        id: "mock_" + Date.now()
       });
     }
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: 'Erro ao gerar PIX' }, { status: 500 });
+    console.error("Erro na API de PIX:", error);
+    return NextResponse.json({ error: 'Erro ao gerar PIX no servidor' }, { status: 500 });
   }
 }

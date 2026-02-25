@@ -32,14 +32,14 @@ function ChatConteudo() {
     return () => unsubscribe()
   }, [router])
 
-  // 2. Carregar Lista de Chats (Em tempo real)
+  // 2. Carregar Lista de Chats (Em tempo real com ordenação local)
   useEffect(() => {
     if (!user) return
 
+    // CORREÇÃO: Removemos o orderBy para evitar o Erro de Index do Firebase.
     const q = query(
       collection(db, 'chats'),
-      where('participantes', 'array-contains', user.uid),
-      orderBy('atualizadoEm', 'desc')
+      where('participantes', 'array-contains', user.uid)
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -47,6 +47,14 @@ function ChatConteudo() {
       snapshot.forEach((doc) => {
         listaChats.push({ id: doc.id, ...doc.data() })
       })
+      
+      // Ordenamos os chats aqui no navegador (do mais recente para o mais antigo)
+      listaChats.sort((a, b) => {
+        const timeA = a.atualizadoEm?.seconds || 0;
+        const timeB = b.atualizadoEm?.seconds || 0;
+        return timeB - timeA;
+      });
+
       setChats(listaChats)
       setLoadingChats(false)
     })
@@ -64,6 +72,7 @@ function ChatConteudo() {
       updateDoc(doc(db, 'chats', activeChatId), { lido: true }).catch(console.error)
     }
 
+    // Aqui podemos usar orderBy normalmente pois não há um "where" antes
     const q = query(
       collection(db, `chats/${activeChatId}/mensagens`),
       orderBy('criadoEm', 'asc')
@@ -239,7 +248,7 @@ function ChatConteudo() {
                     // Envia com Enter (sem shift) no computador
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSendMessage(e);
+                      handleSendMessage(e as any);
                     }
                   }}
                 />

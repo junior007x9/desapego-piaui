@@ -46,12 +46,10 @@ export default function DetalhesAnuncio() {
         const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(adData);
 
-        // --- NOVO: CONTADOR DE VISUALIZAÇÕES ---
         // Verifica se já contabilizou a view nesta sessão para evitar contagem dupla ao dar F5
         if (!sessionStorage.getItem(`viewed_${params.id}`)) {
           await updateDoc(adDocRef, { visualizacoes: increment(1) }).catch(console.error);
           sessionStorage.setItem(`viewed_${params.id}`, 'true');
-          // Atualiza visualmente para o utilizador atual ver a view dele contabilizada na hora
           setAd((prev: any) => ({ ...prev, visualizacoes: (prev.visualizacoes || 0) + 1 }));
         }
 
@@ -100,16 +98,18 @@ export default function DetalhesAnuncio() {
 
     setLoadingChat(true)
     try {
+      // CORREÇÃO: Removemos o where('anuncioId') para evitar erro de Index no Firebase
       const q = query(
         collection(db, 'chats'), 
-        where('anuncioId', '==', ad.id),
         where('participantes', 'array-contains', user.uid)
       );
       const querySnapshot = await getDocs(q);
       
       let existingChatId = null;
       querySnapshot.forEach((doc) => {
-        if (doc.data().participantes.includes(ad.vendedorId)) {
+        const data = doc.data();
+        // Filtramos localmente pelo anúncio e pelo vendedor
+        if (data.anuncioId === ad.id && data.participantes.includes(ad.vendedorId)) {
           existingChatId = doc.id;
         }
       });
@@ -132,6 +132,7 @@ export default function DetalhesAnuncio() {
           [user.uid]: meuNome,
           [ad.vendedorId]: nomeVendedor
         },
+        lido: true,
         atualizadoEm: serverTimestamp()
       });
 
@@ -204,7 +205,6 @@ export default function DetalhesAnuncio() {
                 </span>
               </div>
               
-              {/* NOVO: MOSTRA AS VISUALIZAÇÕES AQUI */}
               <div className="flex items-center gap-6 text-gray-500 text-sm mb-8 pb-6 border-b border-gray-100">
                  <span className="flex items-center gap-1"><MapPin size={18} className="text-purple-400" /> Teresina, PI</span>
                  <span className="flex items-center gap-1"><Eye size={18} className="text-purple-400" /> {ad.visualizacoes || 1} visitas</span>

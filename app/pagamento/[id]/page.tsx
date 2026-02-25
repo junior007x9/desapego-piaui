@@ -2,10 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { Copy, CheckCircle, Loader2, ArrowLeft } from 'lucide-react'
 
-// Recriamos a lista de planos igual à da página de Anunciar
 const PLANOS = [
   { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 3, desc: 'Rápido e barato' },
   { id: 2, nome: 'Semanal', dias: 7, valor: 60, fotos: 5, desc: 'Ideal para maioria' },
@@ -21,14 +20,13 @@ export default function PagamentoPage() {
   const [plano, setPlano] = useState<any>(null)
   const [paymentData, setPaymentData] = useState<any>(null)
   const [copied, setCopied] = useState(false)
+  const [pagamentoAprovado, setPagamentoAprovado] = useState(false)
 
-  // 1. Carregar dados do anúncio e do plano
+  // 1. Carregar Dados Iniciais
   useEffect(() => {
     async function loadData() {
       if (!params.id) return;
-
       try {
-        // Pega o anúncio do Firebase
         const adDocRef = doc(db, 'anuncios', params.id as string);
         const adSnapshot = await getDoc(adDocRef);
 
@@ -38,15 +36,12 @@ export default function PagamentoPage() {
           return
         }
 
-        // CORREÇÃO AQUI: Adicionado ": any" para o TypeScript não reclamar no Build da Vercel
         const anuncio: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(anuncio)
 
-        // Encontra o plano escolhido no array local
         const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
         setPlano(planoEscolhido)
 
-        // Tenta pegar o email do vendedor na coleção 'users' para enviar para o Mercado Pago
         let emailComprador = 'email@teste.com';
         if (anuncio.vendedorId) {
             const userDoc = await getDoc(doc(db, 'users', anuncio.vendedorId));
@@ -55,27 +50,44 @@ export default function PagamentoPage() {
             }
         }
 
-        // Gera o PIX
-        gerarPix(anuncio, planoEscolhido, emailComprador)
-
+        await gerarPix(anuncio, planoEscolhido, emailComprador)
       } catch (error) {
-        console.error("Erro ao carregar os dados:", error);
+        console.error(error);
         setLoading(false);
       }
     }
-
     loadData()
   }, [params.id, router])
 
-  // 2. Chamar a nossa API para gerar o PIX
-  const gerarPix = async (anuncio: any, planoDb: any, email: string) => {
+  // 2. Ouvinte em TEMPO REAL (Fica à espera que o Webhook mude o status)
+  useEffect(() => {
+    if (!params.id) return;
+    
+    const adDocRef = doc(db, 'anuncios', params.id as string);
+    const unsubscribe = onSnapshot(adDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const adData = docSnap.data();
+        if (adData.status === 'ativo') {
+          // O WEBHOOK ATIVOU!
+          setPagamentoAprovado(true);
+          setTimeout(() => {
+            router.push('/meus-anuncios');
+          }, 3000); // Espera 3 segundos para o utilizador ler a mensagem de sucesso
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [params.id, router]);
+
+  async function gerarPix(anuncio: any, planoDb: any, email: string) {
     try {
       const response = await fetch('/api/pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: planoDb.valor,
-          description: `Pagamento Anúncio: ${anuncio.titulo} (${planoDb.nome})`,
+          description: `DesapegoPI: ${anuncio.titulo} (${planoDb.nome})`,
           payerEmail: email,
           adId: anuncio.id
         })
@@ -89,48 +101,16 @@ export default function PagamentoPage() {
       }
     } catch (error) {
       console.error(error)
-      // DICA PARA DESENVOLVIMENTO: 
-      // Se a sua API do Mercado Pago (/api/pix) ainda não estiver a funcionar, 
-      // isto gera um PIX falso (Mock) para não bloquear os seus testes no Firebase!
-      setPaymentData({
-        qr_code: "00020126580014br.gov.bcb.pix0136mock-pix-key-1234-5678-abcd520400005303986540510.005802BR5915Desapego Piaui6008Teresina62070503***6304ABCD",
-        qr_code_base64: "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" 
-      })
     } finally {
       setLoading(false)
     }
   }
 
-  // Função para copiar o código PIX
   const copyToClipboard = () => {
     if (paymentData?.qr_code) {
       navigator.clipboard.writeText(paymentData.qr_code)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  // Simulação de "Já paguei" (Em produção real, deverá usar Webhooks do Mercado Pago)
-  const checkPayment = async () => {
-    setLoading(true)
-    try {
-      // Calcula a data de expiração com base nos dias do plano
-      const dias = plano?.dias || 30
-      const dataExp = new Date()
-      dataExp.setDate(dataExp.getDate() + dias)
-
-      // Atualiza o status do anúncio no Firestore para 'ativo'
-      await updateDoc(doc(db, 'anuncios', ad.id), { 
-        status: 'ativo', 
-        expiraEm: dataExp.toISOString() 
-      })
-
-      alert("Pagamento confirmado! O seu anúncio já está no ar.")
-      router.push('/meus-anuncios') 
-    } catch (error) {
-      console.error("Erro ao confirmar pagamento:", error);
-      alert("Erro ao confirmar o pagamento.");
-      setLoading(false);
     }
   }
 
@@ -142,13 +122,24 @@ export default function PagamentoPage() {
     )
   }
 
+  // TELA DE SUCESSO
+  if (pagamentoAprovado) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
+        <CheckCircle className="text-green-500 mb-4" size={80} />
+        <h1 className="text-3xl font-black text-green-700 mb-2">Pagamento Aprovado!</h1>
+        <p className="text-green-600 font-medium">O seu anúncio já está online. Redirecionando...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen py-10 px-4">
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
         <div className="bg-purple-600 p-6 text-center text-white relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <h1 className="text-2xl font-bold mb-2 relative z-10">Pagamento via PIX</h1>
-          <p className="opacity-90 relative z-10">Falta pouco para o seu anúncio ir ao ar!</p>
+          <p className="opacity-90 relative z-10">Escaneie o QR Code ou use o Pix Copia e Cola.</p>
         </div>
 
         <div className="p-8 space-y-6">
@@ -162,7 +153,6 @@ export default function PagamentoPage() {
             </p>
           </div>
 
-          {/* QR CODE - Imagem */}
           <div className="flex justify-center my-6">
             <div className="border-4 border-gray-50 p-3 rounded-2xl shadow-sm">
               {paymentData?.qr_code_base64?.startsWith('http') ? (
@@ -173,7 +163,6 @@ export default function PagamentoPage() {
             </div>
           </div>
 
-          {/* Copia e Cola */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Pix Copia e Cola</label>
             <div className="flex gap-2">
@@ -191,20 +180,13 @@ export default function PagamentoPage() {
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm p-4 rounded-xl flex items-start gap-3">
-            <span className="text-xl">⏳</span>
-            <p>Após o pagamento, o seu anúncio será ativado automaticamente em alguns instantes.</p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 bg-gray-50 p-4 rounded-xl">
+            <Loader2 className="animate-spin text-purple-600" size={20} />
+            Aguardando a confirmação do pagamento...
           </div>
-
-          <button 
-            onClick={checkPayment}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg"
-          >
-            Já realizei o pagamento
-          </button>
           
           <button onClick={() => router.back()} className="w-full text-gray-500 font-medium text-sm hover:text-purple-600 transition flex items-center justify-center gap-1 mt-4">
-             <ArrowLeft size={16} /> Voltar para o anúncio
+             <ArrowLeft size={16} /> Voltar
           </button>
         </div>
       </div>

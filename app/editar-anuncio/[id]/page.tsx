@@ -4,8 +4,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { Save, Loader2, ArrowLeft, DollarSign } from 'lucide-react'
-import Link from 'next/link'
+import { Save, Loader2, ArrowLeft, DollarSign, AlertCircle } from 'lucide-react'
+
+// Mantemos as mesmas categorias da página de criar anúncio para manter consistência
+const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
 export default function EditarAnuncioPage() {
   const params = useParams()
@@ -73,10 +75,17 @@ export default function EditarAnuncioPage() {
     setSaving(true)
 
     try {
-      // Converte o preço de volta para número
+      // Converte o preço de volta para número com segurança
       let precoNumerico = 0
       if (preco) {
-        precoNumerico = parseFloat(preco.replace(',', '.'))
+        precoNumerico = parseFloat(preco.toString().replace(',', '.'))
+      }
+
+      // Validação extra para evitar que o Firebase grave um "NaN"
+      if (isNaN(precoNumerico) || precoNumerico <= 0) {
+        alert("Por favor, insira um preço válido maior que zero.")
+        setSaving(false)
+        return
       }
 
       // Atualiza apenas os campos permitidos no Firebase
@@ -99,7 +108,7 @@ export default function EditarAnuncioPage() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-purple-600" size={40} /></div>
+  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>
 
   return (
     <div className="bg-gray-50 min-h-screen py-10 px-4">
@@ -113,6 +122,11 @@ export default function EditarAnuncioPage() {
 
         <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
           
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 text-sm text-blue-800">
+            <AlertCircle className="shrink-0 text-blue-500" size={20} />
+            <p><strong>Nota:</strong> Para alterar as fotos do seu desapego, será necessário excluir este anúncio e criar um novo.</p>
+          </div>
+
           {/* Título */}
           <div>
             <label className="block text-gray-700 font-bold mb-2">Título do Anúncio</label>
@@ -121,7 +135,7 @@ export default function EditarAnuncioPage() {
               required
               value={titulo}
               onChange={e => setTitulo(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+              className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
             />
           </div>
 
@@ -130,14 +144,14 @@ export default function EditarAnuncioPage() {
             <div>
               <label className="block text-gray-700 font-bold mb-2">Preço (R$)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input 
                   type="number" 
                   step="0.01"
                   required
                   value={preco}
                   onChange={e => setPreco(e.target.value)}
-                  className="w-full pl-10 pr-4 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
                 />
               </div>
             </div>
@@ -148,14 +162,11 @@ export default function EditarAnuncioPage() {
               <select 
                 value={categoria}
                 onChange={e => setCategoria(e.target.value)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"
+                className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none cursor-pointer"
               >
-                <option>Imóveis</option>
-                <option>Veículos</option>
-                <option>Eletrônicos</option>
-                <option>Para Casa</option>
-                <option>Moda e Beleza</option>
-                <option>Outros</option>
+                {CATEGORIAS.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -168,15 +179,15 @@ export default function EditarAnuncioPage() {
               required
               value={descricao}
               onChange={e => setDescricao(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+              className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
             ></textarea>
           </div>
 
-          <div className="pt-4 border-t border-gray-100">
+          <div className="pt-6">
             <button 
               type="submit" 
               disabled={saving}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-md transition flex justify-center items-center gap-2 disabled:opacity-50"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-md transition flex justify-center items-center gap-2 disabled:opacity-50 text-lg"
             >
               {saving ? <Loader2 className="animate-spin" /> : <Save />}
               Salvar Alterações

@@ -64,7 +64,8 @@ export default function MeusAnuncios() {
   const StatusBadge = ({ status }: { status: string }) => {
     const styles: any = {
       ativo: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ativo', icon: CheckCircle },
-      pagamento_pendente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Aguardando Pagamento', icon: Clock },
+      // CORREÇÃO: Alterado de 'pagamento_pendente' para 'pendente' para combinar com o app/anunciar
+      pendente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Aguardando Pagamento', icon: Clock },
       vendido: { bg: 'bg-gray-200', text: 'text-gray-600', label: 'Vendido', icon: ShoppingBag },
     }
     const current = styles[status] || { bg: 'bg-gray-100', text: 'text-gray-500', label: status, icon: Ban }
@@ -117,7 +118,6 @@ export default function MeusAnuncios() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
                   
-                  {/* NOVO: CONTADOR DE VIEWS AQUI */}
                   <div className="flex items-center justify-center md:justify-start gap-1 text-sm text-gray-500 font-medium">
                     <Eye size={16} className="text-purple-400" />
                     {ad.visualizacoes || 0} pessoas viram este anúncio
@@ -125,7 +125,8 @@ export default function MeusAnuncios() {
                 </div>
 
                 <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto">
-                  {ad.status === 'pagamento_pendente' && (
+                  {/* CORREÇÃO: Alterado aqui também de 'pagamento_pendente' para 'pendente' */}
+                  {ad.status === 'pendente' && (
                     <Link href={`/pagamento/${ad.id}`} className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-4 py-2 rounded-xl font-bold text-sm text-center transition">
                       Pagar PIX
                     </Link>

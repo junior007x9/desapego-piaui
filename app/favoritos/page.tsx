@@ -5,7 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, MapPin, ShoppingBag } from 'lucide-react'
+import { Heart, MapPin, ShoppingBag, Loader2 } from 'lucide-react'
 
 export default function FavoritosPage() {
   const router = useRouter()
@@ -66,7 +66,9 @@ export default function FavoritosPage() {
         </div>
 
         {loading ? (
-           <p className="text-center text-red-500 font-bold animate-pulse">Carregando seus favoritos...</p>
+           <div className="flex justify-center items-center py-20">
+             <Loader2 className="animate-spin text-red-500" size={40} />
+           </div>
         ) : ads.length === 0 ? (
            <div className="bg-white p-10 rounded-2xl text-center shadow-sm border border-gray-100 max-w-2xl mx-auto">
              <Heart size={48} className="mx-auto text-gray-300 mb-4" />
@@ -75,36 +77,31 @@ export default function FavoritosPage() {
              <Link href="/todos-anuncios" className="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-6 py-3 rounded-full transition">Explorar Anúncios</Link>
            </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {ads.map((ad) => (
-              <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group">
-                <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden h-full flex flex-col relative">
-                  
-                  <div className="h-52 overflow-hidden bg-gray-100 relative">
-                     {ad.imagemUrl ? (
-                        <img src={ad.imagemUrl} alt={ad.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
-                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={40}/></div>
-                     )}
-                     
-                     {/* Coração vermelho sempre visível no card dos favoritos */}
-                     <div className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md">
-                        <Heart className="text-red-500 fill-red-500" size={18} />
-                     </div>
-                  </div>
+              <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group bg-white rounded-lg border border-gray-200 hover:shadow-lg transition overflow-hidden flex flex-col relative">
+                
+                <div className="aspect-square bg-gray-100 overflow-hidden relative">
+                   {ad.imagemUrl ? (
+                      <img src={ad.imagemUrl} alt={ad.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+                   ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={40}/></div>
+                   )}
+                   
+                   {/* Coração vermelho sempre visível no card dos favoritos */}
+                   <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm">
+                      <Heart className="text-red-500 fill-red-500" size={16} />
+                   </div>
+                </div>
 
-                  <div className="p-4 flex flex-col flex-1">
-                    <h3 className="text-gray-800 font-medium line-clamp-2 mb-2 group-hover:text-red-500 transition leading-tight">
-                      {ad.titulo}
-                    </h3>
-                    <div className="mt-auto pt-4 border-t border-gray-50">
-                      <p className="text-xl font-bold text-gray-900">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
-                         <MapPin size={12} /> Teresina, PI
-                      </div>
-                    </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="text-sm text-gray-700 line-clamp-2 mb-2 h-10 font-medium group-hover:text-red-500 transition-colors">{ad.titulo}</h3>
+                  <p className="text-xl font-black text-gray-900">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                  </p>
+                  <div className="mt-auto pt-3 text-[10px] text-gray-400 flex justify-between uppercase font-bold tracking-widest">
+                    <span>Salvo</span>
+                    <span className="flex items-center gap-1"><MapPin size={10}/> Teresina</span>
                   </div>
                 </div>
               </Link>

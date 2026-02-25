@@ -1,243 +1,187 @@
 'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { auth, db, storage } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { Camera, Loader2, X, DollarSign, Tag, AlignLeft, Info } from 'lucide-react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { useRouter } from 'next/navigation'
+import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+
+const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
+
+// Adicionamos os planos para o usuário escolher antes de publicar
+const PLANOS = [
+  { id: 1, nome: 'Diário', dias: 1, valor: 10, desc: 'Rápido e barato' },
+  { id: 2, nome: 'Semanal', dias: 7, valor: 60, desc: 'Ideal para maioria' },
+  { id: 3, nome: 'Quinzenal', dias: 15, valor: 160, desc: 'Mais visibilidade' },
+  { id: 4, nome: 'Mensal', dias: 30, valor: 300, desc: 'Venda profissional' }
+]
 
 export default function AnunciarPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [pageLoading, setPageLoading] = useState(true)
-
-  // Estados do Formulário
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
   const [preco, setPreco] = useState('')
-  const [categoria, setCategoria] = useState('Outros')
+  const [categoria, setCategoria] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
+  const [planoId, setPlanoId] = useState<number | null>(null) // Novo estado para o plano
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const router = useRouter()
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        alert("Você precisa fazer login para anunciar.")
-        router.push('/login')
-      } else {
-        setUser(currentUser)
-        setPageLoading(false)
-      }
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (!u) router.push('/login')
+      else setUser(u)
     })
     return () => unsubscribe()
   }, [router])
 
-  // --- A MAGIA DA COMPRESSÃO DE IMAGEM ---
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = (event) => {
-        const img = new Image()
-        img.src = event.target?.result as string
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const MAX_WIDTH = 1080 // Tamanho ideal para web
-          const MAX_HEIGHT = 1080
-          let width = img.width
-          let height = img.height
+  // VALIDAÇÃO: Agora exige escolher um plano
+  const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !planoId;
 
-          // Mantém a proporção da imagem
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width
-              width = MAX_WIDTH
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height
-              height = MAX_HEIGHT
-            }
-          }
-
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-          ctx?.drawImage(img, 0, 0, width, height)
-
-          // Converte o canvas de volta para um ficheiro (JPEG com 70% de qualidade)
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              })
-              resolve(newFile)
-            } else {
-              resolve(file) // Fallback de segurança
-            }
-          }, 'image/jpeg', 0.7)
-        }
-      }
-      reader.onerror = (error) => reject(error)
-    })
-  }
-
-  // Lidar com a seleção de fotos
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
-      
-      if (fotos.length + selectedFiles.length > 5) {
-        alert("Pode enviar no máximo 5 fotos por anúncio.")
-        return
-      }
-
-      // Adiciona as fotos originais (serão comprimidas no envio) para não travar a tela agora
       setFotos(prev => [...prev, ...selectedFiles])
-      
-      // Gera os previews para mostrar na tela imediatamente
-      const newPreviews = selectedFiles.map(file => URL.createObjectURL(file))
-      setPreviews(prev => [...prev, ...newPreviews])
+      const selectedPreviews = selectedFiles.map(file => URL.createObjectURL(file))
+      setPreviews(prev => [...prev, ...selectedPreviews])
     }
   }
 
-  // Remover foto da lista
-  const removePhoto = (index: number) => {
+  const removeFoto = (index: number) => {
     setFotos(prev => prev.filter((_, i) => i !== index))
     setPreviews(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Enviar Formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
-    
+    if (isFormIncompleto) return
+
     setLoading(true)
-
     try {
-      const fotosUrls: string[] = []
-
-      // 1. Faz upload das fotos (Comprimindo uma por uma)
+      const urls: string[] = []
+      
+      // Upload de fotos
       if (fotos.length > 0) {
-        for (const file of fotos) {
-          // Comprime a foto! (De 5MB vai para uns 300KB)
-          const compressedFile = await compressImage(file)
-          
-          const fileRef = ref(storage, `anuncios/${user.uid}/${Date.now()}_${compressedFile.name}`)
-          await uploadBytes(fileRef, compressedFile)
-          const url = await getDownloadURL(fileRef)
-          fotosUrls.push(url)
+        for (const foto of fotos) {
+          const storageRef = ref(storage, `anuncios/${Date.now()}_${foto.name}`)
+          const snapshot = await uploadBytes(storageRef, foto)
+          const url = await getDownloadURL(snapshot.ref)
+          urls.push(url)
         }
       }
 
-      // 2. Prepara o preço (converte string para número)
-      const precoNumerico = parseFloat(preco.replace(',', '.')) || 0
-
-      // 3. Salva no banco de dados
+      // Salva no banco como PENDENTE
       const docRef = await addDoc(collection(db, 'anuncios'), {
+        titulo,
+        descricao,
+        preco: parseFloat(preco.replace(',', '.')),
+        categoria,
+        fotos: urls,
+        imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
-        titulo: titulo,
-        descricao: descricao,
-        preco: precoNumerico,
-        categoria: categoria,
-        fotos: fotosUrls,
-        imagemUrl: fotosUrls.length > 0 ? fotosUrls[0] : '', // A primeira foto é a principal
-        status: 'pagamento_pendente', // Manda para o fluxo de PIX
-        criadoEm: serverTimestamp(),
-        atualizadoEm: serverTimestamp()
+        status: 'pendente', // Status pendente até pagar!
+        planoId: planoId,   // Guarda o ID do plano escolhido
+        visualizacoes: 0,
+        criadoEm: serverTimestamp()
       })
 
-      // 4. Redireciona para a página de Pagamento PIX
+      // Redireciona para a página de pagamento passando o ID do anúncio criado
       router.push(`/pagamento/${docRef.id}`)
-
+      
     } catch (error) {
-      console.error("Erro ao publicar anúncio:", error)
-      alert("Ocorreu um erro ao enviar o anúncio. Tente novamente.")
+      console.error(error)
+      alert("Erro ao publicar anúncio.")
       setLoading(false)
-    }
+    } 
   }
 
-  if (pageLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>
-
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">O que você vai desapegar hoje?</h1>
-        <p className="text-gray-500 mb-8">Preencha os dados abaixo para criar o seu anúncio.</p>
+    <div className="bg-gray-50 min-h-screen py-10">
+      <div className="container mx-auto px-4 max-w-2xl">
+        <h1 className="text-3xl font-black text-gray-800 mb-8 uppercase italic">O que você está desapegando?</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-gray-100">
           
           {/* FOTOS */}
           <div>
-            <label className="block text-gray-700 font-bold mb-3 flex items-center gap-2">
-              <Camera className="text-purple-600" size={20} /> Fotos do Produto (Até 5)
-            </label>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <label className="block text-gray-700 font-bold mb-4">Fotos do produto (Opcional)</label>
+            <div className="grid grid-cols-3 gap-4">
               {previews.map((src, index) => (
-                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
-                  <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removePhoto(index)} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition opacity-0 group-hover:opacity-100">
-                    <X size={14} />
-                  </button>
-                  {index === 0 && <span className="absolute bottom-0 left-0 w-full bg-purple-600/80 text-white text-[10px] text-center py-1 font-bold backdrop-blur-sm">PRINCIPAL</span>}
+                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border">
+                  <img src={src} className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><X size={14}/></button>
                 </div>
               ))}
-              
-              {previews.length < 5 && (
-                <label className="aspect-square flex flex-col items-center justify-center bg-purple-50 hover:bg-purple-100 border-2 border-dashed border-purple-200 rounded-xl cursor-pointer transition text-purple-600">
-                  <Camera size={30} className="mb-2 opacity-50" />
-                  <span className="text-xs font-bold opacity-70">Adicionar</span>
-                  <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
-                </label>
-              )}
-            </div>
-            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Info size={12}/> As fotos serão otimizadas automaticamente para carregar mais rápido.</p>
-          </div>
-
-          <hr className="border-gray-100" />
-
-          {/* DADOS DE TEXTO */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-gray-700 font-bold mb-2 flex items-center gap-2"><Tag className="text-purple-600" size={18}/> Título do Anúncio</label>
-              <input type="text" required value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: iPhone 13 Pro Max 256GB" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-700 font-bold mb-2 flex items-center gap-2"><DollarSign className="text-purple-600" size={18}/> Preço (R$)</label>
-                <input type="number" step="0.01" required value={preco} onChange={e => setPreco(e.target.value)} placeholder="0.00" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-bold mb-2 flex items-center gap-2"><AlignLeft className="text-purple-600" size={18}/> Categoria</label>
-                <select value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer">
-                  <option>Imóveis</option>
-                  <option>Veículos</option>
-                  <option>Eletrônicos</option>
-                  <option>Para Casa</option>
-                  <option>Moda e Beleza</option>
-                  <option>Outros</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-bold mb-2">Descrição Detalhada</label>
-              <textarea rows={5} required value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Descreva os detalhes do seu produto, tempo de uso, se tem marcas de marca de uso..." className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none"></textarea>
+              <label className="aspect-square border-2 border-dashed border-purple-300 rounded-xl flex flex-col items-center justify-center text-purple-600 cursor-pointer hover:bg-purple-50 transition">
+                <Camera size={32} />
+                <span className="text-[10px] font-bold mt-1">ADICIONAR</span>
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-gray-100">
-            <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-lg py-4 rounded-xl shadow-md transition flex justify-center items-center gap-2 disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin" /> : 'Avançar para Pagamento PIX'}
+          <div>
+            <label className="block text-gray-700 font-bold mb-2">Título do anúncio*</label>
+            <input required type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-600 outline-none" placeholder="Ex: iPhone 13 Pro Max 256GB" />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-bold mb-2">Categoria*</label>
+            <select required value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-600 outline-none">
+              <option value="">Selecione uma categoria</option>
+              {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-bold mb-2">Preço (R$)*</label>
+            <input required type="number" value={preco} onChange={(e) => setPreco(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-600 outline-none" placeholder="0,00" />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-bold mb-2">Descrição*</label>
+            <textarea required rows={5} value={descricao} onChange={(e) => setDescricao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-600 outline-none" placeholder="Detalhes sobre o estado do produto..."></textarea>
+          </div>
+
+          {/* SEÇÃO DE PLANOS */}
+          <div className="pt-4 border-t border-gray-100">
+             <label className="block text-gray-800 font-black text-xl mb-4">Escolha um Plano para destacar*</label>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               {PLANOS.map((p) => (
+                 <div 
+                    key={p.id}
+                    onClick={() => setPlanoId(p.id)}
+                    className={`cursor-pointer border-2 rounded-2xl p-4 transition-all ${planoId === p.id ? 'border-purple-600 bg-purple-50 shadow-md scale-[1.02]' : 'border-gray-200 hover:border-purple-300'}`}
+                 >
+                    <div className="flex justify-between items-start mb-2">
+                       <h3 className="font-bold text-gray-800">{p.nome}</h3>
+                       {planoId === p.id && <CheckCircle className="text-purple-600" size={20}/>}
+                    </div>
+                    <p className="text-2xl font-black text-green-600 mb-1">R$ {p.valor},00</p>
+                    <p className="text-sm text-gray-500">{p.dias} dias ativo</p>
+                    <p className="text-xs text-purple-600 font-medium mt-2 bg-white inline-block px-2 py-1 rounded-md">{p.desc}</p>
+                 </div>
+               ))}
+             </div>
+          </div>
+
+          <div className="pt-6">
+            <button 
+              type="submit" 
+              disabled={loading || isFormIncompleto}
+              className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all flex items-center justify-center gap-3
+                ${isFormIncompleto ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white hover:scale-[1.02]'}`}
+            >
+              {loading ? <Loader2 className="animate-spin" /> : 'IR PARA PAGAMENTO'}
             </button>
-            <p className="text-center text-xs text-gray-400 mt-3">Você será redirecionado para concluir a publicação.</p>
+            
+            {isFormIncompleto && (
+              <p className="flex items-center gap-2 text-red-500 text-sm mt-4 font-bold justify-center">
+                <AlertCircle size={16} /> Preencha os campos e escolha um plano.
+              </p>
+            )}
           </div>
         </form>
       </div>
