@@ -3,8 +3,6 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
-
 const DIAS_POR_PLANO: Record<number, number> = {
   5: 1, // Plano Teste
   1: 1,
@@ -14,12 +12,14 @@ const DIAS_POR_PLANO: Record<number, number> = {
 };
 
 export async function GET(request: Request) {
-  // Pega o ID do pagamento na URL da requisição
+  // CORREÇÃO: Lemos o Token DENTRO da função para a Vercel o apanhar em tempo real
+  const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
+
   const { searchParams } = new URL(request.url);
   const paymentId = searchParams.get('id');
 
   if (!paymentId || !MP_ACCESS_TOKEN) {
-    return NextResponse.json({ error: 'Faltam dados' }, { status: 400 });
+    return NextResponse.json({ error: 'Faltam dados ou Token não configurado' }, { status: 400 });
   }
 
   try {

@@ -3,9 +3,6 @@ import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
-
-// ADICIONADO: '5' (Plano Teste) -> 1 Dia
 const DIAS_POR_PLANO: Record<number, number> = {
   5: 1, 
   1: 1,
@@ -16,6 +13,9 @@ const DIAS_POR_PLANO: Record<number, number> = {
 
 export async function POST(request: Request) {
   try {
+    // CORREÇÃO: Lemos o Token DENTRO da função
+    const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
+
     const body = await request.json();
     const paymentId = body?.data?.id || body?.id;
 
