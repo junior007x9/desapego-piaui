@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
 
 const PLANOS = [
@@ -24,7 +24,6 @@ export default function PagamentoPage() {
   const [pagamentoAprovado, setPagamentoAprovado] = useState(false)
   const [erroPagamento, setErroPagamento] = useState(false)
 
-  // 1. Carrega os dados do anúncio e gera o Pix
   useEffect(() => {
     async function loadData() {
       if (!params.id) return;
@@ -62,20 +61,36 @@ export default function PagamentoPage() {
     loadData()
   }, [params.id, router])
 
-  // 2. NOVA MÁGICA: Verifica no Mercado Pago a cada 5 segundos se já foi pago!
+  // A MÁGICA ATUALIZADA (Garantia Dupla)
   useEffect(() => {
     if (!paymentData?.id || pagamentoAprovado) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/pix/status?id=${paymentData.id}`);
+        // O Date.now() impede que o navegador grave o resultado antigo
+        const res = await fetch(`/api/pix/status?id=${paymentData.id}&t=${Date.now()}`);
         const data = await res.json();
         
         if (data.status === 'approved') {
           setPagamentoAprovado(true);
           clearInterval(interval);
+
+          // GARANTIA EXTRA: Atualiza o Firebase pelo lado do cliente!
+          try {
+            const adRef = doc(db, 'anuncios', params.id as string);
+            const dias = plano?.dias || 30;
+            const dataExp = new Date();
+            dataExp.setDate(dataExp.getDate() + dias);
+            
+            await updateDoc(adRef, {
+              status: 'ativo',
+              expiraEm: dataExp.toISOString(),
+              pagoEm: new Date().toISOString()
+            });
+          } catch(e) { console.error("Erro backup client-side:", e) }
+
+          // REDIRECIONA PARA O ANÚNCIO
           setTimeout(() => {
-            // REDIRECIONA DIRETO PARA O ANÚNCIO PUBLICADO
             router.push(`/anuncio/${params.id}`);
           }, 3000); 
         }
@@ -85,27 +100,7 @@ export default function PagamentoPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [paymentData?.id, pagamentoAprovado, params.id, router]);
-
-  // 3. OUVINTE FIREBASE (Mantemos como backup para quando o site estiver ao vivo)
-  useEffect(() => {
-    if (!params.id) return;
-    
-    const adDocRef = doc(db, 'anuncios', params.id as string);
-    const unsubscribe = onSnapshot(adDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const adData = docSnap.data();
-        if (adData.status === 'ativo' && !pagamentoAprovado) {
-          setPagamentoAprovado(true);
-          setTimeout(() => {
-            router.push(`/anuncio/${params.id}`); // Vai para o anúncio
-          }, 3000); 
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [params.id, router, pagamentoAprovado]);
+  }, [paymentData?.id, pagamentoAprovado, params.id, router, plano?.dias]);
 
   async function gerarPix(anuncio: any, planoDb: any, email: string) {
     try {
@@ -143,7 +138,6 @@ export default function PagamentoPage() {
     }
   }
 
-  // TELA DE SUCESSO!
   if (pagamentoAprovado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
