@@ -1,0 +1,130 @@
+'use client'
+import { useState } from 'react'
+import { auth, db } from '@/lib/firebase'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Loader2, Mail, Lock, User, Phone } from 'lucide-react'
+
+export default function CadastroPage() {
+  const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let valor = e.target.value.replace(/\D/g, '')
+    if (valor.length <= 11) {
+      valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2')
+      valor = valor.replace(/(\d)(\d{4})$/, '$1-$2')
+      setTelefone(valor)
+    }
+  }
+
+  const handleCadastro = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    if (password.length < 6) {
+      alert("A senha deve ter pelo menos 6 caracteres.")
+      setLoading(false)
+      return
+    }
+
+    try {
+      // Cria a conta de login no Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // Limpa a formatação do telefone para gravar
+      const telLimpo = telefone.replace(/\D/g, '')
+
+      // Grava os dados do perfil na Base de Dados (Firestore)
+      await setDoc(doc(db, 'users', user.uid), {
+        nome: nome,
+        email: email,
+        telefone: telLimpo,
+        favoritos: [],
+        criadoEm: serverTimestamp()
+      })
+
+      alert("Conta criada com sucesso!")
+      router.push('/meus-anuncios')
+    } catch (error: any) {
+      console.error(error)
+      if (error.code === 'auth/email-already-in-use') {
+        alert("Este email já está em uso. Tente fazer login.")
+      } else {
+        alert("Erro ao criar conta: " + error.message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Crie sua conta
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Rápido, fácil e grátis.
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
+          <form onSubmit={handleCadastro} className="space-y-5">
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
+              <div className="mt-1 relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input required type="text" value={nome} onChange={e => setNome(e.target.value)} className="w-full pl-10 px-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="Seu nome" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+              <div className="mt-1 relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input required type="text" value={telefone} onChange={handleTelefoneChange} className="w-full pl-10 px-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="(86) 99999-9999" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">E-mail</label>
+              <div className="mt-1 relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 px-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="seu@email.com" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Senha</label>
+              <div className="mt-1 relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 px-3 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="Mínimo de 6 caracteres" minLength={6} />
+              </div>
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 mt-4">
+              {loading ? <Loader2 className="animate-spin" size={20} /> : "Criar Conta"}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-gray-600 border-t pt-6">
+            Já tem uma conta?{' '}
+            <Link href="/login" className="font-bold text-purple-600 hover:text-purple-500">
+              Faça Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
