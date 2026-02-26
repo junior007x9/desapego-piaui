@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
-// Pega o token do ficheiro .env.local
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || ''; 
-
-// Configura o Mercado Pago
-const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN, options: { timeout: 10000 } });
-
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { amount, description, payerEmail, adId } = body;
+    // 1. LER O TOKEN AQUI DENTRO (Garante que lê na hora na Vercel)
+    const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || ''; 
 
     if (!MP_ACCESS_TOKEN) {
       console.error("ERRO: Token do Mercado Pago não encontrado!");
       return NextResponse.json({ error: 'Token não configurado' }, { status: 400 });
     }
+
+    // 2. CONFIGURAR O CLIENTE AQUI DENTRO
+    const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN, options: { timeout: 10000 } });
+
+    const body = await request.json();
+    const { amount, description, payerEmail, adId } = body;
 
     const payment = new Payment(client);
 
@@ -26,7 +26,6 @@ export async function POST(request: Request) {
         payment_method_id: 'pix',
         payer: {
           email: payerEmail || 'comprador@desapegopiaui.com.br',
-          // O Mercado Pago muitas vezes exige first_name e last_name para PIX
           first_name: 'Comprador',
           last_name: 'Desapego'
         },
