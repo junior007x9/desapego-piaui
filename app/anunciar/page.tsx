@@ -9,8 +9,9 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// Adicionamos os planos para o usuário escolher antes de publicar
+// ADICIONADO: Plano de teste com ID 5
 const PLANOS = [
+  { id: 5, nome: 'Teste', dias: 1, valor: 1, desc: 'Apenas para testar o sistema' },
   { id: 1, nome: 'Diário', dias: 1, valor: 10, desc: 'Rápido e barato' },
   { id: 2, nome: 'Semanal', dias: 7, valor: 60, desc: 'Ideal para maioria' },
   { id: 3, nome: 'Quinzenal', dias: 15, valor: 160, desc: 'Mais visibilidade' },
@@ -24,7 +25,7 @@ export default function AnunciarPage() {
   const [categoria, setCategoria] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
-  const [planoId, setPlanoId] = useState<number | null>(null) // Novo estado para o plano
+  const [planoId, setPlanoId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
@@ -37,7 +38,6 @@ export default function AnunciarPage() {
     return () => unsubscribe()
   }, [router])
 
-  // VALIDAÇÃO: Agora exige escolher um plano
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !planoId;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +62,6 @@ export default function AnunciarPage() {
     try {
       const urls: string[] = []
       
-      // Upload de fotos
       if (fotos.length > 0) {
         for (const foto of fotos) {
           const storageRef = ref(storage, `anuncios/${Date.now()}_${foto.name}`)
@@ -72,7 +71,6 @@ export default function AnunciarPage() {
         }
       }
 
-      // Salva no banco como PENDENTE
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
@@ -81,13 +79,12 @@ export default function AnunciarPage() {
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
-        status: 'pendente', // Status pendente até pagar!
-        planoId: planoId,   // Guarda o ID do plano escolhido
+        status: 'pendente',
+        planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp()
       })
 
-      // Redireciona para a página de pagamento passando o ID do anúncio criado
       router.push(`/pagamento/${docRef.id}`)
       
     } catch (error) {
@@ -104,7 +101,6 @@ export default function AnunciarPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-gray-100">
           
-          {/* FOTOS */}
           <div>
             <label className="block text-gray-700 font-bold mb-4">Fotos do produto (Opcional)</label>
             <div className="grid grid-cols-3 gap-4">
@@ -145,7 +141,6 @@ export default function AnunciarPage() {
             <textarea required rows={5} value={descricao} onChange={(e) => setDescricao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-600 outline-none" placeholder="Detalhes sobre o estado do produto..."></textarea>
           </div>
 
-          {/* SEÇÃO DE PLANOS */}
           <div className="pt-4 border-t border-gray-100">
              <label className="block text-gray-800 font-black text-xl mb-4">Escolha um Plano para destacar*</label>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
