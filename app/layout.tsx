@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
@@ -6,9 +7,18 @@ import Footer from '@/components/Footer'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'DesapegoPI - O maior marketplace do Piauí',
   description: 'Compre e venda produtos novos e usados em Teresina e todo o Piauí.',
+}
+
+// Configuração OFICIAL e forçada para dispositivos móveis
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#4c1d95', // Deixa a barra de notificações do celular roxa!
 }
 
 export default function RootLayout({
@@ -18,15 +28,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      {/* AQUI ESTÁ A FIXAÇÃO FORÇADA PARA O MOBILE */}
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-      </head>
-      
-      <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen`}>
+      {/* w-full e overflow-x-hidden impedem o site de criar scroll para os lados */}
+      <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
         <Navbar />
         
-        {/* O conteúdo cresce para empurrar o footer, com espaço para o menu mobile */}
         <main className="flex-grow pb-16 md:pb-0 w-full overflow-x-hidden">
           {children}
         </main>

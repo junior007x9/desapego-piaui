@@ -62,7 +62,6 @@ export default function Home() {
               onChange={(e) => setBusca(e.target.value)}
             />
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-primary" size={28} />
-            {/* Botão de Pesquisar - Roxo Claro */}
             <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-accent text-white px-6 py-2 rounded-full font-bold hover:bg-accent-dark transition hidden md:block">
               Pesquisar
             </button>
@@ -70,16 +69,17 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CATEGORIAS - Lógica Corrigida para Mobile */}
-      <div className="bg-white border-b w-full overflow-hidden">
-        <div className="container mx-auto px-4 py-8 overflow-x-auto no-scrollbar">
-          <div className="flex justify-between gap-6 w-max min-w-full">
+      {/* CATEGORIAS CORRIGIDAS - Não esticam mais a tela do celular */}
+      <div className="bg-white border-b w-full">
+        <div className="container mx-auto px-4 py-8">
+          {/* A rolagem lateral agora acontece de forma contida aqui */}
+          <div className="flex overflow-x-auto gap-6 pb-2 no-scrollbar items-center md:justify-center">
             {CATEGORIAS_OLX.map((cat) => (
-              <Link key={cat.nome} href={`/todos-anuncios?cat=${cat.slug}`} className="flex flex-col items-center group shrink-0">
+              <Link key={cat.nome} href={`/todos-anuncios?cat=${cat.slug}`} className="flex flex-col items-center group shrink-0 w-[72px]">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-primary/10 group-hover:text-primary transition-all mb-2 border border-transparent group-hover:border-primary/20">
                   {cat.icon}
                 </div>
-                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">{cat.nome}</span>
+                <span className="text-xs font-medium text-gray-700 group-hover:text-primary text-center">{cat.nome}</span>
               </Link>
             ))}
           </div>
@@ -90,7 +90,6 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12">
         <div className="flex justify-between items-end mb-8">
           <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter italic">Destaques em Teresina</h2>
-          {/* Link Ver Todos - Roxo Claro */}
           <Link href="/todos-anuncios" className="text-accent font-bold hover:text-accent-dark hover:underline">Ver todos</Link>
         </div>
 
