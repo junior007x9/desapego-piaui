@@ -70,17 +70,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CATEGORIAS */}
-      <div className="bg-white border-b overflow-x-auto">
-        <div className="container mx-auto px-4 py-8 flex justify-between gap-6 min-w-max">
-          {CATEGORIAS_OLX.map((cat) => (
-            <Link key={cat.nome} href={`/todos-anuncios?cat=${cat.slug}`} className="flex flex-col items-center group">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-primary/10 group-hover:text-primary transition-all mb-2 border border-transparent group-hover:border-primary/20">
-                {cat.icon}
-              </div>
-              <span className="text-sm font-medium text-gray-700 group-hover:text-primary">{cat.nome}</span>
-            </Link>
-          ))}
+      {/* CATEGORIAS - Lógica Corrigida para Mobile */}
+      <div className="bg-white border-b w-full overflow-hidden">
+        <div className="container mx-auto px-4 py-8 overflow-x-auto no-scrollbar">
+          <div className="flex justify-between gap-6 w-max min-w-full">
+            {CATEGORIAS_OLX.map((cat) => (
+              <Link key={cat.nome} href={`/todos-anuncios?cat=${cat.slug}`} className="flex flex-col items-center group shrink-0">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-primary/10 group-hover:text-primary transition-all mb-2 border border-transparent group-hover:border-primary/20">
+                  {cat.icon}
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">{cat.nome}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,3 @@
-import type { Viewport } from 'next'
 import './globals.css'
 import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
@@ -12,14 +11,6 @@ export const metadata = {
   description: 'Compre e venda produtos novos e usados em Teresina e todo o Piauí.',
 }
 
-// A MÁGICA PARA O CELULAR LER O TAMANHO CERTO É ESTA:
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -27,18 +18,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className={`${inter.className} bg-gray-50`}>
+      {/* AQUI ESTÁ A FIXAÇÃO FORÇADA PARA O MOBILE */}
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </head>
+      
+      <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen`}>
         <Navbar />
-        {/* main ocupa o mínimo da tela inteira */}
-        <main className="min-h-screen pb-16 md:pb-0">
+        
+        {/* O conteúdo cresce para empurrar o footer, com espaço para o menu mobile */}
+        <main className="flex-grow pb-16 md:pb-0 w-full overflow-x-hidden">
           {children}
         </main>
         
-        <div className="pb-16 md:pb-0">
+        <div className="pb-16 md:pb-0 w-full">
           <Footer />
         </div>
         
-        {/* O menu de celular */}
         <BottomNav />
       </body>
     </html>
