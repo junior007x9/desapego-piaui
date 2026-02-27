@@ -8,8 +8,7 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// Sua chave do ImgBB
-const IMGBB_API_KEY = "db69b335530d34d718f02776197a7d91" 
+// A CHAVE FOI REMOVIDA DAQUI POR SEGURANÇA! O CÓDIGO ESTÁ BLINDADO.
 
 const PLANOS = [
   { id: 0, nome: 'Grátis (Teste)', dias: 1, valor: 0, desc: 'Publicação imediata sem custo' },
@@ -64,12 +63,14 @@ export default function AnunciarPage() {
     try {
       const urls: string[] = []
       
+      // COMUNICAÇÃO SEGURA COM NOSSA API INTERNA (A CHAVE NÃO VAZA)
       if (fotos.length > 0) {
         for (const foto of fotos) {
           const formData = new FormData()
           formData.append('image', foto)
 
-          const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          // Chama a nossa própria API, que fará a ponte segura com o ImgBB
+          const response = await fetch('/api/upload', {
             method: 'POST',
             body: formData,
           })
@@ -79,7 +80,7 @@ export default function AnunciarPage() {
           if (data.success) {
             urls.push(data.data.url) 
           } else {
-            console.error("Erro no upload do ImgBB:", data)
+            console.error("Erro no upload seguro:", data)
             alert("Erro ao enviar uma das fotos.")
           }
         }
