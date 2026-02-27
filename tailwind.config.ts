@@ -2,9 +2,9 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",        // Procura na pasta app
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}", // Procura na pasta components
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -12,12 +12,16 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Definição das novas cores baseadas na sua logo
         primary: {
-          DEFAULT: '#6D28D9',
-          light: '#8B5CF6',
-          dark: '#4C1D95',
+          DEFAULT: '#4c1d95', // ROXO ESCURO (Textos principais, links) - Ex: Purple 950
+          dark: '#3b0764',    // Roxo ainda mais escuro para hovers
         },
-        secondary: '#F3F4F6',
+        accent: {
+          DEFAULT: '#9333ea', // ROXO MAIS CLARO (Botões, Ações) - Ex: Purple 600
+          dark: '#7e22ce',    // Hover do botão (Purple 700)
+        },
+        secondary: '#F3F4F6', // Cinza claro mantido
       },
     },
   },

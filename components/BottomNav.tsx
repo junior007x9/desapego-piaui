@@ -13,13 +13,12 @@ export default function BottomNav() {
   const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
-    let unsubscribeChats: () => void; // Variável para guardar a função que limpa a busca de chats
+    let unsubscribeChats: () => void;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       
       if (currentUser) {
-        // Se o utilizador está logado, procuramos mensagens não lidas
         const q = query(
           collection(db, 'chats'), 
           where('participantes', 'array-contains', currentUser.uid)
@@ -34,13 +33,11 @@ export default function BottomNav() {
           setHasUnread(unread);
         });
       } else {
-        // Se o utilizador saiu da conta, paramos de buscar as mensagens e zeramos a notificação
         if (unsubscribeChats) unsubscribeChats();
         setHasUnread(false);
       }
     });
 
-    // Função de limpeza quando o componente é destruído
     return () => {
       unsubscribeAuth();
       if (unsubscribeChats) unsubscribeChats();
@@ -62,8 +59,9 @@ export default function BottomNav() {
           const isActive = pathname === item.href;
           return (
             <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center flex-1 relative">
-              <div className={`p-1 rounded-full transition-colors ${item.special ? 'text-purple-600' : ''}`}>
-                <item.icon size={24} className={isActive && !item.special ? 'text-purple-600' : 'text-gray-500'} />
+              {/* Se for o botão especial (Anunciar), fica Roxo Claro. Se for ativo, Roxo Escuro */}
+              <div className={`p-1 rounded-full transition-colors ${item.special ? 'text-accent' : ''}`}>
+                <item.icon size={24} className={isActive && !item.special ? 'text-primary' : (item.special ? 'text-accent hover:text-accent-dark' : 'text-gray-500')} />
                 {item.badge && (
                   <span className="absolute top-2 right-1/2 translate-x-4 flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -71,7 +69,7 @@ export default function BottomNav() {
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-purple-600' : 'text-gray-400'}`}>
+              <span className={`text-[10px] mt-1 font-medium ${isActive && !item.special ? 'text-primary' : (item.special ? 'text-accent font-bold' : 'text-gray-400')}`}>
                 {item.label}
               </span>
             </Link>

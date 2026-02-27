@@ -1,7 +1,8 @@
 "use client";
 
 import Link from 'next/link';
-import { MapPin, Bell, PlusCircle } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Bell } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
@@ -31,51 +32,65 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           
-          {/* LADO ESQUERDO: Localização e Logo */}
+          {/* LADO ESQUERDO: Logo Redonda e Nome */}
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="text-xl md:text-2xl font-black text-purple-600 tracking-tighter italic">
-                Desapego<span className="text-gray-900">PI</span>
+            <Link href="/" className="flex items-center gap-3 group">
+              {/* Container para deixar a logo JPEG redonda */}
+              <div className="rounded-full overflow-hidden border-2 border-gray-100 shadow-inner w-10 h-10 flex items-center justify-center bg-gray-50">
+                <Image 
+                  src="/logo.jpeg" 
+                  alt="Logo Desapego Piauí" 
+                  width={40}
+                  height={40}
+                  className="object-cover" // object-cover é essencial para imagens redondas
+                  priority
+                />
+              </div>
+              {/* Nome do Site em Roxo Escuro */}
+              <span className="text-primary font-extrabold text-xl tracking-tighter group-hover:text-primary-dark transition">
+                Desapego <span className="text-accent">Piauí</span>
               </span>
             </Link>
             
-            <div className="hidden sm:flex items-center gap-1 text-gray-500 hover:text-purple-600 cursor-pointer transition">
+            <div className="hidden sm:flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition ml-2">
               <MapPin size={18} />
-              <span className="text-sm font-bold">Teresina, PI</span>
+              <span className="text-sm font-medium">Teresina, PI</span>
             </div>
           </div>
 
-          {/* LADO DIREITO: Apenas visível no Desktop */}
+          {/* LADO DIREITO: Desktop */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/chat" className="text-gray-600 hover:text-purple-600 font-medium">Chat</Link>
-            <Link href="/favoritos" className="text-gray-600 hover:text-purple-600 font-medium">Favoritos</Link>
+            <Link href="/chat" className="text-gray-600 hover:text-primary font-medium transition">Chat</Link>
+            <Link href="/favoritos" className="text-gray-600 hover:text-primary font-medium transition">Favoritos</Link>
             
             {user ? (
               <div className="flex items-center gap-4">
-                {/* NOVO: Link para Meus Anúncios */}
-                <Link href="/meus-anuncios" className="text-gray-600 hover:text-purple-600 font-medium text-sm">Meus Anúncios</Link>
-                <Link href="/perfil" className="text-gray-600 hover:text-purple-600 font-medium text-sm">Minha Conta</Link>
-                <button onClick={handleLogout} className="text-red-500 font-bold text-sm">Sair</button>
+                <Link href="/meus-anuncios" className="text-gray-600 hover:text-primary font-medium text-sm transition">Meus Anúncios</Link>
+                <Link href="/perfil" className="text-gray-600 hover:text-primary font-medium text-sm transition">Minha Conta</Link>
+                <button onClick={handleLogout} className="text-red-500 hover:text-red-600 font-bold text-sm transition">Sair</button>
               </div>
             ) : (
-              <Link href="/login" className="text-purple-600 font-bold">Entrar</Link>
+              // Link Entrar em Roxo Escuro
+              <Link href="/login" className="text-primary hover:text-primary-dark font-bold transition">Entrar</Link>
             )}
 
+            {/* Botão Anunciar em Roxo Mais Claro */}
             <Link 
               href={user ? "/anunciar" : "/login"} 
-              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-bold transition-all shadow-md"
+              className="bg-accent hover:bg-accent-dark text-white px-6 py-2 rounded-full font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             >
               Anunciar
             </Link>
           </div>
 
-          {/* ICONES MOBILE (Sininho e Localização simplificada) */}
+          {/* ICONES MOBILE */}
           <div className="flex md:hidden items-center gap-4">
              <div className="flex items-center gap-1 text-gray-800 font-bold text-sm">
-                <MapPin size={18} className="text-purple-600" />
+                {/* Ícone de localização usando a cor de destaque */}
+                <MapPin size={18} className="text-accent" />
                 <span>Teresina</span>
              </div>
-             <button className="text-gray-500">
+             <button className="text-gray-500 hover:text-primary transition">
                 <Bell size={24} />
              </button>
           </div>

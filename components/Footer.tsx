@@ -9,12 +9,12 @@ export default function Footer() {
           
           {/* Coluna 1: Marca */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-4">Desapego <span className="text-purple-400">Piauí</span></h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Desapego <span className="text-accent">Piauí</span></h2>
             <p className="text-sm leading-relaxed mb-6">
               A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local.
             </p>
             <div className="flex gap-4">
-              <a href="https://instagram.com/desapegopiaui" className="bg-gray-800 p-2 rounded-full hover:bg-purple-600 transition text-white">
+              <a href="https://instagram.com/desapegopiaui" className="bg-gray-800 p-2 rounded-full hover:bg-accent transition text-white">
                 <Instagram size={20} />
               </a>
             </div>
@@ -22,17 +22,17 @@ export default function Footer() {
 
           {/* Coluna 2: Links */}
           <div>
-            <h3 className="text-white font-bold mb-4 border-l-4 border-purple-600 pl-3">Navegação</h3>
+            <h3 className="text-white font-bold mb-4 border-l-4 border-primary pl-3">Navegação</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/" className="hover:text-purple-400 transition">Início</Link></li>
-              <li><Link href="/todos-anuncios" className="hover:text-purple-400 transition">Anúncios</Link></li>
-              <li><Link href="/login" className="hover:text-purple-400 transition">Entrar / Cadastrar</Link></li>
+              <li><Link href="/" className="hover:text-accent transition">Início</Link></li>
+              <li><Link href="/todos-anuncios" className="hover:text-accent transition">Anúncios</Link></li>
+              <li><Link href="/login" className="hover:text-accent transition">Entrar / Cadastrar</Link></li>
             </ul>
           </div>
 
           {/* Coluna 3: Suporte */}
           <div>
-            <h3 className="text-white font-bold mb-4 border-l-4 border-purple-600 pl-3">Ajuda</h3>
+            <h3 className="text-white font-bold mb-4 border-l-4 border-primary pl-3">Ajuda</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="#" className="hover:text-white transition">Dicas de Segurança</Link></li>
               <li><Link href="#" className="hover:text-white transition">Termos de Uso</Link></li>
@@ -43,18 +43,18 @@ export default function Footer() {
 
           {/* Coluna 4: Contato */}
           <div>
-            <h3 className="text-white font-bold mb-4 border-l-4 border-purple-600 pl-3">Contato</h3>
+            <h3 className="text-white font-bold mb-4 border-l-4 border-primary pl-3">Contato</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
-                <MapPin className="text-purple-500 mt-1 shrink-0" size={16} />
+                <MapPin className="text-accent mt-1 shrink-0" size={16} />
                 <span>Teresina, Piauí, Brasil</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="text-purple-500 shrink-0" size={16} />
+                <Phone className="text-accent shrink-0" size={16} />
                 <a href="tel:5586988527230" className="hover:text-white">(86) 98852-7230</a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="text-purple-500 shrink-0" size={16} />
+                <Mail className="text-accent shrink-0" size={16} />
                 <a href="mailto:contato@desapegopiaui.com.br" className="hover:text-white">contato@desapegopiaui.com</a>
               </li>
             </ul>
