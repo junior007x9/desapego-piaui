@@ -1,37 +1,42 @@
-import './globals.css'
-import { Inter } from 'next/font/google'
-import Navbar from '@/components/Navbar'
-import BottomNav from '@/components/BottomNav'
-import Footer from '@/components/Footer' // IMPORTAMOS O FOOTER AQUI
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import BottomNav from '@/components/BottomNav';
 
-const inter = Inter({ subsets: ['latin'] })
+// Configurações de SEO e Título do Site
+export const metadata: Metadata = {
+  title: 'Desapego Piauí',
+  description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí.',
+};
 
-export const metadata = {
-  title: 'DesapegoPI - O maior marketplace do Piauí',
-  description: 'Compre e venda produtos novos e usados em Teresina e todo o Piauí.',
-}
+// É ESTA CONFIGURAÇÃO QUE CONSERTA A TELA NO CELULAR 👇
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-br">
-      <body className={inter.className}>
+    <html lang="pt-BR">
+      {/* O pb-16 no mobile é para o BottomNav não ficar por cima do conteúdo */}
+      <body className="bg-gray-50 text-gray-900 pb-16 md:pb-0 min-h-screen flex flex-col">
         <Navbar />
-        {/* pb-20 no mobile para dar espaço à BottomNav e md:pb-0 no desktop */}
-        <main className="min-h-screen">
+        
+        {/* Onde o conteúdo de cada página (Home, Anunciar, etc) vai aparecer */}
+        <main className="flex-grow">
           {children}
         </main>
         
-        {/* ADICIONAMOS O FOOTER AQUI, com padding inferior no mobile */}
-        <div className="pb-16 md:pb-0">
-          <Footer />
-        </div>
-        
+        <Footer />
         <BottomNav />
       </body>
     </html>
-  )
+  );
 }
