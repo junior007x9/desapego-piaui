@@ -22,7 +22,6 @@ export default function Navbar() {
   const handleLogout = async () => {
     if (window.confirm("Deseja sair da sua conta?")) {
       await signOut(auth);
-      alert("Você saiu com sucesso!");
       router.push('/');
     }
   };
@@ -30,36 +29,34 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        {/* Altura menor no mobile (h-14) e normal no PC (md:h-16) */}
+        <div className="flex justify-between h-14 md:h-16 items-center">
           
           {/* LADO ESQUERDO: Logo Redonda e Nome */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-3 group">
-              {/* Container para deixar a logo JPEG redonda */}
-              <div className="rounded-full overflow-hidden border-2 border-gray-100 shadow-inner w-10 h-10 flex items-center justify-center bg-gray-50">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
+              <div className="rounded-full overflow-hidden border border-gray-100 shadow-sm w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-gray-50">
                 <Image 
                   src="/logo.jpeg" 
-                  alt="Logo Desapego Piauí" 
+                  alt="Logo" 
                   width={40}
                   height={40}
-                  className="object-cover" // object-cover é essencial para imagens redondas
+                  className="object-cover"
                   priority
                 />
               </div>
-              {/* Nome do Site em Roxo Escuro */}
-              <span className="text-primary font-extrabold text-xl tracking-tighter group-hover:text-primary-dark transition">
+              <span className="text-primary font-extrabold text-lg md:text-xl tracking-tighter group-hover:text-primary-dark transition">
                 Desapego <span className="text-accent">Piauí</span>
               </span>
             </Link>
-            
-            <div className="hidden sm:flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition ml-2">
-              <MapPin size={18} />
-              <span className="text-sm font-medium">Teresina, PI</span>
-            </div>
           </div>
 
           {/* LADO DIREITO: Desktop */}
           <div className="hidden md:flex items-center space-x-6">
+            <div className="flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition mr-2">
+              <MapPin size={18} />
+              <span className="text-sm font-medium">Teresina, PI</span>
+            </div>
             <Link href="/chat" className="text-gray-600 hover:text-primary font-medium transition">Chat</Link>
             <Link href="/favoritos" className="text-gray-600 hover:text-primary font-medium transition">Favoritos</Link>
             
@@ -70,11 +67,9 @@ export default function Navbar() {
                 <button onClick={handleLogout} className="text-red-500 hover:text-red-600 font-bold text-sm transition">Sair</button>
               </div>
             ) : (
-              // Link Entrar em Roxo Escuro
               <Link href="/login" className="text-primary hover:text-primary-dark font-bold transition">Entrar</Link>
             )}
 
-            {/* Botão Anunciar em Roxo Mais Claro */}
             <Link 
               href={user ? "/anunciar" : "/login"} 
               className="bg-accent hover:bg-accent-dark text-white px-6 py-2 rounded-full font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
@@ -83,15 +78,14 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* ICONES MOBILE */}
-          <div className="flex md:hidden items-center gap-4">
-             <div className="flex items-center gap-1 text-gray-800 font-bold text-sm">
-                {/* Ícone de localização usando a cor de destaque */}
-                <MapPin size={18} className="text-accent" />
+          {/* ICONES MOBILE (Apenas localização curta e sino) */}
+          <div className="flex md:hidden items-center gap-3">
+             <div className="flex items-center gap-1 text-gray-800 font-bold text-xs bg-gray-100 px-2 py-1.5 rounded-full">
+                <MapPin size={14} className="text-accent" />
                 <span>Teresina</span>
              </div>
              <button className="text-gray-500 hover:text-primary transition">
-                <Bell size={24} />
+                <Bell size={20} />
              </button>
           </div>
 
