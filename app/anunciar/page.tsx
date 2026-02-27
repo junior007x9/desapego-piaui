@@ -8,8 +8,6 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// A CHAVE FOI REMOVIDA DAQUI POR SEGURANÇA! O CÓDIGO ESTÁ BLINDADO.
-
 const PLANOS = [
   { id: 0, nome: 'Grátis (Teste)', dias: 1, valor: 0, desc: 'Publicação imediata sem custo' },
   { id: 5, nome: 'Teste PIX', dias: 1, valor: 1, desc: 'Apenas para testar o PIX 1 real' },
@@ -63,15 +61,21 @@ export default function AnunciarPage() {
     try {
       const urls: string[] = []
       
-      // COMUNICAÇÃO SEGURA COM NOSSA API INTERNA (A CHAVE NÃO VAZA)
+      // COMUNICAÇÃO SEGURA COM NOSSA API INTERNA
       if (fotos.length > 0) {
+        // Gera o token de segurança do utilizador logado no Firebase
+        const idToken = await user.getIdToken();
+
         for (const foto of fotos) {
           const formData = new FormData()
           formData.append('image', foto)
 
-          // Chama a nossa própria API, que fará a ponte segura com o ImgBB
+          // Agora enviamos a foto COM o token de segurança no "Header"
           const response = await fetch('/api/upload', {
             method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${idToken}`
+            },
             body: formData,
           })
 
@@ -81,7 +85,7 @@ export default function AnunciarPage() {
             urls.push(data.data.url) 
           } else {
             console.error("Erro no upload seguro:", data)
-            alert("Erro ao enviar uma das fotos.")
+            alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
           }
         }
       }
