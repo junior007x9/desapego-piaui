@@ -10,13 +10,47 @@ import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  
+  // Novos estados para a localização dinâmica
+  const [locFull, setLocFull] = useState('Carregando...');
+  const [locShort, setLocShort] = useState('...');
+  
   const router = useRouter();
 
+  // Verifica se o usuário está logado
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
+  }, []);
+
+  // MÁGICA: Pega a localização automaticamente pela internet do usuário (Sem pedir permissão)
+  useEffect(() => {
+    async function fetchLocation() {
+      try {
+        const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
+        const data = await res.json();
+        
+        const city = data.city || data.locality || 'Teresina';
+        let state = 'PI';
+        
+        // Formata o estado (Ex: tira o "BR-" de "BR-SP" e deixa só "SP")
+        if (data.principalSubdivisionCode && data.principalSubdivisionCode.includes('-')) {
+          state = data.principalSubdivisionCode.split('-')[1]; 
+        } else if (data.principalSubdivision) {
+          state = data.principalSubdivision.substring(0, 2).toUpperCase();
+        }
+
+        setLocFull(`${city}, ${state}`);
+        setLocShort(city);
+      } catch (error) {
+        console.error("Erro de localização:", error);
+        setLocFull('Teresina, PI');
+        setLocShort('Teresina');
+      }
+    }
+    fetchLocation();
   }, []);
 
   const handleLogout = async () => {
@@ -29,7 +63,6 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Altura menor no mobile (h-14) e normal no PC (md:h-16) */}
         <div className="flex justify-between h-14 md:h-16 items-center">
           
           {/* LADO ESQUERDO: Logo Redonda e Nome */}
@@ -55,7 +88,8 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-6">
             <div className="flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition mr-2">
               <MapPin size={18} />
-              <span className="text-sm font-medium">Teresina, PI</span>
+              {/* Localização Dinâmica Desktop */}
+              <span className="text-sm font-medium">{locFull}</span>
             </div>
             <Link href="/chat" className="text-gray-600 hover:text-primary font-medium transition">Chat</Link>
             <Link href="/favoritos" className="text-gray-600 hover:text-primary font-medium transition">Favoritos</Link>
@@ -78,11 +112,12 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* ICONES MOBILE (Apenas localização curta e sino) */}
+          {/* ICONES MOBILE */}
           <div className="flex md:hidden items-center gap-3">
              <div className="flex items-center gap-1 text-gray-800 font-bold text-xs bg-gray-100 px-2 py-1.5 rounded-full">
                 <MapPin size={14} className="text-accent" />
-                <span>Teresina</span>
+                {/* Localização Dinâmica Mobile */}
+                <span className="truncate max-w-[100px]">{locShort}</span>
              </div>
              <button className="text-gray-500 hover:text-primary transition">
                 <Bell size={20} />

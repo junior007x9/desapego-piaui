@@ -18,7 +18,22 @@ const CATEGORIAS_OLX = [
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
   const [busca, setBusca] = useState('')
+  const [userCity, setUserCity] = useState('sua região') // Estado da cidade
   const router = useRouter()
+
+  // MÁGICA: Pega a cidade para exibir nas buscas e anúncios
+  useEffect(() => {
+    async function fetchCity() {
+      try {
+        const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
+        const data = await res.json();
+        setUserCity(data.city || data.locality || 'Teresina');
+      } catch (error) {
+        setUserCity('Teresina');
+      }
+    }
+    fetchCity();
+  }, []);
 
   useEffect(() => {
     async function fetchRecentAds() {
@@ -45,14 +60,15 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen">
       
-      {/* BARRA DE BUSCA - Compacta no Mobile, Banner no PC */}
+      {/* BARRA DE BUSCA */}
       <div className="bg-white md:bg-primary px-4 py-3 md:py-10 border-b md:border-none shadow-sm md:shadow-none">
         <div className="container mx-auto max-w-4xl text-center">
           <h1 className="hidden md:block text-white text-3xl md:text-4xl font-black mb-6">O que você está procurando hoje?</h1>
           <form onSubmit={handleSearch} className="relative">
             <input 
               type="text" 
-              placeholder="Buscar em Teresina e região..." 
+              // AQUI MUDA O TEXTO DO PLACEHOLDER DINAMICAMENTE
+              placeholder={`Buscar em ${userCity}...`} 
               className="w-full p-3 md:p-5 bg-gray-100 md:bg-white rounded-full md:shadow-xl outline-none text-base pl-12 md:pl-14 text-gray-800 focus:ring-2 focus:ring-accent md:focus:ring-primary transition-all"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
@@ -65,7 +81,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CATEGORIAS - Layout App Mobile (Icones Redondos) */}
+      {/* CATEGORIAS */}
       <div className="bg-white pb-6 pt-4 w-full">
         <div className="container mx-auto px-2">
           <div className="flex overflow-x-auto gap-3 md:gap-6 px-2 no-scrollbar items-start md:justify-center">
@@ -81,17 +97,17 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ANÚNCIOS RECENTES - Grade justinha no mobile */}
+      {/* ANÚNCIOS RECENTES */}
       <div className="container mx-auto px-3 md:px-4 py-6 md:py-12">
         <div className="flex justify-between items-end mb-4 md:mb-8 px-1">
-          <h2 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight">Destaques</h2>
+          {/* AQUI MUDA O TÍTULO DINAMICAMENTE */}
+          <h2 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight">Destaques em {userCity}</h2>
           <Link href="/todos-anuncios" className="text-accent text-sm md:text-base font-bold hover:underline">Ver todos</Link>
         </div>
 
         {ads.length === 0 ? (
           <div className="text-center py-10 text-gray-500 text-sm">Nenhum anúncio encontrado.</div>
         ) : (
-          /* NO MOBILE: grid-cols-2 com gap-3 (bem perto, estilo OLX). NO PC: gap-6 */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => (
               <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group bg-white rounded-xl border border-gray-100 hover:shadow-lg transition overflow-hidden flex flex-col shadow-sm">
@@ -105,7 +121,8 @@ export default function Home() {
                   </p>
                   <div className="mt-auto pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-bold tracking-wider">
                     <span>Hoje</span>
-                    <span className="flex items-center gap-0.5"><MapPin size={10} className="text-accent"/> Teresina</span>
+                    {/* AQUI MOSTRA A CIDADE NO ANÚNCIO DINAMICAMENTE */}
+                    <span className="flex items-center gap-0.5"><MapPin size={10} className="text-accent"/> {userCity}</span>
                   </div>
                 </div>
               </Link>
