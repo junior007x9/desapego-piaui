@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-// Note que removemos o 'storage' do firebase, pois não vamos mais usá-lo
 import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -9,10 +8,8 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// ==========================================
-// COLOQUE SUA CHAVE DA API DO IMGBB AQUI 👇
+// Sua chave do ImgBB
 const IMGBB_API_KEY = "db69b335530d34d718f02776197a7d91" 
-// ==========================================
 
 const PLANOS = [
   { id: 0, nome: 'Grátis (Teste)', dias: 1, valor: 0, desc: 'Publicação imediata sem custo' },
@@ -63,16 +60,10 @@ export default function AnunciarPage() {
     e.preventDefault()
     if (isFormIncompleto) return
 
-    if (IMGBB_API_KEY === "COLOQUE_SUA_CHAVE_AQUI" && fotos.length > 0) {
-        alert("Por favor, adicione sua chave da API do ImgBB no código para enviar fotos!");
-        return;
-    }
-
     setLoading(true)
     try {
       const urls: string[] = []
       
-      // NOVA LÓGICA DE UPLOAD USANDO IMGBB (Bypass do Firebase Storage)
       if (fotos.length > 0) {
         for (const foto of fotos) {
           const formData = new FormData()
@@ -86,7 +77,7 @@ export default function AnunciarPage() {
           const data = await response.json()
           
           if (data.success) {
-            urls.push(data.data.url) // Pega a URL direta da imagem
+            urls.push(data.data.url) 
           } else {
             console.error("Erro no upload do ImgBB:", data)
             alert("Erro ao enviar uma das fotos.")
@@ -99,7 +90,7 @@ export default function AnunciarPage() {
         descricao,
         preco: parseFloat(preco.replace(',', '.')),
         categoria,
-        fotos: urls, // Salva as URLs do ImgBB no Firebase
+        fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
         status: 'pendente',
