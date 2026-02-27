@@ -1,42 +1,46 @@
-import type { Metadata, Viewport } from 'next';
-import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import BottomNav from '@/components/BottomNav';
+import type { Viewport } from 'next'
+import './globals.css'
+import { Inter } from 'next/font/google'
+import Navbar from '@/components/Navbar'
+import BottomNav from '@/components/BottomNav'
+import Footer from '@/components/Footer'
 
-// Configurações de SEO e Título do Site
-export const metadata: Metadata = {
-  title: 'Desapego Piauí',
-  description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí.',
-};
+const inter = Inter({ subsets: ['latin'] })
 
-// É ESTA CONFIGURAÇÃO QUE CONSERTA A TELA NO CELULAR 👇
+export const metadata = {
+  title: 'DesapegoPI - O maior marketplace do Piauí',
+  description: 'Compre e venda produtos novos e usados em Teresina e todo o Piauí.',
+}
+
+// A MÁGICA PARA O CELULAR LER O TAMANHO CERTO É ESTA:
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-};
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR">
-      {/* O pb-16 no mobile é para o BottomNav não ficar por cima do conteúdo */}
-      <body className="bg-gray-50 text-gray-900 pb-16 md:pb-0 min-h-screen flex flex-col">
+    <html lang="pt-br">
+      <body className={`${inter.className} bg-gray-50`}>
         <Navbar />
-        
-        {/* Onde o conteúdo de cada página (Home, Anunciar, etc) vai aparecer */}
-        <main className="flex-grow">
+        {/* main ocupa o mínimo da tela inteira */}
+        <main className="min-h-screen pb-16 md:pb-0">
           {children}
         </main>
         
-        <Footer />
+        <div className="pb-16 md:pb-0">
+          <Footer />
+        </div>
+        
+        {/* O menu de celular */}
         <BottomNav />
       </body>
     </html>
-  );
+  )
 }
