@@ -3,16 +3,14 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
-import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle, Sparkles } from 'lucide-react'
+import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
 
-// PLANOS ATUALIZADOS COM O GRÁTIS
+// PLANOS ATUALIZADOS PARA O MODELO PAGO
 const PLANOS = [
-  { id: 0, nome: 'Grátis (Teste)', dias: 1, valor: 0, fotos: 3, desc: 'Publicação imediata sem custo' },
-  { id: 5, nome: 'Teste PIX', dias: 1, valor: 1, fotos: 3, desc: 'Apenas para testar o PIX 1 real' },
-  { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 3, desc: 'Rápido e barato' },
-  { id: 2, nome: 'Semanal', dias: 7, valor: 60, fotos: 5, desc: 'Ideal para maioria' },
-  { id: 3, nome: 'Quinzenal', dias: 15, valor: 160, fotos: 10, desc: 'Mais visibilidade' },
-  { id: 4, nome: 'Mensal', dias: 30, valor: 300, fotos: 20, desc: 'Venda profissional' }
+  { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 10, desc: '1 dia de destaque' },
+  { id: 2, nome: 'Semanal', dias: 7, valor: 65, fotos: 10, desc: '7 dias de destaque' },
+  { id: 3, nome: 'Quinzenal', dias: 15, valor: 140, fotos: 10, desc: '15 dias de destaque' },
+  { id: 4, nome: 'Mensal', dias: 30, valor: 280, fotos: 10, desc: '30 dias de destaque' }
 ];
 
 export default function PagamentoPage() {
@@ -42,29 +40,9 @@ export default function PagamentoPage() {
         const anuncio: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(anuncio)
 
-        const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
+        // Encontra o plano escolhido. Se não achar, usa o Diário como fallback de segurança.
+        const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[0];
         setPlano(planoEscolhido)
-
-        // SE O PLANO FOR GRÁTIS, APROVA AUTOMATICAMENTE E PULA O PIX
-        if (planoEscolhido.valor === 0) {
-           const dias = planoEscolhido.dias || 1;
-           const dataExp = new Date();
-           dataExp.setDate(dataExp.getDate() + dias);
-           
-           await updateDoc(adDocRef, {
-             status: 'ativo',
-             expiraEm: dataExp.toISOString(),
-             pagoEm: new Date().toISOString()
-           });
-           
-           setPagamentoAprovado(true);
-           setLoading(false);
-           
-           setTimeout(() => {
-             router.push(`/anuncio/${params.id}`);
-           }, 3000);
-           return;
-        }
 
         let emailComprador = 'comprador@desapegopiaui.com.br';
         if (anuncio.vendedorId) {
@@ -98,7 +76,7 @@ export default function PagamentoPage() {
 
           try {
             const adRef = doc(db, 'anuncios', params.id as string);
-            const dias = plano?.dias || 30;
+            const dias = plano?.dias || 1;
             const dataExp = new Date();
             dataExp.setDate(dataExp.getDate() + dias);
             
@@ -160,13 +138,9 @@ export default function PagamentoPage() {
   if (pagamentoAprovado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
-        {plano?.valor === 0 ? (
-           <Sparkles className="text-primary mb-6 animate-pulse" size={80} />
-        ) : (
-           <CheckCircle className="text-green-500 mb-6 animate-bounce" size={80} />
-        )}
+         <CheckCircle className="text-green-500 mb-6 animate-bounce" size={80} />
         <h1 className="text-3xl md:text-4xl font-black text-green-700 mb-3 tracking-tight">
-          {plano?.valor === 0 ? 'Anúncio Publicado!' : 'Pagamento Aprovado!'}
+          Pagamento Aprovado!
         </h1>
         <p className="text-green-600 font-medium text-lg">O seu anúncio já está online. Redirecionando para ver o resultado...</p>
       </div>
