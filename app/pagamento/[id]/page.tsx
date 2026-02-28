@@ -161,56 +161,59 @@ export default function PagamentoPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
         {plano?.valor === 0 ? (
-           <Sparkles className="text-primary mb-4" size={80} />
+           <Sparkles className="text-primary mb-6 animate-pulse" size={80} />
         ) : (
-           <CheckCircle className="text-green-500 mb-4" size={80} />
+           <CheckCircle className="text-green-500 mb-6 animate-bounce" size={80} />
         )}
-        <h1 className="text-3xl font-black text-green-700 mb-2">
+        <h1 className="text-3xl md:text-4xl font-black text-green-700 mb-3 tracking-tight">
           {plano?.valor === 0 ? 'Anúncio Publicado!' : 'Pagamento Aprovado!'}
         </h1>
-        <p className="text-green-600 font-medium">O seu anúncio já está online. Redirecionando para ver o resultado...</p>
+        <p className="text-green-600 font-medium text-lg">O seu anúncio já está online. Redirecionando para ver o resultado...</p>
       </div>
     )
   }
 
   if (loading && !paymentData && !erroPagamento) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-primary bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center text-primary bg-gray-50 flex-col gap-4">
         <Loader2 className="animate-spin" size={48}/>
+        <p className="font-bold text-lg animate-pulse">Gerando QR Code PIX...</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <div className="bg-primary p-6 text-center text-white relative overflow-hidden">
+    <div className="bg-gray-50 min-h-screen py-8 md:py-10 px-4 pb-24 md:pb-10">
+      <div className="max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 relative">
+        
+        {/* CABEÇALHO ROXO ESCURO */}
+        <div className="bg-primary p-8 text-center text-white relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-          <h1 className="text-2xl font-bold mb-2 relative z-10">Pagamento via PIX</h1>
-          <p className="opacity-90 relative z-10">Escaneie o QR Code ou use o Pix Copia e Cola.</p>
+          <h1 className="text-2xl font-black mb-2 relative z-10 tracking-tight">Pagamento via PIX</h1>
+          <p className="opacity-90 relative z-10 font-medium">Escaneie o QR Code ou use o Copia e Cola.</p>
         </div>
 
-        <div className="p-8 space-y-6">
+        <div className="p-6 md:p-8 space-y-6">
           <div className="text-center">
-            <p className="text-gray-500 mb-1 font-medium">Valor a pagar</p>
-            <p className="text-4xl font-extrabold text-green-600">
+            <p className="text-gray-500 mb-1 font-bold uppercase tracking-wider text-xs">Valor a pagar</p>
+            <p className="text-4xl md:text-5xl font-black text-green-600 tracking-tighter">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plano?.valor || 0)}
             </p>
-            <p className="text-sm text-primary font-bold mt-2 bg-primary/10 inline-block px-3 py-1 rounded-full">
+            <p className="text-xs text-primary font-black uppercase tracking-wider mt-3 bg-primary/10 inline-block px-4 py-1.5 rounded-full border border-primary/20">
               Plano {plano?.nome}
             </p>
           </div>
 
           {erroPagamento ? (
             <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center flex flex-col items-center">
-               <AlertTriangle size={40} className="mb-3 text-red-500" />
-               <h3 className="font-bold text-lg">Erro ao gerar PIX</h3>
-               <p className="text-sm mt-2">Verifique se o seu Token do Mercado Pago está correto.</p>
+               <AlertTriangle size={48} className="mb-4 text-red-500" strokeWidth={2.5} />
+               <h3 className="font-black text-xl mb-2">Erro ao gerar PIX</h3>
+               <p className="text-sm font-medium">Verifique se o seu Token do Mercado Pago está correto.</p>
             </div>
           ) : (
             <>
               <div className="flex justify-center my-6">
-                <div className="border-4 border-gray-50 p-3 rounded-2xl shadow-sm">
+                <div className="border-4 border-gray-50 p-4 rounded-[2rem] shadow-inner bg-white">
                   {paymentData?.qr_code_base64?.startsWith('http') ? (
                     <img src={paymentData.qr_code_base64} alt="QR Code" className="w-48 h-48 object-cover rounded-xl" />
                   ) : (
@@ -219,33 +222,33 @@ export default function PagamentoPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Pix Copia e Cola</label>
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-3 ml-1">Pix Copia e Cola</label>
                 <div className="flex gap-2">
                   <input 
                     readOnly 
                     value={paymentData?.qr_code || ''} 
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-500 truncate focus:outline-none"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500 truncate focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   />
                   {/* Botão Copiar em Roxo Claro (accent) */}
                   <button 
                     onClick={copyToClipboard}
-                    className="bg-accent hover:bg-accent-dark text-white p-3 rounded-xl transition shadow-sm"
+                    className={`${copied ? 'bg-green-500' : 'bg-accent hover:bg-accent-dark'} text-white p-3.5 rounded-xl transition-all shadow-sm transform active:scale-95`}
                   >
-                    {copied ? <CheckCircle size={20} /> : <Copy size={20} />}
+                    {copied ? <CheckCircle size={20} strokeWidth={2.5}/> : <Copy size={20} strokeWidth={2.5}/>}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 text-sm text-primary bg-primary/5 border border-primary/20 font-bold p-4 rounded-xl">
-                <Loader2 className="animate-spin text-primary" size={20} />
-                Aguardando a confirmação do pagamento...
+              <div className="flex items-center justify-center gap-3 text-sm text-primary bg-primary/5 border border-primary/20 font-bold p-4 rounded-2xl shadow-sm">
+                <Loader2 className="animate-spin text-primary shrink-0" size={20} />
+                Aguardando a confirmação...
               </div>
             </>
           )}
           
-          <button onClick={() => router.back()} className="w-full text-gray-500 font-medium text-sm hover:text-primary transition flex items-center justify-center gap-1 mt-4">
-             <ArrowLeft size={16} /> Voltar
+          <button onClick={() => router.back()} className="w-full text-gray-400 font-bold text-sm hover:text-primary transition-colors flex items-center justify-center gap-1.5 mt-8 pb-2">
+             <ArrowLeft size={16} strokeWidth={2.5} /> Voltar para o início
           </button>
         </div>
       </div>
