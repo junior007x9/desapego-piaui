@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Plus, MessageCircle, User } from 'lucide-react';
+import { Home, Plus, MessageCircle, User, ShoppingBag } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -38,9 +38,10 @@ export default function BottomNav() {
     };
   }, []);
 
+  // Substituímos o "Buscar" pelo "Meus Anúncios" para manter os 5 itens perfeitos no telemóvel
   const navItems = [
     { label: 'Início', icon: Home, href: '/' },
-    { label: 'Buscar', icon: Search, href: '/todos-anuncios' },
+    { label: 'Anúncios', icon: ShoppingBag, href: user ? '/meus-anuncios' : '/login' },
     { label: 'Anunciar', icon: Plus, href: user ? '/anunciar' : '/login', special: true },
     { label: 'Chat', icon: MessageCircle, href: '/chat', badge: hasUnread },
     { label: 'Conta', icon: User, href: '/perfil' },
