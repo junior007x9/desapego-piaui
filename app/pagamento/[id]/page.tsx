@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
-import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle, Sparkles } from 'lucide-react'
 
-// PLANOS ATUALIZADOS PARA O MODELO PAGO
+// PLANOS (Inclui o Grátis oculto para validação do ID 0)
 const PLANOS = [
+  { id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, fotos: 10, desc: 'Teste de 24 horas' },
   { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 10, desc: '1 dia de destaque' },
   { id: 2, nome: 'Semanal', dias: 7, valor: 65, fotos: 10, desc: '7 dias de destaque' },
   { id: 3, nome: 'Quinzenal', dias: 15, valor: 140, fotos: 10, desc: '15 dias de destaque' },
@@ -40,9 +41,29 @@ export default function PagamentoPage() {
         const anuncio: any = { id: adSnapshot.id, ...adSnapshot.data() };
         setAd(anuncio)
 
-        // Encontra o plano escolhido. Se não achar, usa o Diário como fallback de segurança.
-        const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[0];
+        const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
         setPlano(planoEscolhido)
+
+        // SE O PLANO FOR O BRINDE, APROVA AUTOMATICAMENTE E PULA O PIX
+        if (planoEscolhido.valor === 0) {
+           const dias = planoEscolhido.dias || 1;
+           const dataExp = new Date();
+           dataExp.setDate(dataExp.getDate() + dias); // Válido por exatamente 24 horas (1 dia)
+           
+           await updateDoc(adDocRef, {
+             status: 'ativo',
+             expiraEm: dataExp.toISOString(),
+             pagoEm: new Date().toISOString()
+           });
+           
+           setPagamentoAprovado(true);
+           setLoading(false);
+           
+           setTimeout(() => {
+             router.push(`/anuncio/${params.id}`);
+           }, 3000);
+           return;
+        }
 
         let emailComprador = 'comprador@desapegopiaui.com.br';
         if (anuncio.vendedorId) {
@@ -138,9 +159,13 @@ export default function PagamentoPage() {
   if (pagamentoAprovado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
-         <CheckCircle className="text-green-500 mb-6 animate-bounce" size={80} />
+        {plano?.valor === 0 ? (
+           <Sparkles className="text-primary mb-6 animate-pulse" size={80} />
+        ) : (
+           <CheckCircle className="text-green-500 mb-6 animate-bounce" size={80} />
+        )}
         <h1 className="text-3xl md:text-4xl font-black text-green-700 mb-3 tracking-tight">
-          Pagamento Aprovado!
+          {plano?.valor === 0 ? 'Plano Grátis Ativado!' : 'Pagamento Aprovado!'}
         </h1>
         <p className="text-green-600 font-medium text-lg">O seu anúncio já está online. Redirecionando para ver o resultado...</p>
       </div>
@@ -151,7 +176,7 @@ export default function PagamentoPage() {
     return (
       <div className="min-h-screen flex items-center justify-center text-primary bg-gray-50 flex-col gap-4">
         <Loader2 className="animate-spin" size={48}/>
-        <p className="font-bold text-lg animate-pulse">Gerando QR Code PIX...</p>
+        <p className="font-bold text-lg animate-pulse">Preparando seu anúncio...</p>
       </div>
     )
   }
@@ -204,7 +229,6 @@ export default function PagamentoPage() {
                     value={paymentData?.qr_code || ''} 
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500 truncate focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   />
-                  {/* Botão Copiar em Roxo Claro (accent) */}
                   <button 
                     onClick={copyToClipboard}
                     className={`${copied ? 'bg-green-500' : 'bg-accent hover:bg-accent-dark'} text-white p-3.5 rounded-xl transition-all shadow-sm transform active:scale-95`}

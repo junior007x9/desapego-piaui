@@ -1,15 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// NOVOS PLANOS ATUALIZADOS
-const PLANOS = [
+// PLANOS PAGOS PADRÃO
+const PLANOS_BASE = [
   { id: 1, nome: 'Diário', dias: 1, valor: 10, desc: '1 dia de destaque' },
   { id: 2, nome: 'Semanal', dias: 7, valor: 65, desc: '7 dias de destaque' },
   { id: 3, nome: 'Quinzenal', dias: 15, valor: 140, desc: '15 dias de destaque' },
@@ -24,25 +24,53 @@ export default function AnunciarPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [planoId, setPlanoId] = useState<number | null>(null)
+  
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [jaUsouGratis, setJaUsouGratis] = useState(true) // Começa como true por segurança
+  
   const router = useRouter()
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (!u) router.push('/login')
-      else setUser(u)
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        router.push('/login')
+      } else {
+        setUser(u)
+        
+        // VERIFICAÇÃO ANTI-FRAUDE DUPLA
+        try {
+           const userDoc = await getDoc(doc(db, 'users', u.uid))
+           const userData = userDoc.data()
+           
+           const usouNoBanco = userData?.jaUsouAnuncioGratis === true
+           const usouNoAparelho = localStorage.getItem('device_used_free_ad') === 'true'
+
+           // Se ele já usou em alguma das duas verificações, bloqueia o brinde
+           if (usouNoBanco || usouNoAparelho) {
+             setJaUsouGratis(true)
+           } else {
+             setJaUsouGratis(false)
+           }
+        } catch (error) {
+           console.error("Erro ao verificar status do usuário", error)
+        }
+      }
     })
     return () => unsubscribe()
   }, [router])
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
 
+  // Monta a lista de planos de acordo com o direito ao brinde
+  const planosDisponiveis = jaUsouGratis 
+    ? PLANOS_BASE 
+    : [{ id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, desc: 'Teste de 24 horas!' }, ...PLANOS_BASE];
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
       
-      // TRAVA DE SEGURANÇA: Limite de 10 fotos
       if (fotos.length + selectedFiles.length > 10) {
         alert("Você pode adicionar no máximo 10 fotos por anúncio.")
         return
@@ -67,7 +95,6 @@ export default function AnunciarPage() {
     try {
       const urls: string[] = []
       
-      // COMUNICAÇÃO SEGURA COM NOSSA API INTERNA
       if (fotos.length > 0) {
         const idToken = await user.getIdToken();
 
@@ -77,9 +104,7 @@ export default function AnunciarPage() {
 
           const response = await fetch('/api/upload', {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            },
+            headers: { 'Authorization': `Bearer ${idToken}` },
             body: formData,
           })
 
@@ -94,6 +119,12 @@ export default function AnunciarPage() {
         }
       }
 
+      // Se escolheu o plano grátis (ID 0), aplicamos a marcação Anti-Fraude
+      if (planoId === 0) {
+        await updateDoc(doc(db, 'users', user.uid), { jaUsouAnuncioGratis: true });
+        localStorage.setItem('device_used_free_ad', 'true');
+      }
+
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
@@ -102,7 +133,7 @@ export default function AnunciarPage() {
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
-        status: 'pendente',
+        status: 'pendente', // A página de pagamento se encarrega de ativar se for 0,00
         planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp()
@@ -174,21 +205,27 @@ export default function AnunciarPage() {
           <div className="pt-6 border-t border-gray-100">
              <label className="block text-primary font-black text-xl mb-4">Escolha um Plano para destacar*</label>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               {PLANOS.map((p) => (
+               {planosDisponiveis.map((p) => (
                  <div 
                     key={p.id}
                     onClick={() => setPlanoId(p.id)}
-                    className={`cursor-pointer border-2 rounded-2xl p-4 transition-all ${planoId === p.id ? 'border-primary bg-primary/5 shadow-md scale-[1.02]' : 'border-gray-100 hover:border-primary/30 bg-gray-50'}`}
+                    className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? 'border-primary bg-primary/5 shadow-md scale-[1.02]' : 'border-gray-100 hover:border-primary/30 bg-gray-50'}`}
                  >
+                    {/* Selo especial para o plano grátis */}
+                    {p.valor === 0 && (
+                      <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                        <Gift size={12}/> Presente
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-2">
-                       <h3 className="font-bold text-gray-800">{p.nome}</h3>
-                       {planoId === p.id && <CheckCircle className="text-primary" size={20}/>}
+                       <h3 className={`font-bold ${p.valor === 0 ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
+                       {planoId === p.id && <CheckCircle className={p.valor === 0 ? 'text-green-600' : 'text-primary'} size={20}/>}
                     </div>
-                    <p className="text-2xl font-black text-green-600 mb-1">
-                      R$ {p.valor.toFixed(2).replace('.', ',')}
+                    <p className={`text-2xl font-black mb-1 ${p.valor === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                      {p.valor === 0 ? 'Grátis' : `R$ ${p.valor.toFixed(2).replace('.', ',')}`}
                     </p>
-                    <p className="text-sm text-gray-500 font-medium">{p.dias} dias ativo</p>
-                    <p className="text-xs text-primary font-bold mt-2 bg-white inline-block px-2 py-1 rounded-md border border-gray-200">Até 10 fotos</p>
+                    <p className="text-sm text-gray-500 font-medium">{p.desc}</p>
                  </div>
                ))}
              </div>
@@ -201,7 +238,7 @@ export default function AnunciarPage() {
               className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all flex items-center justify-center gap-3 transform
                 ${isFormIncompleto ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent hover:bg-accent-dark text-white hover:-translate-y-0.5'}`}
             >
-              {loading ? <Loader2 className="animate-spin" /> : 'IR PARA PAGAMENTO'}
+              {loading ? <Loader2 className="animate-spin" /> : 'PUBLICAR ANÚNCIO'}
             </button>
             
             {isFormIncompleto && (
