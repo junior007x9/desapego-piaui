@@ -18,9 +18,9 @@ function ChatConteudo() {
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loadingChats, setLoadingChats] = useState(true)
+  const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // 1. Verificar Login
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
@@ -32,7 +32,6 @@ function ChatConteudo() {
     return () => unsubscribe()
   }, [router])
 
-  // 2. Carregar Lista de Chats (Em tempo real com ordenação local)
   useEffect(() => {
     if (!user) return
 
@@ -47,7 +46,6 @@ function ChatConteudo() {
         listaChats.push({ id: doc.id, ...doc.data() })
       })
       
-      // Ordenamos os chats aqui no navegador (do mais recente para o mais antigo)
       listaChats.sort((a, b) => {
         const timeA = a.atualizadoEm?.seconds || 0;
         const timeB = b.atualizadoEm?.seconds || 0;
@@ -61,11 +59,9 @@ function ChatConteudo() {
     return () => unsubscribe()
   }, [user])
 
-  // 3. Carregar Mensagens do Chat Ativo & Marcar como Lido
   useEffect(() => {
     if (!user || !activeChatId) return
 
-    // Marcar como lido ao abrir o chat
     const chatAtual = chats.find(c => c.id === activeChatId)
     if (chatAtual && chatAtual.ultimoRemetenteId !== user.uid && chatAtual.lido === false) {
       updateDoc(doc(db, 'chats', activeChatId), { lido: true }).catch(console.error)
@@ -83,7 +79,6 @@ function ChatConteudo() {
       })
       setMessages(listaMensagens)
       
-      // Fazer scroll para o fim quando chegam novas mensagens
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
@@ -92,23 +87,21 @@ function ChatConteudo() {
     return () => unsubscribe()
   }, [activeChatId, user, chats])
 
-  // 4. Enviar nova mensagem
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || !user || !activeChatId) return
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!newMessage.trim() || !user || !activeChatId || isSending) return
 
     const text = newMessage.trim()
-    setNewMessage('') // Limpa o input imediatamente
+    setNewMessage('') 
+    setIsSending(true)
 
     try {
-      // Adiciona a mensagem na subcoleção
       await addDoc(collection(db, `chats/${activeChatId}/mensagens`), {
         texto: text,
         remetenteId: user.uid,
         criadoEm: serverTimestamp()
       })
 
-      // Atualiza o documento principal do chat (Gatilho da Bolinha Vermelha!)
       await updateDoc(doc(db, 'chats', activeChatId), {
         ultimaMensagem: text,
         ultimoRemetenteId: user.uid,
@@ -117,14 +110,14 @@ function ChatConteudo() {
       })
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error)
-      alert("Erro ao enviar. Tente novamente.")
+      alert("Falha ao enviar mensagem. Se o erro persistir, verifique as regras do Firebase Firestore.")
+    } finally {
+      setIsSending(false)
     }
   }
 
-  // Obter detalhes do chat ativo para o cabeçalho
   const activeChatDetails = chats.find(c => c.id === activeChatId)
   
-  // Encontrar o nome do outro participante
   const getOtherParticipantName = (chat: any) => {
     if (!chat || !user) return 'Usuário'
     const otherId = chat.participantes.find((id: string) => id !== user.uid)
@@ -136,11 +129,10 @@ function ChatConteudo() {
   }
 
   return (
-    // Altura calculada para encaixar perfeitamente entre o Header e o BottomNav
     <div className="bg-gray-50 h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] overflow-hidden">
       <div className="max-w-6xl mx-auto h-full flex shadow-sm border-x border-gray-200 bg-white">
         
-        {/* --- BARRA LATERAL (LISTA DE CHATS) --- */}
+        {/* BARRA LATERAL */}
         <div className={`w-full md:w-1/3 flex flex-col border-r border-gray-100 ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 bg-gray-50 border-b border-gray-200">
             <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
@@ -180,7 +172,7 @@ function ChatConteudo() {
           </div>
         </div>
 
-        {/* --- ÁREA DE MENSAGENS (DIREITA) --- */}
+        {/* ÁREA DE MENSAGENS */}
         <div className={`w-full md:w-2/3 flex flex-col bg-slate-50 relative ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
           {!activeChatId ? (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -189,7 +181,7 @@ function ChatConteudo() {
             </div>
           ) : (
             <>
-              {/* CABEÇALHO DO CHAT */}
+              {/* CABEÇALHO */}
               <div className="h-16 bg-white border-b border-gray-200 flex items-center px-4 justify-between shadow-sm z-10">
                 <div className="flex items-center gap-3">
                   <Link href="/chat" className="md:hidden p-2 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-full transition">
@@ -211,7 +203,7 @@ function ChatConteudo() {
                 )}
               </div>
 
-              {/* LISTA DE MENSAGENS */}
+              {/* LISTA */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/90 bg-blend-overlay">
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-400 mt-10 text-sm bg-white py-2 px-4 rounded-full w-fit mx-auto shadow-sm border border-gray-100 font-medium">
@@ -235,7 +227,7 @@ function ChatConteudo() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* INPUT DE MENSAGEM */}
+              {/* INPUT */}
               <form onSubmit={handleSendMessage} className="bg-white p-3 border-t border-gray-200 flex gap-2 items-end">
                 <textarea
                   value={newMessage}
@@ -244,31 +236,28 @@ function ChatConteudo() {
                   className="flex-1 max-h-32 min-h-[48px] bg-gray-100 border border-transparent focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 resize-none outline-none transition text-sm md:text-base scrollbar-hide"
                   rows={1}
                   onKeyDown={(e) => {
-                    // Envia com Enter (sem shift) no computador
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSendMessage(e as any);
+                      handleSendMessage();
                     }
                   }}
                 />
                 <button 
                   type="submit" 
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() || isSending}
                   className="bg-primary hover:bg-primary-dark disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3.5 md:p-4 rounded-xl transition-all shadow-sm flex-shrink-0"
                 >
-                  <Send size={20} className={newMessage.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
+                  {isSending ? <Loader2 className="animate-spin" size={20}/> : <Send size={20} className={newMessage.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />}
                 </button>
               </form>
             </>
           )}
         </div>
-
       </div>
     </div>
   )
 }
 
-// O Suspense é obrigatório no Next.js quando usamos useSearchParams na build
 export default function ChatPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-primary"><Loader2 className="animate-spin" size={40} /></div>}>

@@ -64,19 +64,14 @@ export default function DetalhesAnuncio() {
 
         const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
 
-        // ==========================================
-        // LÓGICA DE EXPIRAÇÃO AUTOMÁTICA
-        // ==========================================
         const agora = new Date();
         if (adData.expiraEm) {
           const dataExpiracao = new Date(adData.expiraEm);
           if (dataExpiracao < agora && adData.status === 'ativo') {
-             // O plano venceu! Atualiza automaticamente no banco de dados
              await updateDoc(adDocRef, { status: 'expirado' });
              adData.status = 'expirado';
           }
         }
-        // ==========================================
 
         setAd(adData);
 
@@ -170,9 +165,16 @@ export default function DetalhesAnuncio() {
     }
   }
 
+  const handleWhatsAppClick = () => {
+    if (vendedor?.telefone) {
+      window.open(`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no Desapego Piauí.`, '_blank');
+    } else {
+      alert("Este vendedor ainda não cadastrou um número de WhatsApp. Por favor, utilize o Chat Interno!");
+    }
+  }
+
   if (!ad) return <div className="min-h-screen flex items-center justify-center text-primary animate-pulse font-bold text-xl">Carregando detalhes...</div>
 
-  // Os botões de contato (WhatsApp e Chat) adaptados com verificação de status
   const ContactButtons = () => {
     if (user?.uid === ad.vendedorId) {
        if (ad.status === 'expirado') {
@@ -200,12 +202,12 @@ export default function DetalhesAnuncio() {
 
     return (
       <div className="flex flex-col sm:flex-row gap-3">
-        {vendedor?.telefone && (
-          <a href={`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no Desapego Piauí.`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-[15px] md:text-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-            WhatsApp
-          </a>
-        )}
+        {/* BOTÃO WHATSAPP AGORA FICA SEMPRE VISÍVEL */}
+        <button onClick={handleWhatsAppClick} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-[15px] md:text-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          WhatsApp
+        </button>
+        
         <button onClick={handleStartChat} disabled={loadingChat} className="flex-1 bg-accent hover:bg-accent-dark text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-[15px] md:text-lg">
           <MessageCircle size={22} strokeWidth={2.5} />
           {loadingChat ? "Abrindo..." : "Chat Interno"}
@@ -216,8 +218,6 @@ export default function DetalhesAnuncio() {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
-      
-      {/* Botão Voltar Mobile */}
       <div className="bg-white p-3 shadow-sm md:hidden sticky top-0 z-40 flex justify-between items-center">
         <button onClick={() => router.back()} className="flex items-center text-primary font-bold">
           <ChevronLeft size={24} /> Voltar
@@ -231,8 +231,6 @@ export default function DetalhesAnuncio() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
           
           <div className="lg:col-span-2 space-y-2 md:space-y-4">
-            
-            {/* CARROSSEL DE FOTOS */}
             <div className="bg-white md:rounded-2xl overflow-hidden shadow-sm md:border border-gray-100 relative h-[350px] sm:h-[400px] md:h-[500px] bg-black group">
               {ad.fotos && ad.fotos.length > 0 ? (
                 <>
@@ -250,13 +248,11 @@ export default function DetalhesAnuncio() {
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400">Sem fotos</div>
               )}
-              {/* Botão de favorito no PC */}
               <button onClick={toggleFavorite} className="hidden md:flex absolute top-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg hover:scale-110 transition-transform">
                 <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-500"} size={24} />
               </button>
             </div>
 
-            {/* INFORMAÇÕES MOBILE (Dentro do fluxo, sem "fixed bottom") */}
             <div className="md:hidden bg-white p-5 space-y-3">
               <span className="text-[10px] font-black uppercase tracking-wider text-accent bg-accent/10 px-3 py-1.5 rounded-full inline-block">
                 {ad.categoria}
@@ -270,13 +266,11 @@ export default function DetalhesAnuncio() {
                  <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
               </div>
               
-              {/* BOTÕES INSERIDOS DIRETAMENTE AQUI, LOGO ABAIXO DO PREÇO (Não vão sumir!) */}
               <div className="pt-4 border-t border-gray-100 mt-4">
                  <ContactButtons />
               </div>
             </div>
 
-            {/* DESCRIÇÃO */}
             <div className="bg-white p-5 md:p-8 md:rounded-2xl shadow-sm md:border border-gray-100">
               <h2 className="text-lg md:text-xl font-black text-gray-800 mb-4 border-b pb-3">Descrição</h2>
               <p className="whitespace-pre-wrap text-gray-600 text-sm md:text-base leading-relaxed">{ad.descricao}</p>
@@ -288,10 +282,7 @@ export default function DetalhesAnuncio() {
             </div>
           </div>
 
-          {/* COLUNA LATERAL (PC) */}
           <div className="space-y-4 md:space-y-6 px-0 md:px-0">
-            
-            {/* CARD DE PREÇO (Escondido no mobile, pois já mostramos lá em cima) */}
             <div className="hidden md:block bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <span className="text-xs font-black uppercase tracking-wider text-accent bg-accent/10 px-3 py-1.5 rounded-full mb-4 inline-block">
                 {ad.categoria}
@@ -309,7 +300,6 @@ export default function DetalhesAnuncio() {
               <ContactButtons />
             </div>
 
-            {/* CARD DO VENDEDOR */}
             <div className="bg-white md:rounded-2xl shadow-sm border-t md:border border-gray-100 p-0 md:p-0 overflow-hidden">
                <Link href={`/vendedor/${ad.vendedorId}`} className="p-5 md:p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xl shrink-0 group-hover:bg-primary/20 transition-colors">
