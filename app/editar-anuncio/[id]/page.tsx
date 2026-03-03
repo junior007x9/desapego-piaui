@@ -108,61 +108,64 @@ export default function EditarAnuncioPage() {
     }
   }
 
-  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>
+  if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
+    // pb-28 no mobile para não esconder o botão Salvar atrás da barra inferior
+    <div className="bg-gray-50 min-h-screen py-6 md:py-10 px-4 pb-28 md:pb-10">
       <div className="max-w-2xl mx-auto">
+        
         <div className="mb-6 flex items-center gap-4">
-          <button onClick={() => router.back()} className="p-2 bg-white rounded-full shadow-sm text-gray-600 hover:text-purple-600 transition">
-            <ArrowLeft size={20} />
+          <button onClick={() => router.back()} className="p-2 bg-white rounded-full shadow-sm text-gray-600 hover:text-primary transition-colors">
+            <ArrowLeft size={24} />
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Editar Anúncio</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Editar Anúncio</h1>
         </div>
 
-        <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+        <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
           
+          {/* Nota de Segurança */}
           <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 text-sm text-blue-800">
-            <AlertCircle className="shrink-0 text-blue-500" size={20} />
+            <AlertCircle className="shrink-0 text-blue-500" size={20} strokeWidth={2.5} />
             <p><strong>Nota:</strong> Para alterar as fotos do seu desapego, será necessário excluir este anúncio e criar um novo.</p>
           </div>
 
           {/* Título */}
           <div>
-            <label className="block text-gray-700 font-bold mb-2">Título do Anúncio</label>
+            <label className="block text-primary font-bold mb-2">Título do Anúncio</label>
             <input 
               type="text" 
               required
               value={titulo}
               onChange={e => setTitulo(e.target.value)}
-              className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
+              className="w-full p-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Preço */}
             <div>
-              <label className="block text-gray-700 font-bold mb-2">Preço (R$)</label>
+              <label className="block text-primary font-bold mb-2">Preço (R$)</label>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/50" size={20} />
                 <input 
                   type="number" 
                   step="0.01"
                   required
                   value={preco}
                   onChange={e => setPreco(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800"
                 />
               </div>
             </div>
 
             {/* Categoria */}
             <div>
-              <label className="block text-gray-700 font-bold mb-2">Categoria</label>
+              <label className="block text-primary font-bold mb-2">Categoria</label>
               <select 
                 value={categoria}
                 onChange={e => setCategoria(e.target.value)}
-                className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none cursor-pointer"
+                className="w-full p-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800 cursor-pointer"
               >
                 {CATEGORIAS.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -173,21 +176,21 @@ export default function EditarAnuncioPage() {
 
           {/* Descrição */}
           <div>
-            <label className="block text-gray-700 font-bold mb-2">Descrição Detalhada</label>
+            <label className="block text-primary font-bold mb-2">Descrição Detalhada</label>
             <textarea 
               rows={5}
               required
               value={descricao}
               onChange={e => setDescricao(e.target.value)}
-              className="w-full p-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-purple-600 outline-none"
+              className="w-full p-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800 resize-none"
             ></textarea>
           </div>
 
-          <div className="pt-6">
+          <div className="pt-6 border-t border-gray-100">
             <button 
               type="submit" 
               disabled={saving}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-md transition flex justify-center items-center gap-2 disabled:opacity-50 text-lg"
+              className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5"
             >
               {saving ? <Loader2 className="animate-spin" /> : <Save />}
               Salvar Alterações

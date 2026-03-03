@@ -5,7 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Trash2, Eye, CheckCircle, Clock, Ban, ShoppingBag, PlusCircle } from 'lucide-react'
+import { Trash2, Eye, CheckCircle, Clock, Ban, ShoppingBag, PlusCircle, RefreshCw } from 'lucide-react'
 
 export default function MeusAnuncios() {
   const router = useRouter()
@@ -28,9 +28,27 @@ export default function MeusAnuncios() {
       
       const querySnapshot = await getDocs(q);
       const lista: any[] = [];
-      querySnapshot.forEach((doc) => {
-        lista.push({ id: doc.id, ...doc.data() });
-      });
+      const agora = new Date();
+
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        let statusFinal = data.status;
+
+        // ==========================================
+        // LÓGICA DE EXPIRAÇÃO AUTOMÁTICA
+        // ==========================================
+        if (data.expiraEm) {
+          const dataExpiracao = new Date(data.expiraEm);
+          if (dataExpiracao < agora && statusFinal === 'ativo') {
+             statusFinal = 'expirado';
+             // Atualiza no banco que este anúncio venceu
+             updateDoc(doc(db, 'anuncios', docSnapshot.id), { status: 'expirado' }).catch(console.error);
+          }
+        }
+        // ==========================================
+
+        lista.push({ id: docSnapshot.id, ...data, status: statusFinal });
+      }
       
       lista.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
       
@@ -66,6 +84,7 @@ export default function MeusAnuncios() {
       ativo: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ativo', icon: CheckCircle },
       pendente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Aguardando PIX', icon: Clock },
       vendido: { bg: 'bg-gray-200', text: 'text-gray-600', label: 'Vendido', icon: ShoppingBag },
+      expirado: { bg: 'bg-red-100', text: 'text-red-700', label: 'Plano Vencido', icon: Ban },
     }
     const current = styles[status] || { bg: 'bg-gray-100', text: 'text-gray-500', label: status, icon: Ban }
     const Icon = current.icon
@@ -78,7 +97,6 @@ export default function MeusAnuncios() {
   }
 
   return (
-    // pb-24 no mobile para não esconder conteúdo atrás da BottomNav
     <div className="bg-gray-50 min-h-screen py-6 md:py-10 pb-24 md:pb-10">
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="flex justify-between items-center mb-6 md:mb-8">
@@ -121,9 +139,14 @@ export default function MeusAnuncios() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
                   
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400 font-bold uppercase tracking-wider">
-                    <Eye size={14} className="text-accent" />
-                    {ad.visualizacoes || 0} visitas
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-bold uppercase tracking-wider">
+                    <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 0} visitas</span>
+                    
+                    {ad.expiraEm && ad.status === 'ativo' && (
+                      <span className="text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                        Online até {new Date(ad.expiraEm).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -139,6 +162,12 @@ export default function MeusAnuncios() {
                   {ad.status === 'ativo' && (
                     <Link href={`/anuncio/${ad.id}`} className="flex-1 md:flex-none bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors">
                       <Eye size={16} strokeWidth={2.5}/> Ver no Site
+                    </Link>
+                  )}
+
+                  {ad.status === 'expirado' && (
+                    <Link href={`/pagamento/${ad.id}`} className="flex-1 md:flex-none bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm">
+                      <RefreshCw size={16} strokeWidth={2.5}/> Renovar Plano
                     </Link>
                   )}
 

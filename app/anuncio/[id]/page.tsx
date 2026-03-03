@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore'
-import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye } from 'lucide-react'
+import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Ban } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DetalhesAnuncio() {
@@ -16,12 +16,9 @@ export default function DetalhesAnuncio() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [loadingChat, setLoadingChat] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  
-  // Estado para localização dinâmica
   const [locFull, setLocFull] = useState('Carregando...')
 
   useEffect(() => {
-    // Busca a localização pela internet de forma invisível
     async function fetchLocation() {
       try {
         const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
@@ -66,6 +63,21 @@ export default function DetalhesAnuncio() {
         }
 
         const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
+
+        // ==========================================
+        // LÓGICA DE EXPIRAÇÃO AUTOMÁTICA
+        // ==========================================
+        const agora = new Date();
+        if (adData.expiraEm) {
+          const dataExpiracao = new Date(adData.expiraEm);
+          if (dataExpiracao < agora && adData.status === 'ativo') {
+             // O plano venceu! Atualiza automaticamente no banco de dados
+             await updateDoc(adDocRef, { status: 'expirado' });
+             adData.status = 'expirado';
+          }
+        }
+        // ==========================================
+
         setAd(adData);
 
         if (!sessionStorage.getItem(`viewed_${params.id}`)) {
@@ -160,13 +172,33 @@ export default function DetalhesAnuncio() {
 
   if (!ad) return <div className="min-h-screen flex items-center justify-center text-primary animate-pulse font-bold text-xl">Carregando detalhes...</div>
 
-  // Os botões de contato (WhatsApp e Chat)
-  const ContactButtons = () => (
-    user?.uid === ad.vendedorId ? (
-      <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center text-gray-600 font-bold">
-        Este é o seu anúncio
-      </div>
-    ) : (
+  // Os botões de contato (WhatsApp e Chat) adaptados com verificação de status
+  const ContactButtons = () => {
+    if (user?.uid === ad.vendedorId) {
+       if (ad.status === 'expirado') {
+         return (
+           <Link href={`/pagamento/${ad.id}`} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-lg">
+              Renovar Plano do Anúncio
+           </Link>
+         );
+       }
+       return (
+         <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center text-gray-600 font-bold">
+           Este é o seu anúncio
+         </div>
+       );
+    }
+
+    if (ad.status !== 'ativo') {
+       return (
+         <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-center justify-center gap-2 text-red-600 font-bold">
+           <Ban size={20} />
+           {ad.status === 'expirado' ? 'Este anúncio expirou.' : 'Anúncio indisponível no momento.'}
+         </div>
+       );
+    }
+
+    return (
       <div className="flex flex-col sm:flex-row gap-3">
         {vendedor?.telefone && (
           <a href={`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no Desapego Piauí.`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-[15px] md:text-lg">
@@ -179,11 +211,11 @@ export default function DetalhesAnuncio() {
           {loadingChat ? "Abrindo..." : "Chat Interno"}
         </button>
       </div>
-    )
-  );
+    );
+  };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
+    <div className="bg-gray-50 min-h-screen pb-10">
       
       {/* Botão Voltar Mobile */}
       <div className="bg-white p-3 shadow-sm md:hidden sticky top-0 z-40 flex justify-between items-center">
@@ -198,7 +230,6 @@ export default function DetalhesAnuncio() {
       <div className="container mx-auto px-0 md:px-4 pt-0 md:pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
           
-          {/* FOTOS E DESCRIÇÃO */}
           <div className="lg:col-span-2 space-y-2 md:space-y-4">
             
             {/* CARROSSEL DE FOTOS */}
@@ -225,7 +256,7 @@ export default function DetalhesAnuncio() {
               </button>
             </div>
 
-            {/* INFORMAÇÕES MOBILE (Aparecem embaixo da foto no celular) */}
+            {/* INFORMAÇÕES MOBILE (Dentro do fluxo, sem "fixed bottom") */}
             <div className="md:hidden bg-white p-5 space-y-3">
               <span className="text-[10px] font-black uppercase tracking-wider text-accent bg-accent/10 px-3 py-1.5 rounded-full inline-block">
                 {ad.categoria}
@@ -234,9 +265,14 @@ export default function DetalhesAnuncio() {
               <span className="text-3xl font-black text-primary block mt-2">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
               </span>
-              <div className="flex items-center gap-4 text-gray-500 text-xs mt-3 pt-3 border-t border-gray-100 font-medium">
+              <div className="flex items-center gap-4 text-gray-500 text-xs mt-3 font-medium">
                  <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {locFull}</span>
                  <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
+              </div>
+              
+              {/* BOTÕES INSERIDOS DIRETAMENTE AQUI, LOGO ABAIXO DO PREÇO (Não vão sumir!) */}
+              <div className="pt-4 border-t border-gray-100 mt-4">
+                 <ContactButtons />
               </div>
             </div>
 
@@ -270,7 +306,6 @@ export default function DetalhesAnuncio() {
                  <span className="flex items-center gap-1"><Eye size={16} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
               </div>
 
-              {/* Botões no PC */}
               <ContactButtons />
             </div>
 
@@ -290,12 +325,6 @@ export default function DetalhesAnuncio() {
           </div>
         </div>
       </div>
-
-      {/* BOTÕES FIXOS NA BASE PARA MOBILE */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-50">
-         <ContactButtons />
-      </div>
-
     </div>
   )
 }
