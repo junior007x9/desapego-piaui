@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import Footer from '@/components/Footer'
+import CookieBanner from '@/components/CookieBanner' // IMPORTAÇÃO DO BANNER LGPD AQUI
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -41,6 +42,9 @@ export default function RootLayout({
         </div>
         
         <BottomNav />
+        
+        {/* COMPONENTE DO BANNER RENDERIZADO AQUI */}
+        <CookieBanner />
       </body>
     </html>
   )

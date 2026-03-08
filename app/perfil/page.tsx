@@ -1,19 +1,19 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { onAuthStateChanged, deleteUser } from 'firebase/auth'
+import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { User, Phone, Save, Loader2, ArrowLeft } from 'lucide-react'
+import { User, Phone, Save, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function PerfilPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [userAuth, setUserAuth] = useState<any>(null)
   
-  // Campos do formulário
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
 
@@ -26,7 +26,6 @@ export default function PerfilPage() {
       setUserAuth(user)
 
       try {
-        // Busca os dados do utilizador no Firestore
         const userDoc = await getDoc(doc(db, 'users', user.uid))
         if (userDoc.exists()) {
           const dados = userDoc.data()
@@ -48,16 +47,14 @@ export default function PerfilPage() {
     setSaving(true)
 
     try {
-      // Limpa a formatação do telefone (deixa só números)
       const telLimpo = telefone.replace(/\D/g, '')
 
-      // Guarda ou atualiza o documento do utilizador no Firestore
       await setDoc(doc(db, 'users', userAuth.uid), {
         nome: nome,
         telefone: telLimpo,
         email: userAuth.email,
         atualizadoEm: serverTimestamp()
-      }, { merge: true }) // merge: true garante que não apaga outros dados se existirem
+      }, { merge: true })
 
       alert("Perfil atualizado com sucesso!")
       router.push('/meus-anuncios')
@@ -69,7 +66,33 @@ export default function PerfilPage() {
     }
   }
 
-  // Máscara simples para telefone: (86) 99999-9999
+  // LGPD: FUNÇÃO PARA EXCLUIR CONTA DEFINITIVAMENTE
+  const handleDeleteAccount = async () => {
+    const confirmacao = window.confirm("ATENÇÃO (LGPD): Tem certeza de que deseja excluir sua conta? Todos os seus dados pessoais, perfil e anúncios vinculados serão permanentemente apagados e não poderão ser recuperados.")
+    
+    if (!confirmacao) return;
+
+    setDeleting(true)
+    try {
+      // 1. Apaga os dados do usuário no Firestore
+      await deleteDoc(doc(db, 'users', userAuth.uid));
+      
+      // 2. Apaga a conta de Autenticação do Firebase
+      await deleteUser(userAuth);
+      
+      alert("Sua conta e dados foram excluídos com sucesso em conformidade com a LGPD.");
+      router.push('/');
+    } catch (error: any) {
+      console.error("Erro ao excluir conta:", error)
+      if (error.code === 'auth/requires-recent-login') {
+        alert("Por questões de segurança, faça logout e login novamente antes de excluir sua conta.");
+      } else {
+        alert("Ocorreu um erro ao tentar excluir a sua conta.");
+      }
+      setDeleting(false)
+    }
+  }
+
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value.replace(/\D/g, '')
     if (valor.length <= 11) {
@@ -82,7 +105,6 @@ export default function PerfilPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
   return (
-    // pb-28 no mobile para o BottomNav não tampar o botão
     <div className="bg-gray-50 min-h-screen py-6 md:py-10 px-4 pb-28 md:pb-10">
       <div className="max-w-xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
@@ -133,14 +155,25 @@ export default function PerfilPage() {
             </p>
           </div>
 
-          <div className="pt-6 border-t border-gray-100">
+          <div className="pt-6 border-t border-gray-100 space-y-4">
             <button 
               type="submit" 
-              disabled={saving}
+              disabled={saving || deleting}
               className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5"
             >
               {saving ? <Loader2 className="animate-spin" /> : <Save />}
               Salvar Alterações
+            </button>
+
+            {/* BOTÃO LGPD EXCLUIR CONTA */}
+            <button 
+              type="button" 
+              onClick={handleDeleteAccount}
+              disabled={saving || deleting}
+              className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm"
+            >
+              {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />}
+              Excluir minha conta e dados (LGPD)
             </button>
           </div>
         </form>
