@@ -3,7 +3,7 @@ import { Instagram, MapPin, Mail, Phone } from 'lucide-react'
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300 pt-16 pb-8">
+    <footer className="bg-gray-900 text-gray-300 pt-16 pb-24 md:pb-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           
@@ -30,14 +30,14 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Coluna 3: Suporte */}
+          {/* Coluna 3: Suporte (Links Corrigidos!) */}
           <div>
             <h3 className="text-white font-bold mb-4 border-l-4 border-primary pl-3">Ajuda</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="hover:text-white transition">Dicas de Segurança</Link></li>
-              <li><Link href="#" className="hover:text-white transition">Termos de Uso</Link></li>
-              <li><Link href="#" className="hover:text-white transition">Privacidade</Link></li>
-              <li><Link href="#" className="hover:text-white transition">Fale Conosco</Link></li>
+              <li><Link href="/seguranca" className="hover:text-white transition">Dicas de Segurança</Link></li>
+              <li><Link href="/termos" className="hover:text-white transition">Termos de Uso</Link></li>
+              <li><Link href="/privacidade" className="hover:text-white transition">Privacidade</Link></li>
+              <li><Link href="/contato" className="hover:text-white transition">Fale Conosco</Link></li>
             </ul>
           </div>
 
@@ -51,11 +51,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="text-accent shrink-0" size={16} />
-                <a href="tel:5586988527230" className="hover:text-white">(86) 98852-7230</a>
+                <a href="https://wa.me/5586988527230" target="_blank" rel="noopener noreferrer" className="hover:text-white">(86) 98852-7230</a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="text-accent shrink-0" size={16} />
-                <a href="mailto:contato@desapegopiaui.com.br" className="hover:text-white">contato@desapegopiaui.com</a>
+                <a href="mailto:contato@desapegopiaui.com.br" className="hover:text-white">contato@desapegopiaui.com.br</a>
               </li>
             </ul>
           </div>
@@ -63,7 +63,6 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
           <p>&copy; {new Date().getFullYear()} Desapego Piauí. Todos os direitos reservados.</p>
-          <p className="mt-2 text-xs">Desenvolvido com Next.js</p>
         </div>
       </div>
     </footer>
