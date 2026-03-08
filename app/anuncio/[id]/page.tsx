@@ -18,19 +18,33 @@ export default function DetalhesAnuncio() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [locFull, setLocFull] = useState('Carregando...')
 
+  // MÁGICA DE PERFORMANCE: Mesma lógica de cache da Home, adaptada com o Estado (UF)
   useEffect(() => {
     async function fetchLocation() {
+      const cachedFullLocation = localStorage.getItem('user_full_location');
+      if (cachedFullLocation) {
+        setLocFull(cachedFullLocation);
+        return;
+      }
+
       try {
         const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
         const data = await res.json();
         const city = data.city || data.locality || 'Teresina';
         let state = 'PI';
+        
         if (data.principalSubdivisionCode && data.principalSubdivisionCode.includes('-')) {
           state = data.principalSubdivisionCode.split('-')[1]; 
         } else if (data.principalSubdivision) {
           state = data.principalSubdivision.substring(0, 2).toUpperCase();
         }
-        setLocFull(`${city}, ${state}`);
+        
+        const fullLocation = `${city}, ${state}`;
+        setLocFull(fullLocation);
+        
+        // Grava no cache
+        localStorage.setItem('user_full_location', fullLocation);
+        localStorage.setItem('user_city', city); // Atualiza também o cache da Home por segurança
       } catch (error) {
         setLocFull('Teresina, PI');
       }
@@ -202,7 +216,6 @@ export default function DetalhesAnuncio() {
 
     return (
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* BOTÃO WHATSAPP AGORA FICA SEMPRE VISÍVEL */}
         <button onClick={handleWhatsAppClick} className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-[15px] md:text-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
           WhatsApp

@@ -21,13 +21,25 @@ export default function Home() {
   const [userCity, setUserCity] = useState('sua região') 
   const router = useRouter()
 
-  // MÁGICA: Pega a cidade para exibir nas buscas e anúncios
+  // MÁGICA DE PERFORMANCE: Verifica se a cidade já está salva no telemóvel
   useEffect(() => {
     async function fetchCity() {
+      // 1. Tenta pegar da memória do navegador primeiro
+      const cachedCity = localStorage.getItem('user_city');
+      if (cachedCity) {
+        setUserCity(cachedCity);
+        return; // Para a função aqui e não gasta a API!
+      }
+
+      // 2. Se não tiver na memória, chama a API
       try {
         const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
         const data = await res.json();
-        setUserCity(data.city || data.locality || 'Teresina');
+        const city = data.city || data.locality || 'Teresina';
+        
+        setUserCity(city);
+        // Salva na memória para as próximas vezes
+        localStorage.setItem('user_city', city);
       } catch (error) {
         setUserCity('Teresina');
       }
@@ -47,7 +59,6 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
 
-          // LÓGICA DE EXPIRAÇÃO AUTOMÁTICA NA HOME
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora && statusFinal === 'ativo') {
@@ -56,13 +67,11 @@ export default function Home() {
             }
           }
 
-          // Só adiciona na lista se estiver ativo!
           if (statusFinal === 'ativo') {
             list.push({ id: document.id, ...data })
           }
         }
         
-        // Pega apenas os 8 primeiros ativos para a vitrine
         setAds(list.slice(0, 8))
       } catch (error) {
         console.error("Erro ao buscar anúncios recentes:", error)
