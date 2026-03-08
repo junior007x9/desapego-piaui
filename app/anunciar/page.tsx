@@ -151,7 +151,7 @@ export default function AnunciarPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10">
       <div className="container mx-auto px-4 max-w-2xl">
-        <h1 className="text-3xl font-black text-primary mb-8 uppercase italic tracking-tight">O que você está desapegando?</h1>
+        <h1 className="text-3xl font-black text-primary mb-8 uppercase italic tracking-tight">O que você está anunciando?</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-gray-100">
           

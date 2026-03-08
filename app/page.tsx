@@ -47,14 +47,11 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
 
-          // ==========================================
           // LÓGICA DE EXPIRAÇÃO AUTOMÁTICA NA HOME
-          // ==========================================
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora && statusFinal === 'ativo') {
                statusFinal = 'expirado';
-               // A Home faz o trabalho sujo e inativa o anúncio no banco de dados!
                updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
             }
           }
@@ -121,7 +118,7 @@ export default function Home() {
       {/* ANÚNCIOS RECENTES */}
       <div className="container mx-auto px-3 md:px-4 py-6 md:py-12">
         <div className="flex justify-between items-end mb-4 md:mb-8 px-1">
-          <h2 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight uppercase">Destaques em {userCity}</h2>
+          <h2 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight uppercase">Destaques</h2>
           <Link href="/todos-anuncios" className="text-accent text-[13px] md:text-base font-bold hover:text-accent-dark hover:underline transition-colors">Ver todos</Link>
         </div>
 
