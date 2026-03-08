@@ -1,8 +1,8 @@
 'use client'
 import Link from 'next/link'
-import { ArrowLeft, ShieldCheck, AlertTriangle, Eye, MessageCircle, MapPin } from 'lucide-react'
+import { ArrowLeft, Shield, AlertCircle, Eye, MessageCircle, MapPin } from 'lucide-react'
 
-export default function DicasSegurancaPage() {
+export default function SegurancaPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 px-4 pb-24 md:pb-10">
       <div className="max-w-3xl mx-auto">
@@ -18,7 +18,7 @@ export default function DicasSegurancaPage() {
           
           <div className="bg-primary p-8 text-center text-white relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-            <ShieldCheck size={56} className="mx-auto mb-4 relative z-10" />
+            <Shield size={56} className="mx-auto mb-4 relative z-10" />
             <h2 className="text-2xl font-black mb-2 relative z-10 tracking-tight">Compre e venda com tranquilidade</h2>
             <p className="opacity-90 relative z-10 font-medium">O Desapego Piauí aproxima pessoas, mas a segurança depende de boas práticas.</p>
           </div>
@@ -28,7 +28,7 @@ export default function DicasSegurancaPage() {
             {/* Dica 1 */}
             <div className="flex gap-4 items-start">
               <div className="bg-orange-100 text-orange-600 p-3 rounded-2xl shrink-0">
-                <AlertTriangle size={24} strokeWidth={2.5} />
+                <AlertCircle size={24} strokeWidth={2.5} />
               </div>
               <div>
                 <h3 className="text-lg font-black text-gray-900 mb-2">Nunca pague antecipado</h3>
