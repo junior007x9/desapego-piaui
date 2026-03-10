@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { onAuthStateChanged, deleteUser } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { User, Phone, Save, Loader2, ArrowLeft, Trash2, Shield, Eye, Camera } from 'lucide-react'
+import { User, Save, Loader2, ArrowLeft, Trash2, Shield, Eye, Camera } from 'lucide-react'
 import Link from 'next/link'
 
 export default function PerfilPage() {
@@ -39,19 +39,16 @@ export default function PerfilPage() {
       setUserAuth(user)
 
       try {
-        // 1. Busca dados públicos
         const publicDoc = await getDoc(doc(db, 'users', user.uid))
         if (publicDoc.exists()) {
           const publicData = publicDoc.data()
           setApelido(publicData.nome || '')
           setTelefone(publicData.telefone || '')
-          // Puxa a foto salva no banco OU a foto do Google Auth como fallback
           setFotoPerfil(publicData.fotoPerfil || user.photoURL || '')
         } else if (user.photoURL) {
            setFotoPerfil(user.photoURL)
         }
 
-        // 2. Busca dados privados (LGPD)
         const privateDoc = await getDoc(doc(db, 'users', user.uid, 'privado', 'dados'))
         if (privateDoc.exists()) {
           const privateData = privateDoc.data()
@@ -74,7 +71,6 @@ export default function PerfilPage() {
     return () => unsubscribe()
   }, [router])
 
-  // Função para fazer o upload da nova foto de perfil
   const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !userAuth) return;
     
@@ -86,7 +82,6 @@ export default function PerfilPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      // Usa a mesma API segura que já criamos para os anúncios!
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${idToken}` },
@@ -98,8 +93,6 @@ export default function PerfilPage() {
       if (data.success) {
         const novaUrl = data.data.url;
         setFotoPerfil(novaUrl);
-        
-        // Já salva direto no banco para o usuário não perder a foto se sair sem clicar em salvar
         await setDoc(doc(db, 'users', userAuth.uid), { fotoPerfil: novaUrl }, { merge: true });
       } else {
         alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
@@ -119,7 +112,6 @@ export default function PerfilPage() {
     try {
       const telLimpo = telefone.replace(/\D/g, '')
 
-      // Salva Públicos
       await setDoc(doc(db, 'users', userAuth.uid), {
         nome: apelido,
         telefone: telLimpo,
@@ -130,7 +122,6 @@ export default function PerfilPage() {
         atualizadoEm: serverTimestamp()
       }, { merge: true })
 
-      // Salva Privados
       await setDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'), {
         nomeCompleto,
         documento: documento.replace(/\D/g, ''),
@@ -147,24 +138,47 @@ export default function PerfilPage() {
     }
   }
 
+  // NOVA LÓGICA DE EXCLUSÃO (LGPD: Congelamento de 30 dias)
   const handleDeleteAccount = async () => {
-    const confirmacao = window.confirm("ATENÇÃO (LGPD): Tem certeza de que deseja excluir sua conta e todos os seus dados definitivamente?")
-    if (!confirmacao) return;
+    // Primeiro aviso para evitar cliques acidentais
+    const confirmacao1 = window.confirm("ATENÇÃO: Você está prestes a iniciar o processo de exclusão da sua conta. Deseja continuar?")
+    if (!confirmacao1) return;
+
+    // Segundo aviso com validade legal e explicação clara
+    const textoLegal = "TERMO DE CONSENTIMENTO (LGPD):\n\n" +
+                       "Ao confirmar, sua conta será desativada imediatamente e não ficará mais visível para novos negócios.\n\n" +
+                       "A exclusão DEFINITIVA dos seus dados ocorrerá em um prazo de 30 DIAS. Este período de retenção é mantido exclusivamente para segurança, prevenção a fraudes e cumprimento de obrigações legais, conforme autorizado pela Lei Geral de Proteção de Dados.\n\n" +
+                       "Você concorda com estes termos e deseja desativar a conta agora?";
+                       
+    const confirmacao2 = window.confirm(textoLegal);
+    if (!confirmacao2) return;
 
     setDeleting(true)
     try {
-      await deleteDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'));
-      await deleteDoc(doc(db, 'users', userAuth.uid));
-      await deleteUser(userAuth);
+      // Calcula a data exata daqui a 30 dias
+      const dataExclusao = new Date();
+      dataExclusao.setDate(dataExclusao.getDate() + 30);
+
+      // Marca a conta pública como agendada para exclusão
+      await setDoc(doc(db, 'users', userAuth.uid), {
+        status: 'aguardando_exclusao',
+        exclusaoAgendadaPara: dataExclusao,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+
+      // Marca o cofre de dados privados como agendado para exclusão
+      await setDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'), {
+        status: 'aguardando_exclusao',
+        exclusaoAgendadaPara: dataExclusao
+      }, { merge: true });
+
+      // Desloga o utilizador do dispositivo
+      await signOut(auth);
       
-      alert("Sua conta e dados foram excluídos com sucesso.");
+      alert("Solicitação recebida com sucesso. Sua conta foi desativada e será excluída definitivamente em 30 dias.");
       router.push('/');
     } catch (error: any) {
-      if (error.code === 'auth/requires-recent-login') {
-        alert("Por segurança, faça logout e login novamente antes de excluir sua conta.");
-      } else {
-        alert("Erro ao excluir conta.");
-      }
+      alert("Ocorreu um erro ao processar a exclusão. Tente novamente.");
       setDeleting(false)
     }
   }
@@ -183,7 +197,7 @@ export default function PerfilPage() {
 
         <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-8">
           
-          {/* FOTO DE PERFIL COM UPLOAD */}
+          {/* FOTO DE PERFIL */}
           <div className="flex flex-col items-center justify-center mb-4">
             <div className="relative w-28 h-28 bg-primary/10 text-primary rounded-full flex items-center justify-center text-4xl font-black shadow-inner border-4 border-white outline outline-1 outline-gray-200 group overflow-hidden">
               {uploadingFoto ? (
@@ -194,16 +208,9 @@ export default function PerfilPage() {
                 apelido ? apelido.charAt(0).toUpperCase() : <User size={40} />
               )}
 
-              {/* Camada escura que aparece ao passar o mouse por cima (Hover) */}
               <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                 <Camera className="text-white" size={28} />
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleFotoChange} 
-                  disabled={uploadingFoto} 
-                />
+                <input type="file" accept="image/*" className="hidden" onChange={handleFotoChange} disabled={uploadingFoto} />
               </label>
             </div>
             <p className="text-xs text-gray-400 mt-3 font-medium">Clique na imagem para alterar</p>
@@ -264,7 +271,7 @@ export default function PerfilPage() {
             </button>
 
             <button type="button" onClick={handleDeleteAccount} disabled={saving || deleting || uploadingFoto} className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm">
-              {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />} Excluir minha conta (LGPD)
+              {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />} Desativar e Excluir minha conta
             </button>
           </div>
         </form>
