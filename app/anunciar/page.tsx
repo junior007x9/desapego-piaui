@@ -2,11 +2,18 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
+
+// LISTA NEGRA DE PALAVRAS PROIBIDAS (Filtro Anti-Golpe / Moderação Automática)
+const PALAVRAS_PROIBIDAS = [
+  'arma', 'revólver', 'pistola', 'munição', 'droga', 'maconha', 'cocaína', 
+  'hack', 'clonado', 'falsificado', 'réplica perfeita', 'nota falsa',
+  'caralho', 'porra', 'buceta', 'puta', 'merda', 'cu'
+]
 
 // PLANOS PAGOS PADRÃO
 const PLANOS_BASE = [
@@ -27,7 +34,8 @@ export default function AnunciarPage() {
   
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [jaUsouGratis, setJaUsouGratis] = useState(true) // Começa como true por segurança
+  const [emailVerificado, setEmailVerificado] = useState(true) // Começa true para não piscar
+  const [jaUsouGratis, setJaUsouGratis] = useState(true) 
   
   const router = useRouter()
 
@@ -38,7 +46,15 @@ export default function AnunciarPage() {
       } else {
         setUser(u)
         
-        // VERIFICAÇÃO ANTI-FRAUDE DUPLA
+        // 1. TRAVA DE SEGURANÇA: O E-MAIL FOI CONFIRMADO?
+        if (!u.emailVerified) {
+          setEmailVerificado(false)
+          return; // Para tudo aqui e não deixa carregar o formulário
+        } else {
+          setEmailVerificado(true)
+        }
+        
+        // VERIFICAÇÃO ANTI-FRAUDE DUPLA PARA O PLANO GRÁTIS
         try {
            const userDoc = await getDoc(doc(db, 'users', u.uid))
            const userData = userDoc.data()
@@ -46,7 +62,6 @@ export default function AnunciarPage() {
            const usouNoBanco = userData?.jaUsouAnuncioGratis === true
            const usouNoAparelho = localStorage.getItem('device_used_free_ad') === 'true'
 
-           // Se ele já usou em alguma das duas verificações, bloqueia o brinde
            if (usouNoBanco || usouNoAparelho) {
              setJaUsouGratis(true)
            } else {
@@ -60,9 +75,20 @@ export default function AnunciarPage() {
     return () => unsubscribe()
   }, [router])
 
+  // Função para reenviar o e-mail caso o usuário não tenha recebido
+  const handleReenviarEmail = async () => {
+    if (user) {
+      try {
+        await sendEmailVerification(user);
+        alert("E-mail reenviado com sucesso! Verifique sua caixa de entrada e a pasta de Spam.");
+      } catch (error) {
+        alert("Aguarde um momento antes de tentar reenviar o e-mail novamente.");
+      }
+    }
+  }
+
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
 
-  // Monta a lista de planos de acordo com o direito ao brinde
   const planosDisponiveis = jaUsouGratis 
     ? PLANOS_BASE 
     : [{ id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, desc: 'Teste de 24 horas!' }, ...PLANOS_BASE];
@@ -90,6 +116,15 @@ export default function AnunciarPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isFormIncompleto) return
+
+    // 2. FILTRO ANTI-GOLPE E PALAVRÕES
+    const textoParaVerificar = `${titulo.toLowerCase()} ${descricao.toLowerCase()}`;
+    const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => textoParaVerificar.includes(palavra));
+
+    if (temPalavraProibida) {
+      alert("⚠️ BLOQUEADO: Seu anúncio contém palavras proibidas que violam nossos Termos de Segurança e Uso. Por favor, altere o título e a descrição.");
+      return;
+    }
 
     setLoading(true)
     try {
@@ -119,7 +154,6 @@ export default function AnunciarPage() {
         }
       }
 
-      // Se escolheu o plano grátis (ID 0), aplicamos a marcação Anti-Fraude
       if (planoId === 0) {
         await updateDoc(doc(db, 'users', user.uid), { jaUsouAnuncioGratis: true });
         localStorage.setItem('device_used_free_ad', 'true');
@@ -133,7 +167,7 @@ export default function AnunciarPage() {
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
-        status: 'pendente', // A página de pagamento se encarrega de ativar se for 0,00
+        status: 'pendente', 
         planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp()
@@ -146,6 +180,46 @@ export default function AnunciarPage() {
       alert("Erro ao publicar anúncio.")
       setLoading(false)
     } 
+  }
+
+  // TELA DE BLOQUEIO SE O E-MAIL NÃO ESTIVER VERIFICADO
+  if (!emailVerificado && user) {
+    return (
+      <div className="bg-gray-50 min-h-screen py-10 px-4 flex items-center justify-center pb-28">
+        <div className="max-w-md w-full bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
+          
+          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MailWarning size={40} strokeWidth={2} />
+          </div>
+          
+          <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Verificação Necessária</h2>
+          
+          <p className="text-gray-600 font-medium mb-6 leading-relaxed">
+            Para manter a segurança do Desapego Piauí, você precisa confirmar o seu e-mail (<strong className="text-gray-900">{user.email}</strong>) antes de publicar um anúncio.
+          </p>
+
+          <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 text-sm text-orange-800 text-left mb-8">
+             <ShieldAlert className="shrink-0 text-orange-500" size={20} />
+             <p>Esta é uma medida de segurança para evitar perfis falsos e fraudes na plataforma.</p>
+          </div>
+
+          <button 
+            onClick={() => window.location.reload()} 
+            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4"
+          >
+            Já confirmei, recarregar página
+          </button>
+          
+          <button 
+            onClick={handleReenviarEmail} 
+            className="text-primary font-bold hover:underline text-sm"
+          >
+            Não recebeu? Reenviar e-mail de confirmação
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
