@@ -5,7 +5,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Mail, Lock, User, Phone, MapPin, CheckCircle, Shield } from 'lucide-react'
+import { Loader2, Mail, Lock, User, Phone, MapPin, CheckCircle, Shield, Eye } from 'lucide-react'
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
 function CadastroForm() {
@@ -130,7 +130,7 @@ function CadastroForm() {
 
       // 1. SALVA OS DADOS PÚBLICOS (Visíveis nos anúncios)
       await setDoc(doc(db, 'users', user.uid), {
-        nome: apelido, // O nome social é o que vai aparecer no site
+        nome: apelido, 
         email: email,
         telefone: telLimpo,
         cidade: cidade, 
