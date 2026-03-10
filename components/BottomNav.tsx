@@ -1,93 +1,160 @@
 'use client'
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Plus, MessageCircle, User, ShoppingBag } from 'lucide-react';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { Home, Search, PlusCircle, MessageCircle, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle } from 'lucide-react'
+import { auth } from '@/lib/firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 
 export default function BottomNav() {
-  const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
-  const [hasUnread, setHasUnread] = useState(false);
+  const pathname = usePathname()
+  const router = useRouter()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    let unsubscribeChats: () => void;
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+    })
+    return () => unsubscribe()
+  }, [])
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const q = query(collection(db, 'chats'), where('participantes', 'array-contains', currentUser.uid));
-        unsubscribeChats = onSnapshot(q, (snapshot) => {
-          let unread = false;
-          snapshot.forEach(doc => {
-            if (doc.data().ultimoRemetenteId !== currentUser.uid && doc.data().lido === false) unread = true;
-          });
-          setHasUnread(unread);
-        });
-      } else {
-        if (unsubscribeChats) unsubscribeChats();
-        setHasUnread(false);
-      }
-    });
+  const handleLogout = async () => {
+    const confirmar = window.confirm("Tem certeza que deseja sair?")
+    if (confirmar) {
+      await signOut(auth)
+      setIsMenuOpen(false)
+      router.push('/login')
+    }
+  }
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeChats) unsubscribeChats();
-    };
-  }, []);
+  const closeMenu = () => setIsMenuOpen(false)
 
-  // Substituímos o "Buscar" pelo "Meus Anúncios" para manter os 5 itens perfeitos no telemóvel
-  const navItems = [
-    { label: 'Início', icon: Home, href: '/' },
-    { label: 'Anúncios', icon: ShoppingBag, href: user ? '/meus-anuncios' : '/login' },
-    { label: 'Anunciar', icon: Plus, href: user ? '/anunciar' : '/login', special: true },
-    { label: 'Chat', icon: MessageCircle, href: '/chat', badge: hasUnread },
-    { label: 'Conta', icon: User, href: '/perfil' },
-  ];
+  // Ocultar a barra inferior em páginas específicas se quiser (opcional)
+  if (pathname === '/login' || pathname === '/cadastro') return null
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 pb-safe z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] h-16">
-      <div className="flex justify-between items-center h-full relative">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          
-          // ESTILO DO BOTÃO CENTRAL ANUNCIAR (Estilo App)
-          if (item.special) {
-            return (
-              <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center flex-1 relative -top-4">
-                <div className="bg-accent shadow-lg shadow-accent/40 rounded-full p-3 text-white flex items-center justify-center transform active:scale-95 transition-transform">
-                  <item.icon size={28} strokeWidth={2.5} />
-                </div>
-                <span className="text-[10px] mt-1 text-gray-500 font-semibold">{item.label}</span>
-              </Link>
-            )
-          }
+    <>
+      {/* ESPAÇO FANTASMA PARA A BARRA NÃO COBRIR CONTEÚDO */}
+      <div className="h-16 md:hidden"></div>
 
-          // ITENS NORMAIS
-          return (
-            <Link key={item.label} href={item.href} className="flex flex-col items-center justify-center flex-1 relative h-full">
-              <div className="relative">
-                <item.icon 
-                  size={24} 
-                  strokeWidth={isActive ? 2.5 : 2}
-                  className={isActive ? 'text-primary' : 'text-gray-400'} 
-                />
-                {item.badge && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white"></span>
-                  </span>
-                )}
+      {/* BARRA DE NAVEGAÇÃO INFERIOR PRINCIPAL */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-40 pb-safe">
+        <div className="flex justify-around items-center h-16">
+          <Link href="/" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Home size={24} strokeWidth={pathname === '/' ? 2.5 : 2} className={pathname === '/' ? 'scale-110 transition-transform' : ''} />
+            <span className="text-[10px] font-bold mt-1">Início</span>
+          </Link>
+
+          <Link href="/todos-anuncios" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/todos-anuncios' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Search size={24} strokeWidth={pathname === '/todos-anuncios' ? 2.5 : 2} />
+            <span className="text-[10px] font-bold mt-1">Buscar</span>
+          </Link>
+
+          <Link href="/anunciar" onClick={closeMenu} className="flex flex-col items-center justify-center w-full h-full -mt-5">
+            <div className="bg-accent text-white p-3 rounded-full shadow-lg border-4 border-gray-50 transform hover:scale-105 transition-transform">
+              <PlusCircle size={28} strokeWidth={2.5} />
+            </div>
+            <span className="text-[10px] font-bold mt-1 text-accent">Anunciar</span>
+          </Link>
+
+          <Link href="/chat" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname.includes('/chat') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+            <MessageCircle size={24} strokeWidth={pathname.includes('/chat') ? 2.5 : 2} />
+            <span className="text-[10px] font-bold mt-1">Chat</span>
+          </Link>
+
+          {/* BOTÃO MÁGICO DO MENU */}
+          <button onClick={() => setIsMenuOpen(true)} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${isMenuOpen ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Menu size={24} strokeWidth={isMenuOpen ? 2.5 : 2} className={isMenuOpen ? 'scale-110 transition-transform' : ''} />
+            <span className="text-[10px] font-bold mt-1">Menu</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* OVERLAY ESCURO (Fundo desfocado) */}
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300"
+          onClick={closeMenu}
+        ></div>
+      )}
+
+      {/* GAVETA DO MENU (BOTTOM SHEET) */}
+      <div className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[2rem] z-50 md:hidden transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-y-0 shadow-[0_-20px_40px_rgba(0,0,0,0.2)]' : 'translate-y-full'}`}>
+        
+        {/* Barra pequena para indicar que pode arrastar para baixo */}
+        <div className="w-full flex justify-center pt-3 pb-1" onClick={closeMenu}>
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
+
+        <div className="p-6 pt-2 pb-10">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Mais Opções</h2>
+            <button onClick={closeMenu} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            
+            {user ? (
+              <>
+                <Link href="/perfil" onClick={closeMenu} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl hover:bg-primary/10 transition group">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/20 p-3 rounded-full text-primary group-hover:scale-110 transition-transform"><User size={24} /></div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base">Meu Perfil</h3>
+                      <p className="text-xs text-gray-500 font-medium">Editar dados e foto</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </Link>
+
+                <Link href="/meus-anuncios" onClick={closeMenu} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition group">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white border border-gray-200 p-3 rounded-full text-gray-600 shadow-sm group-hover:scale-110 transition-transform"><FileText size={24} /></div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base">Meus Anúncios</h3>
+                      <p className="text-xs text-gray-500 font-medium">Gerenciar vendas</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </Link>
+
+                <Link href="/favoritos" onClick={closeMenu} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition group">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-red-50 text-red-500 p-3 rounded-full group-hover:scale-110 transition-transform"><Heart size={24} /></div>
+                    <h3 className="font-bold text-gray-900 text-base">Favoritos</h3>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </Link>
+              </>
+            ) : (
+              <Link href="/login" onClick={closeMenu} className="flex items-center justify-center p-4 bg-primary text-white rounded-2xl font-bold shadow-md hover:bg-primary-dark transition text-lg mb-4">
+                Entrar / Cadastrar
+              </Link>
+            )}
+
+            <div className="pt-4 mt-4 border-t border-gray-100 space-y-2">
+              <Link href="/seguranca" onClick={closeMenu} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition font-bold text-gray-700">
+                <Shield size={22} className="text-blue-500" /> Dicas de Segurança
+              </Link>
+              
+              <Link href="/contato" onClick={closeMenu} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition font-bold text-gray-700">
+                <HelpCircle size={22} className="text-orange-500" /> Ajuda e Contato
+              </Link>
+            </div>
+
+            {user && (
+              <div className="pt-4 mt-4 border-t border-gray-100">
+                <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition">
+                  <LogOut size={20} /> Sair da conta
+                </button>
               </div>
-              <span className={`text-[10px] mt-1 ${isActive ? 'text-primary font-bold' : 'text-gray-400 font-medium'}`}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    </>
+  )
 }
