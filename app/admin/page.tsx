@@ -3,19 +3,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
 import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut } from 'lucide-react'
 import Link from 'next/link'
-
-// ==========================================
-// 🚨 ATENÇÃO: COLOQUE AQUI O SEU E-MAIL REAL DE ADMIN
-// ==========================================
-const ADMIN_EMAIL = 'admin@desapegopiaui.com'
 
 export default function AdminPage() {
   const router = useRouter()
   
-  // Estados de Autenticação
   const [loadingAuth, setLoadingAuth] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -23,16 +17,30 @@ export default function AdminPage() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
 
-  // Estados do Painel
   const [ads, setAds] = useState<any[]>([])
   const [denuncias, setDenuncias] = useState<any[]>([])
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
-      if (currentUser && currentUser.email === ADMIN_EMAIL) {
-        setIsAdmin(true)
-        fetchDados()
+      
+      if (currentUser) {
+        // PERGUNTA AO COFRE SE O UTILIZADOR É ADMIN
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid))
+          
+          if (adminDoc.exists()) {
+            setIsAdmin(true)
+            fetchDados()
+          } else {
+            setIsAdmin(false)
+            setLoadingAuth(false)
+          }
+        } catch (error) {
+          console.error("Erro ao verificar permissões:", error)
+          setIsAdmin(false)
+          setLoadingAuth(false)
+        }
       } else {
         setIsAdmin(false)
         setLoadingAuth(false)
@@ -67,22 +75,13 @@ export default function AdminPage() {
     }
   }
 
-  // ==========================================
-  // FUNÇÕES DE LOGIN ADMIN
-  // ==========================================
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginLoading(true)
-    
-    if (loginEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      alert("❌ Acesso Negado: Este e-mail não tem privilégios de administrador.")
-      setLoginLoading(false)
-      return
-    }
 
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
-      // O useEffect vai detetar a mudança automaticamente e carregar o painel
+      // O useEffect vai disparar, checar no banco se é admin, e liberar ou bloquear a tela.
     } catch (error) {
       alert("E-mail ou senha incorretos.")
       setLoginLoading(false)
@@ -94,9 +93,6 @@ export default function AdminPage() {
     router.push('/')
   }
 
-  // ==========================================
-  // FUNÇÕES DO PAINEL
-  // ==========================================
   const handleDeleteAd = async (id: string) => {
     if (!confirm("Tem a certeza que deseja excluir este anúncio permanentemente?")) return
     try {
@@ -131,20 +127,15 @@ export default function AdminPage() {
     }
   }
 
-  // ==========================================
-  // RENDERIZAÇÕES CONDICIONAIS DE SEGURANÇA
-  // ==========================================
-  
   if (loadingAuth) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
-  // CENÁRIO 1: Utilizador logado, mas NÃO é o admin (Tentativa de invasão)
   if (user && !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center px-4">
         <ShieldAlert size={80} className="text-red-500 mb-6" />
         <h1 className="text-4xl font-black text-white mb-2">ACESSO NEGADO</h1>
         <p className="text-gray-400 font-medium mb-8 text-center max-w-md">
-          A sua conta ({user.email}) não tem privilégios administrativos para aceder a esta área restrita.
+          A sua conta não tem privilégios administrativos para aceder a esta área restrita.
         </p>
         <div className="flex gap-4">
            <Link href="/" className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition">Voltar ao Início</Link>
@@ -154,7 +145,6 @@ export default function AdminPage() {
     )
   }
 
-  // CENÁRIO 2: Ninguém logado (Mostra o Login Admin)
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -195,7 +185,6 @@ export default function AdminPage() {
     )
   }
 
-  // CENÁRIO 3: Admin Logado com Sucesso (O Painel que já construímos)
   return (
     <div className="bg-gray-50 min-h-screen py-10">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -207,7 +196,6 @@ export default function AdminPage() {
            </button>
         </div>
         
-        {/* CARDS DE RESUMO */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="bg-primary/10 p-4 rounded-xl text-primary">
@@ -230,7 +218,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* MÓDULO 1: CENTRAL DE DENÚNCIAS */}
         {denuncias.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border-2 border-red-100 overflow-hidden mb-10">
             <div className="p-6 bg-red-50 border-b border-red-100 flex items-center gap-3">
@@ -290,7 +277,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* MÓDULO 2: GESTÃO GLOBAL DE ANÚNCIOS */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
             <h2 className="text-xl font-black text-gray-800">Todos os Anúncios ({ads.length})</h2>
@@ -345,7 +331,6 @@ export default function AdminPage() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   )
