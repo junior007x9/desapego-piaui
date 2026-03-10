@@ -2,40 +2,53 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
-import { DollarSign, Users, ShoppingBag, Ban, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink } from 'lucide-react'
+import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut } from 'lucide-react'
 import Link from 'next/link'
+
+// ==========================================
+// 🚨 ATENÇÃO: COLOQUE AQUI O SEU E-MAIL REAL DE ADMIN
+// ==========================================
+const ADMIN_EMAIL = 'admin@desapegopiaui.com'
 
 export default function AdminPage() {
   const router = useRouter()
+  
+  // Estados de Autenticação
+  const [loadingAuth, setLoadingAuth] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  // Estados do Painel
   const [ads, setAds] = useState<any[]>([])
   const [denuncias, setDenuncias] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // 🔒 Num projeto real, coloque aqui a verificação do seu e-mail de administrador
-      // ex: if (user?.email !== 'seu@email.com') router.push('/')
-      if (!user) {
-        router.push('/login')
-      } else {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        setIsAdmin(true)
         fetchDados()
+      } else {
+        setIsAdmin(false)
+        setLoadingAuth(false)
       }
     })
     return () => unsubscribe()
-  }, [router])
+  }, [])
 
   async function fetchDados() {
     try {
-      // 1. Puxa todos os anúncios do Firebase
       const snapshotAds = await getDocs(collection(db, 'anuncios'))
       const listaAds: any[] = []
       snapshotAds.forEach(doc => listaAds.push({ id: doc.id, ...doc.data() }))
       listaAds.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
       setAds(listaAds)
 
-      // 2. Puxa todas as denúncias pendentes
       const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
       const listaDenuncias: any[] = []
       snapshotDenuncias.forEach(doc => {
@@ -50,11 +63,40 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Erro ao buscar dados admin", error)
     } finally {
-      setLoading(false)
+      setLoadingAuth(false)
     }
   }
 
-  // AÇÃO 1: Excluir um anúncio normal da plataforma
+  // ==========================================
+  // FUNÇÕES DE LOGIN ADMIN
+  // ==========================================
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginLoading(true)
+    
+    if (loginEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      alert("❌ Acesso Negado: Este e-mail não tem privilégios de administrador.")
+      setLoginLoading(false)
+      return
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
+      // O useEffect vai detetar a mudança automaticamente e carregar o painel
+    } catch (error) {
+      alert("E-mail ou senha incorretos.")
+      setLoginLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await signOut(auth)
+    router.push('/')
+  }
+
+  // ==========================================
+  // FUNÇÕES DO PAINEL
+  // ==========================================
   const handleDeleteAd = async (id: string) => {
     if (!confirm("Tem a certeza que deseja excluir este anúncio permanentemente?")) return
     try {
@@ -66,17 +108,11 @@ export default function AdminPage() {
     }
   }
 
-  // AÇÃO 2: Excluir o anúncio denunciado E resolver a denúncia
   const handleAprovarDenuncia = async (anuncioId: string, denunciaId: string) => {
     if (!confirm("🚨 ATENÇÃO: Isso vai APAGAR O ANÚNCIO da plataforma e marcar a denúncia como resolvida. Confirmar exclusão?")) return
     try {
-      // Apaga o anúncio
       await deleteDoc(doc(db, 'anuncios', anuncioId))
-      
-      // Marca a denúncia como resolvida
       await updateDoc(doc(db, 'denuncias', denunciaId), { status: 'resolvido' })
-      
-      // Atualiza a tela
       setAds(ads.filter(ad => ad.id !== anuncioId))
       setDenuncias(denuncias.filter(d => d.id !== denunciaId))
       alert("Golpe evitado! Anúncio apagado e denúncia resolvida.")
@@ -85,7 +121,6 @@ export default function AdminPage() {
     }
   }
 
-  // AÇÃO 3: Ignorar denúncia falsa
   const handleIgnorarDenuncia = async (denunciaId: string) => {
     if (!confirm("Deseja ignorar esta denúncia? O anúncio CONTINUARÁ no ar.")) return
     try {
@@ -96,12 +131,81 @@ export default function AdminPage() {
     }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
+  // ==========================================
+  // RENDERIZAÇÕES CONDICIONAIS DE SEGURANÇA
+  // ==========================================
+  
+  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
+  // CENÁRIO 1: Utilizador logado, mas NÃO é o admin (Tentativa de invasão)
+  if (user && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center px-4">
+        <ShieldAlert size={80} className="text-red-500 mb-6" />
+        <h1 className="text-4xl font-black text-white mb-2">ACESSO NEGADO</h1>
+        <p className="text-gray-400 font-medium mb-8 text-center max-w-md">
+          A sua conta ({user.email}) não tem privilégios administrativos para aceder a esta área restrita.
+        </p>
+        <div className="flex gap-4">
+           <Link href="/" className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition">Voltar ao Início</Link>
+           <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold transition">Sair da Conta</button>
+        </div>
+      </div>
+    )
+  }
+
+  // CENÁRIO 2: Ninguém logado (Mostra o Login Admin)
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+          <div className="w-20 h-20 bg-gray-800 text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-gray-700">
+             <Lock size={36} />
+          </div>
+          <h2 className="text-3xl font-black text-white tracking-tight">Admin Restrito</h2>
+          <p className="mt-2 text-sm text-gray-400 font-medium">Insira as credenciais de administrador</p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-gray-800 py-8 px-4 shadow-2xl sm:rounded-[2rem] sm:px-10 border border-gray-700">
+            <form onSubmit={handleAdminLogin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-1">E-mail Administrativo</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                  <input required type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full pl-10 px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition text-white" placeholder="admin@..." />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-1">Senha de Segurança</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                  <input required type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full pl-10 px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition text-white" placeholder="••••••••" />
+                </div>
+              </div>
+
+              <button type="submit" disabled={loginLoading} className="w-full flex justify-center items-center gap-2 py-4 px-4 rounded-xl shadow-lg text-lg font-bold text-white bg-primary hover:bg-primary-dark transition-all disabled:opacity-50 mt-8">
+                {loginLoading ? <Loader2 className="animate-spin" size={24} /> : "Autenticar"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // CENÁRIO 3: Admin Logado com Sucesso (O Painel que já construímos)
   return (
     <div className="bg-gray-50 min-h-screen py-10">
       <div className="container mx-auto px-4 max-w-6xl">
-        <h1 className="text-3xl font-black text-gray-900 mb-8 tracking-tight">Painel Administrativo</h1>
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Painel Administrativo</h1>
+           <button onClick={handleLogout} className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl font-bold hover:bg-gray-100 transition shadow-sm w-fit">
+              <LogOut size={18}/> Sair do Painel
+           </button>
+        </div>
         
         {/* CARDS DE RESUMO */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -186,7 +290,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* MÓDULO 2: GESTÃO GLOBAL DE ANÚNCIOS (Sempre visível) */}
+        {/* MÓDULO 2: GESTÃO GLOBAL DE ANÚNCIOS */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
             <h2 className="text-xl font-black text-gray-800">Todos os Anúncios ({ads.length})</h2>
@@ -241,6 +345,7 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   )
