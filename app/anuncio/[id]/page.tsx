@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore'
-import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Ban } from 'lucide-react'
+import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Ban, Flag, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DetalhesAnuncio() {
@@ -18,7 +18,12 @@ export default function DetalhesAnuncio() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [locFull, setLocFull] = useState('Carregando...')
 
-  // MÁGICA DE PERFORMANCE: Mesma lógica de cache da Home, adaptada com o Estado (UF)
+  // Estados da Denúncia
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [reportMotivo, setReportMotivo] = useState('')
+  const [isReporting, setIsReporting] = useState(false)
+
+  // MÁGICA DE PERFORMANCE: Cache da Localização
   useEffect(() => {
     async function fetchLocation() {
       const cachedFullLocation = localStorage.getItem('user_full_location');
@@ -42,9 +47,8 @@ export default function DetalhesAnuncio() {
         const fullLocation = `${city}, ${state}`;
         setLocFull(fullLocation);
         
-        // Grava no cache
         localStorage.setItem('user_full_location', fullLocation);
-        localStorage.setItem('user_city', city); // Atualiza também o cache da Home por segurança
+        localStorage.setItem('user_city', city);
       } catch (error) {
         setLocFull('Teresina, PI');
       }
@@ -133,7 +137,7 @@ export default function DetalhesAnuncio() {
 
   const handleStartChat = async () => {
     if (!user) {
-      alert("Faça login para negociar!")
+      alert("Faça login no site para iniciar uma negociação de forma segura!")
       router.push(`/login`)
       return
     }
@@ -179,11 +183,51 @@ export default function DetalhesAnuncio() {
     }
   }
 
+  // PROTEÇÃO ANTI-SCRAPING: Tranca o WhatsApp para visitantes anônimos
   const handleWhatsAppClick = () => {
+    if (!user) {
+      alert("🔒 Segurança: Para ver o número do vendedor e evitar fraudes, você precisa fazer login no site.");
+      router.push('/login');
+      return;
+    }
+
     if (vendedor?.telefone) {
       window.open(`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no Desapego Piauí.`, '_blank');
     } else {
       alert("Este vendedor ainda não cadastrou um número de WhatsApp. Por favor, utilize o Chat Interno!");
+    }
+  }
+
+  // SISTEMA DE DENÚNCIAS
+  const handleReportarAnuncio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Faça login para denunciar um anúncio.");
+      router.push('/login');
+      return;
+    }
+    if (!reportMotivo) return;
+
+    setIsReporting(true);
+    try {
+      await addDoc(collection(db, 'denuncias'), {
+        anuncioId: ad.id,
+        anuncioTitulo: ad.titulo,
+        vendedorId: ad.vendedorId,
+        denuncianteId: user.uid,
+        motivo: reportMotivo,
+        status: 'pendente', // pendente, analisado, resolvido
+        criadoEm: serverTimestamp()
+      });
+
+      alert("Denúncia enviada com sucesso! A nossa equipa de moderação vai analisar este anúncio.");
+      setIsReportModalOpen(false);
+      setReportMotivo('');
+    } catch (error) {
+      console.error("Erro ao enviar denúncia:", error);
+      alert("Ocorreu um erro. Tente novamente mais tarde.");
+    } finally {
+      setIsReporting(false);
     }
   }
 
@@ -231,6 +275,38 @@ export default function DetalhesAnuncio() {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
+      
+      {/* MODAL DE DENÚNCIA */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+            <button onClick={() => setIsReportModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 p-2 rounded-full transition">
+              <X size={20} />
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+               <div className="bg-red-100 text-red-600 p-3 rounded-full"><Flag size={24}/></div>
+               <h2 className="text-xl font-black text-gray-900">Denunciar Anúncio</h2>
+            </div>
+            <form onSubmit={handleReportarAnuncio} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Qual é o problema com este anúncio?</label>
+                <select required value={reportMotivo} onChange={(e) => setReportMotivo(e.target.value)} className="w-full p-4 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-red-200 focus:border-red-500 outline-none transition">
+                  <option value="">Selecione um motivo...</option>
+                  <option value="Suspeita de Fraude / Golpe">Suspeita de Fraude / Golpe</option>
+                  <option value="Produto Falsificado / Ilegal">Produto Falsificado / Ilegal</option>
+                  <option value="Conteúdo Ofensivo ou Impróprio">Conteúdo Ofensivo ou Impróprio</option>
+                  <option value="Preço Irreal (Falso)">Preço Irreal (Falso)</option>
+                  <option value="Outro Motivo">Outro Motivo</option>
+                </select>
+              </div>
+              <button type="submit" disabled={isReporting || !reportMotivo} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 mt-4">
+                {isReporting ? <Loader2 className="animate-spin" /> : 'Enviar Denúncia Segura'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white p-3 shadow-sm md:hidden sticky top-0 z-40 flex justify-between items-center">
         <button onClick={() => router.back()} className="flex items-center text-primary font-bold">
           <ChevronLeft size={24} /> Voltar
@@ -274,9 +350,14 @@ export default function DetalhesAnuncio() {
               <span className="text-3xl font-black text-primary block mt-2">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
               </span>
-              <div className="flex items-center gap-4 text-gray-500 text-xs mt-3 font-medium">
-                 <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {locFull}</span>
-                 <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
+              <div className="flex items-center justify-between text-gray-500 text-xs mt-3 font-medium">
+                 <div className="flex gap-4">
+                   <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {locFull}</span>
+                   <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
+                 </div>
+                 <button onClick={() => setIsReportModalOpen(true)} className="flex items-center gap-1 text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded-md transition-colors font-bold">
+                    <Flag size={12}/> Denunciar
+                 </button>
               </div>
               
               <div className="pt-4 border-t border-gray-100 mt-4">
@@ -306,8 +387,13 @@ export default function DetalhesAnuncio() {
               </div>
               
               <div className="flex items-center justify-between text-gray-500 text-sm mb-6 pb-6 border-b border-gray-100 font-medium">
-                 <span className="flex items-center gap-1"><MapPin size={16} className="text-accent" /> {locFull}</span>
-                 <span className="flex items-center gap-1"><Eye size={16} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
+                 <div className="flex gap-4">
+                   <span className="flex items-center gap-1"><MapPin size={16} className="text-accent" /> {locFull}</span>
+                   <span className="flex items-center gap-1"><Eye size={16} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
+                 </div>
+                 <button onClick={() => setIsReportModalOpen(true)} className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors font-bold bg-red-50 px-3 py-1.5 rounded-lg">
+                    <Flag size={14}/> Denunciar
+                 </button>
               </div>
 
               <ContactButtons />
