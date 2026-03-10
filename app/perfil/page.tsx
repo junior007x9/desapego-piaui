@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { User, Phone, Save, Loader2, ArrowLeft, Trash2, Shield, Eye } from 'lucide-react'
+import { User, Phone, Save, Loader2, ArrowLeft, Trash2, Shield, Eye, Camera } from 'lucide-react'
 import Link from 'next/link'
 
 export default function PerfilPage() {
@@ -12,11 +12,13 @@ export default function PerfilPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [uploadingFoto, setUploadingFoto] = useState(false)
   const [userAuth, setUserAuth] = useState<any>(null)
   
   // Dados Públicos
   const [apelido, setApelido] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [fotoPerfil, setFotoPerfil] = useState('')
 
   // Dados Privados
   const [nomeCompleto, setNomeCompleto] = useState('')
@@ -43,6 +45,10 @@ export default function PerfilPage() {
           const publicData = publicDoc.data()
           setApelido(publicData.nome || '')
           setTelefone(publicData.telefone || '')
+          // Puxa a foto salva no banco OU a foto do Google Auth como fallback
+          setFotoPerfil(publicData.fotoPerfil || user.photoURL || '')
+        } else if (user.photoURL) {
+           setFotoPerfil(user.photoURL)
         }
 
         // 2. Busca dados privados (LGPD)
@@ -68,6 +74,44 @@ export default function PerfilPage() {
     return () => unsubscribe()
   }, [router])
 
+  // Função para fazer o upload da nova foto de perfil
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !userAuth) return;
+    
+    const file = e.target.files[0];
+    setUploadingFoto(true);
+    
+    try {
+      const idToken = await userAuth.getIdToken();
+      const formData = new FormData();
+      formData.append('image', file);
+
+      // Usa a mesma API segura que já criamos para os anúncios!
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` },
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        const novaUrl = data.data.url;
+        setFotoPerfil(novaUrl);
+        
+        // Já salva direto no banco para o usuário não perder a foto se sair sem clicar em salvar
+        await setDoc(doc(db, 'users', userAuth.uid), { fotoPerfil: novaUrl }, { merge: true });
+      } else {
+        alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao atualizar a foto de perfil.");
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -82,6 +126,7 @@ export default function PerfilPage() {
         cidade: cidade,
         estado: estado,
         email: userAuth.email,
+        fotoPerfil: fotoPerfil,
         atualizadoEm: serverTimestamp()
       }, { merge: true })
 
@@ -138,10 +183,30 @@ export default function PerfilPage() {
 
         <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-8">
           
-          <div className="flex items-center justify-center mb-2">
-            <div className="w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center text-4xl font-black shadow-inner border border-primary/20">
-              {apelido ? apelido.charAt(0).toUpperCase() : <User size={40} />}
+          {/* FOTO DE PERFIL COM UPLOAD */}
+          <div className="flex flex-col items-center justify-center mb-4">
+            <div className="relative w-28 h-28 bg-primary/10 text-primary rounded-full flex items-center justify-center text-4xl font-black shadow-inner border-4 border-white outline outline-1 outline-gray-200 group overflow-hidden">
+              {uploadingFoto ? (
+                <Loader2 className="animate-spin text-primary" size={32} />
+              ) : fotoPerfil ? (
+                <img src={fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+              ) : (
+                apelido ? apelido.charAt(0).toUpperCase() : <User size={40} />
+              )}
+
+              {/* Camada escura que aparece ao passar o mouse por cima (Hover) */}
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <Camera className="text-white" size={28} />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleFotoChange} 
+                  disabled={uploadingFoto} 
+                />
+              </label>
             </div>
+            <p className="text-xs text-gray-400 mt-3 font-medium">Clique na imagem para alterar</p>
           </div>
 
           {/* DADOS PÚBLICOS */}
@@ -194,11 +259,11 @@ export default function PerfilPage() {
           </div>
 
           <div className="pt-6 border-t border-gray-100 space-y-4">
-            <button type="submit" disabled={saving || deleting} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5">
+            <button type="submit" disabled={saving || deleting || uploadingFoto} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5">
               {saving ? <Loader2 className="animate-spin" /> : <Save />} Salvar Alterações
             </button>
 
-            <button type="button" onClick={handleDeleteAccount} disabled={saving || deleting} className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm">
+            <button type="button" onClick={handleDeleteAccount} disabled={saving || deleting || uploadingFoto} className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm">
               {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />} Excluir minha conta (LGPD)
             </button>
           </div>
