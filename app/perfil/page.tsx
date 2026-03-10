@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { User, Phone, Save, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
+import { User, Phone, Save, Loader2, ArrowLeft, Trash2, Shield, Eye } from 'lucide-react'
 import Link from 'next/link'
 
 export default function PerfilPage() {
@@ -14,8 +14,19 @@ export default function PerfilPage() {
   const [deleting, setDeleting] = useState(false)
   const [userAuth, setUserAuth] = useState<any>(null)
   
-  const [nome, setNome] = useState('')
+  // Dados Públicos
+  const [apelido, setApelido] = useState('')
   const [telefone, setTelefone] = useState('')
+
+  // Dados Privados
+  const [nomeCompleto, setNomeCompleto] = useState('')
+  const [documento, setDocumento] = useState('')
+  const [cep, setCep] = useState('')
+  const [rua, setRua] = useState('')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estado, setEstado] = useState('')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -26,11 +37,26 @@ export default function PerfilPage() {
       setUserAuth(user)
 
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          const dados = userDoc.data()
-          setNome(dados.nome || '')
-          setTelefone(dados.telefone || '')
+        // 1. Busca dados públicos
+        const publicDoc = await getDoc(doc(db, 'users', user.uid))
+        if (publicDoc.exists()) {
+          const publicData = publicDoc.data()
+          setApelido(publicData.nome || '')
+          setTelefone(publicData.telefone || '')
+        }
+
+        // 2. Busca dados privados (LGPD)
+        const privateDoc = await getDoc(doc(db, 'users', user.uid, 'privado', 'dados'))
+        if (privateDoc.exists()) {
+          const privateData = privateDoc.data()
+          setNomeCompleto(privateData.nomeCompleto || '')
+          setDocumento(privateData.documento || '')
+          setCep(privateData.endereco?.cep || '')
+          setRua(privateData.endereco?.rua || '')
+          setNumero(privateData.endereco?.numero || '')
+          setBairro(privateData.endereco?.bairro || '')
+          setCidade(privateData.endereco?.cidade || '')
+          setEstado(privateData.endereco?.estado || '')
         }
       } catch (error) {
         console.error("Erro ao carregar perfil:", error)
@@ -49,11 +75,21 @@ export default function PerfilPage() {
     try {
       const telLimpo = telefone.replace(/\D/g, '')
 
+      // Salva Públicos
       await setDoc(doc(db, 'users', userAuth.uid), {
-        nome: nome,
+        nome: apelido,
         telefone: telLimpo,
+        cidade: cidade,
+        estado: estado,
         email: userAuth.email,
         atualizadoEm: serverTimestamp()
+      }, { merge: true })
+
+      // Salva Privados
+      await setDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'), {
+        nomeCompleto,
+        documento: documento.replace(/\D/g, ''),
+        endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
       }, { merge: true })
 
       alert("Perfil atualizado com sucesso!")
@@ -66,39 +102,25 @@ export default function PerfilPage() {
     }
   }
 
-  // LGPD: FUNÇÃO PARA EXCLUIR CONTA DEFINITIVAMENTE
   const handleDeleteAccount = async () => {
-    const confirmacao = window.confirm("ATENÇÃO (LGPD): Tem certeza de que deseja excluir sua conta? Todos os seus dados pessoais, perfil e anúncios vinculados serão permanentemente apagados e não poderão ser recuperados.")
-    
+    const confirmacao = window.confirm("ATENÇÃO (LGPD): Tem certeza de que deseja excluir sua conta e todos os seus dados definitivamente?")
     if (!confirmacao) return;
 
     setDeleting(true)
     try {
-      // 1. Apaga os dados do usuário no Firestore
+      await deleteDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'));
       await deleteDoc(doc(db, 'users', userAuth.uid));
-      
-      // 2. Apaga a conta de Autenticação do Firebase
       await deleteUser(userAuth);
       
-      alert("Sua conta e dados foram excluídos com sucesso em conformidade com a LGPD.");
+      alert("Sua conta e dados foram excluídos com sucesso.");
       router.push('/');
     } catch (error: any) {
-      console.error("Erro ao excluir conta:", error)
       if (error.code === 'auth/requires-recent-login') {
-        alert("Por questões de segurança, faça logout e login novamente antes de excluir sua conta.");
+        alert("Por segurança, faça logout e login novamente antes de excluir sua conta.");
       } else {
-        alert("Ocorreu um erro ao tentar excluir a sua conta.");
+        alert("Erro ao excluir conta.");
       }
       setDeleting(false)
-    }
-  }
-
-  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let valor = e.target.value.replace(/\D/g, '')
-    if (valor.length <= 11) {
-      valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2')
-      valor = valor.replace(/(\d)(\d{4})$/, '$1-$2')
-      setTelefone(valor)
     }
   }
 
@@ -106,7 +128,7 @@ export default function PerfilPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen py-6 md:py-10 px-4 pb-28 md:pb-10">
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
           <Link href="/meus-anuncios" className="p-2 bg-white rounded-full shadow-sm text-gray-600 hover:text-primary transition">
             <ArrowLeft size={24} />
@@ -114,66 +136,70 @@ export default function PerfilPage() {
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">Meu Perfil</h1>
         </div>
 
-        <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+        <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-8">
           
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-2">
             <div className="w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center text-4xl font-black shadow-inner border border-primary/20">
-              {nome ? nome.charAt(0).toUpperCase() : <User size={40} />}
+              {apelido ? apelido.charAt(0).toUpperCase() : <User size={40} />}
             </div>
           </div>
 
-          <div>
-            <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">Nome Completo</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
-              <input 
-                type="text" 
-                required
-                placeholder="Como quer ser chamado?"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-800 font-medium"
-              />
+          {/* DADOS PÚBLICOS */}
+          <div className="bg-primary/5 p-4 md:p-6 rounded-2xl border border-primary/10">
+            <h3 className="text-lg font-black text-primary border-b border-primary/10 pb-2 mb-4 flex items-center gap-2"><Eye size={20}/> Dados Públicos</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Como quer ser chamado?</label>
+                <input required type="text" value={apelido} onChange={e => setApelido(e.target.value)} className="w-full px-4 py-3 bg-white border border-transparent rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">WhatsApp de Vendas</label>
+                <input required type="text" value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full px-4 py-3 bg-white border border-transparent rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
+              </div>
             </div>
           </div>
 
+          {/* DADOS PRIVADOS */}
           <div>
-            <label className="block text-gray-700 font-bold mb-2 text-sm md:text-base">WhatsApp para Vendas</label>
-            <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
-              <input 
-                type="text" 
-                required
-                placeholder="(86) 99999-9999"
-                value={telefone}
-                onChange={handleTelefoneChange}
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-800 font-medium"
-              />
+            <h3 className="text-lg font-black text-gray-900 border-b border-gray-100 pb-2 mb-4 flex items-center gap-2"><Shield size={20} className="text-blue-500"/> Dados Privados (LGPD)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Nome Completo</label>
+                <input required type="text" value={nomeCompleto} onChange={e => setNomeCompleto(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">CPF / CNPJ</label>
+                <input required readOnly type="text" value={documento} className="w-full px-4 py-3 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl outline-none cursor-not-allowed" />
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">
-              Os compradores poderão clicar num botão para falar diretamente com você pelo WhatsApp.
-            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="col-span-2 md:col-span-3">
+                <label className="block text-sm font-bold text-gray-700 mb-1">Rua / Logradouro</label>
+                <input required type="text" value={rua} onChange={e => setRua(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Número</label>
+                <input required type="text" value={numero} onChange={e => setNumero(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Bairro</label>
+                <input required type="text" value={bairro} onChange={e => setBairro(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-bold text-gray-700 mb-1">CEP</label>
+                <input required type="text" value={cep} onChange={e => setCep(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+              </div>
+            </div>
           </div>
 
           <div className="pt-6 border-t border-gray-100 space-y-4">
-            <button 
-              type="submit" 
-              disabled={saving || deleting}
-              className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5"
-            >
-              {saving ? <Loader2 className="animate-spin" /> : <Save />}
-              Salvar Alterações
+            <button type="submit" disabled={saving || deleting} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-lg transform hover:-translate-y-0.5">
+              {saving ? <Loader2 className="animate-spin" /> : <Save />} Salvar Alterações
             </button>
 
-            {/* BOTÃO LGPD EXCLUIR CONTA */}
-            <button 
-              type="button" 
-              onClick={handleDeleteAccount}
-              disabled={saving || deleting}
-              className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm"
-            >
-              {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />}
-              Excluir minha conta e dados (LGPD)
+            <button type="button" onClick={handleDeleteAccount} disabled={saving || deleting} className="w-full bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 disabled:opacity-50 text-sm">
+              {deleting ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18} />} Excluir minha conta (LGPD)
             </button>
           </div>
         </form>
