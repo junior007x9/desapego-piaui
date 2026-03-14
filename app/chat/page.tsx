@@ -19,7 +19,18 @@ function ChatConteudo() {
   const [newMessage, setNewMessage] = useState('')
   const [loadingChats, setLoadingChats] = useState(true)
   const [isSending, setIsSending] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // NOVA REFERÊNCIA: Captura a caixa de mensagens inteira
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  // FUNÇÃO BLINDADA DE SCROLL: Rola apenas a caixa, sem afetar a página
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }, 100)
+  }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -79,9 +90,8 @@ function ChatConteudo() {
       })
       setMessages(listaMensagens)
       
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
+      // Chama o nosso novo scroll perfeito sempre que chegar mensagem
+      scrollToBottom()
     })
 
     return () => unsubscribe()
@@ -125,6 +135,9 @@ function ChatConteudo() {
     const text = newMessage.trim()
     setNewMessage('') 
     setIsSending(true)
+    
+    // Força o scroll assim que o utilizador clica em enviar, para ficar super rápido
+    scrollToBottom()
 
     try {
       // 1. Envia a mensagem do usuário normalmente
@@ -247,8 +260,8 @@ function ChatConteudo() {
                 )}
               </div>
 
-              {/* LISTA */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/90 bg-blend-overlay">
+              {/* LISTA DE MENSAGENS COM A NOVA REFERÊNCIA APLICADA AQUI */}
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/90 bg-blend-overlay scroll-smooth">
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-400 mt-10 text-sm bg-white py-2 px-4 rounded-full w-fit mx-auto shadow-sm border border-gray-100 font-medium">
                     Mande a primeira mensagem!
@@ -280,7 +293,6 @@ function ChatConteudo() {
                     )
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* INPUT */}
