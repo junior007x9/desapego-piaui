@@ -4,8 +4,39 @@ import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { User, Save, Loader2, ArrowLeft, Trash2, Shield, Eye, Camera } from 'lucide-react'
+import { User, Save, Loader2, ArrowLeft, Trash2, Shield, Eye, Camera, Lock } from 'lucide-react'
 import Link from 'next/link'
+
+// ==========================================
+// MÁSCARAS DE FORMATAÇÃO
+// ==========================================
+const mascaraTelefone = (valor: string) => {
+  valor = valor.replace(/\D/g, '')
+  valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2')
+  valor = valor.replace(/(\d)(\d{4})$/, '$1-$2')
+  return valor.substring(0, 15)
+}
+
+const mascaraDoc = (valor: string) => {
+  valor = valor.replace(/\D/g, '')
+  if (valor.length <= 11) {
+    valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+    valor = valor.replace(/(\d{3})(\d)/, '$1.$2')
+    valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  } else {
+    valor = valor.replace(/^(\d{2})(\d)/, '$1.$2')
+    valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2')
+    valor = valor.replace(/(\d{4})(\d)/, '$1-$2')
+  }
+  return valor.substring(0, 18)
+}
+
+const mascaraCep = (valor: string) => {
+  valor = valor.replace(/\D/g, '')
+  valor = valor.replace(/^(\d{5})(\d)/, '$1-$2')
+  return valor.substring(0, 9)
+}
 
 export default function PerfilPage() {
   const router = useRouter()
@@ -15,6 +46,9 @@ export default function PerfilPage() {
   const [uploadingFoto, setUploadingFoto] = useState(false)
   const [userAuth, setUserAuth] = useState<any>(null)
   
+  // TRAVA ANTI-FRAUDE
+  const [temDocSalvo, setTemDocSalvo] = useState(false)
+
   // Dados Públicos
   const [apelido, setApelido] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -43,7 +77,7 @@ export default function PerfilPage() {
         if (publicDoc.exists()) {
           const publicData = publicDoc.data()
           setApelido(publicData.nome || '')
-          setTelefone(publicData.telefone || '')
+          setTelefone(mascaraTelefone(publicData.telefone || ''))
           setFotoPerfil(publicData.fotoPerfil || user.photoURL || '')
         } else if (user.photoURL) {
            setFotoPerfil(user.photoURL)
@@ -53,8 +87,17 @@ export default function PerfilPage() {
         if (privateDoc.exists()) {
           const privateData = privateDoc.data()
           setNomeCompleto(privateData.nomeCompleto || '')
-          setDocumento(privateData.documento || '')
-          setCep(privateData.endereco?.cep || '')
+          
+          // VERIFICA SE JÁ EXISTE UM CPF CADASTRADO E TRAVA O CAMPO
+          if (privateData.documento && privateData.documento.length > 5) {
+            setTemDocSalvo(true)
+            setDocumento(mascaraDoc(privateData.documento))
+          } else {
+            setTemDocSalvo(false)
+            setDocumento('')
+          }
+
+          setCep(mascaraCep(privateData.endereco?.cep || ''))
           setRua(privateData.endereco?.rua || '')
           setNumero(privateData.endereco?.numero || '')
           setBairro(privateData.endereco?.bairro || '')
@@ -111,6 +154,8 @@ export default function PerfilPage() {
 
     try {
       const telLimpo = telefone.replace(/\D/g, '')
+      const docLimpo = documento.replace(/\D/g, '')
+      const cepLimpo = cep.replace(/\D/g, '')
 
       await setDoc(doc(db, 'users', userAuth.uid), {
         nome: apelido,
@@ -124,9 +169,15 @@ export default function PerfilPage() {
 
       await setDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'), {
         nomeCompleto,
-        documento: documento.replace(/\D/g, ''),
-        endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
+        // Só atualiza o documento se o campo não estiver travado
+        ...( !temDocSalvo && { documento: docLimpo } ),
+        endereco: { cep: cepLimpo, rua, numero, bairro, cidade, estado }
       }, { merge: true })
+
+      // Após salvar com sucesso, se a pessoa digitou um CPF novo, a gente trava a tela pra ela não mexer mais
+      if (!temDocSalvo && docLimpo.length > 5) {
+         setTemDocSalvo(true)
+      }
 
       alert("Perfil atualizado com sucesso!")
       router.push('/meus-anuncios')
@@ -138,13 +189,10 @@ export default function PerfilPage() {
     }
   }
 
-  // NOVA LÓGICA DE EXCLUSÃO (LGPD: Congelamento de 30 dias)
   const handleDeleteAccount = async () => {
-    // Primeiro aviso para evitar cliques acidentais
     const confirmacao1 = window.confirm("ATENÇÃO: Você está prestes a iniciar o processo de exclusão da sua conta. Deseja continuar?")
     if (!confirmacao1) return;
 
-    // Segundo aviso com validade legal e explicação clara
     const textoLegal = "TERMO DE CONSENTIMENTO (LGPD):\n\n" +
                        "Ao confirmar, sua conta será desativada imediatamente e não ficará mais visível para novos negócios.\n\n" +
                        "A exclusão DEFINITIVA dos seus dados ocorrerá em um prazo de 30 DIAS. Este período de retenção é mantido exclusivamente para segurança, prevenção a fraudes e cumprimento de obrigações legais, conforme autorizado pela Lei Geral de Proteção de Dados.\n\n" +
@@ -155,24 +203,20 @@ export default function PerfilPage() {
 
     setDeleting(true)
     try {
-      // Calcula a data exata daqui a 30 dias
       const dataExclusao = new Date();
       dataExclusao.setDate(dataExclusao.getDate() + 30);
 
-      // Marca a conta pública como agendada para exclusão
       await setDoc(doc(db, 'users', userAuth.uid), {
         status: 'aguardando_exclusao',
         exclusaoAgendadaPara: dataExclusao,
         atualizadoEm: serverTimestamp()
       }, { merge: true });
 
-      // Marca o cofre de dados privados como agendado para exclusão
       await setDoc(doc(db, 'users', userAuth.uid, 'privado', 'dados'), {
         status: 'aguardando_exclusao',
         exclusaoAgendadaPara: dataExclusao
       }, { merge: true });
 
-      // Desloga o utilizador do dispositivo
       await signOut(auth);
       
       alert("Solicitação recebida com sucesso. Sua conta foi desativada e será excluída definitivamente em 30 dias.");
@@ -226,7 +270,14 @@ export default function PerfilPage() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">WhatsApp de Vendas</label>
-                <input required type="text" value={telefone} onChange={e => setTelefone(e.target.value)} className="w-full px-4 py-3 bg-white border border-transparent rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
+                <input 
+                  required 
+                  type="text" 
+                  value={telefone} 
+                  onChange={e => setTelefone(mascaraTelefone(e.target.value))} 
+                  className="w-full px-4 py-3 bg-white border border-transparent rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" 
+                  placeholder="(00) 00000-0000"
+                />
               </div>
             </div>
           </div>
@@ -241,7 +292,25 @@ export default function PerfilPage() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">CPF / CNPJ</label>
-                <input required readOnly type="text" value={documento} className="w-full px-4 py-3 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl outline-none cursor-not-allowed" />
+                <div className="relative">
+                  <input 
+                    required 
+                    readOnly={temDocSalvo}
+                    type="text" 
+                    value={documento} 
+                    onChange={e => {
+                      if(!temDocSalvo) setDocumento(mascaraDoc(e.target.value))
+                    }} 
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition ${temDocSalvo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-gray-50 focus:ring-2 focus:ring-primary'}`} 
+                    placeholder="000.000.000-00"
+                  />
+                  {temDocSalvo && <Lock size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />}
+                </div>
+                {temDocSalvo && (
+                  <p className="text-[11px] text-gray-400 mt-1.5 font-bold flex items-center gap-1">
+                    Documento validado e protegido contra alterações.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -260,7 +329,14 @@ export default function PerfilPage() {
               </div>
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-bold text-gray-700 mb-1">CEP</label>
-                <input required type="text" value={cep} onChange={e => setCep(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" />
+                <input 
+                  required 
+                  type="text" 
+                  value={cep} 
+                  onChange={e => setCep(mascaraCep(e.target.value))} 
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" 
+                  placeholder="00000-000"
+                />
               </div>
             </div>
           </div>
