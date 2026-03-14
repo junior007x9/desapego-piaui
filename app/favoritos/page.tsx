@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, MapPin, ShoppingBag, Loader2 } from 'lucide-react'
+import { Heart, MapPin, ShoppingBag, Loader2, ArrowLeft } from 'lucide-react'
 
 export default function FavoritosPage() {
   const router = useRouter()
@@ -13,40 +13,36 @@ export default function FavoritosPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         router.push('/login')
         return
       }
 
       try {
-        // 1. Busca os IDs favoritos do utilizador
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
-        if (!userDoc.exists()) {
-          setLoading(false)
-          return
-        }
-
-        const favoritosIds: string[] = userDoc.data().favoritos || []
-
-        if (favoritosIds.length === 0) {
-          setAds([])
-          setLoading(false)
-          return
-        }
-
-        // 2. Busca os dados completos de cada anúncio favorito
-        const promessasDeAnuncios = favoritosIds.map(id => getDoc(doc(db, 'anuncios', id)))
-        const docsSnapshots = await Promise.all(promessasDeAnuncios)
-        
-        const listaFavoritos: any[] = []
-        docsSnapshots.forEach(snap => {
-          if (snap.exists() && snap.data().status === 'ativo') {
-            listaFavoritos.push({ id: snap.id, ...snap.data() })
+        const userDoc = await getDoc(doc(db, 'users', user.uid))
+        if (userDoc.exists()) {
+          const favoritosIds = userDoc.data().favoritos || []
+          
+          if (favoritosIds.length === 0) {
+            setAds([])
+            setLoading(false)
+            return
           }
-        })
 
-        setAds(listaFavoritos)
+          // Busca cada anúncio favoritado
+          const promessasAnuncios = favoritosIds.map((id: string) => getDoc(doc(db, 'anuncios', id)))
+          const snapshots = await Promise.all(promessasAnuncios)
+          
+          const listaFavoritos: any[] = []
+          snapshots.forEach(snap => {
+            if (snap.exists()) {
+              listaFavoritos.push({ id: snap.id, ...snap.data() })
+            }
+          })
+          
+          setAds(listaFavoritos)
+        }
       } catch (error) {
         console.error("Erro ao buscar favoritos:", error)
       } finally {
@@ -57,51 +53,56 @@ export default function FavoritosPage() {
     return () => unsubscribe()
   }, [router])
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
+
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 mb-8">
-          <Heart className="text-red-500 fill-red-500" size={32} />
-          <h1 className="text-3xl font-bold text-gray-900">Meus Favoritos</h1>
+    <div className="bg-gray-50 min-h-screen py-10 pb-28 md:pb-10">
+      <div className="container mx-auto px-4 max-w-5xl">
+        
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={() => router.back()} className="p-2 bg-white rounded-full shadow-sm text-gray-600 hover:text-primary transition">
+            <ArrowLeft size={24} />
+          </button>
+          <div className="bg-red-50 text-red-500 p-3 rounded-xl">
+             <Heart size={28} className="fill-red-500" />
+          </div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Meus Favoritos</h1>
         </div>
 
-        {loading ? (
-           <div className="flex justify-center items-center py-20">
-             <Loader2 className="animate-spin text-red-500" size={40} />
-           </div>
-        ) : ads.length === 0 ? (
-           <div className="bg-white p-10 rounded-2xl text-center shadow-sm border border-gray-100 max-w-2xl mx-auto">
-             <Heart size={48} className="mx-auto text-gray-300 mb-4" />
-             <h3 className="text-xl font-bold text-gray-800">Você ainda não tem favoritos</h3>
-             <p className="text-gray-500 mt-2 mb-6">Navegue pelos anúncios e clique no coração para guardar os produtos que mais gostou.</p>
-             <Link href="/todos-anuncios" className="bg-red-50 text-red-600 font-bold hover:bg-red-100 px-6 py-3 rounded-full transition">Explorar Anúncios</Link>
-           </div>
+        {ads.length === 0 ? (
+          <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100 flex flex-col items-center">
+             <Heart size={64} className="text-gray-200 mb-4" />
+             <h2 className="text-2xl font-black text-gray-800 mb-2">Nenhum favorito ainda</h2>
+             <p className="text-gray-500 text-lg font-medium mb-6">Navegue pelos anúncios e clique no coração para guardar os itens que mais gostou.</p>
+             <Link href="/todos-anuncios" className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-xl transition shadow-md">
+               Explorar Anúncios
+             </Link>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => (
-              <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group bg-white rounded-lg border border-gray-200 hover:shadow-lg transition overflow-hidden flex flex-col relative">
+              <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group bg-white rounded-xl md:rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative">
                 
-                <div className="aspect-square bg-gray-100 overflow-hidden relative">
-                   {ad.imagemUrl ? (
-                      <img src={ad.imagemUrl} alt={ad.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
-                   ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={40}/></div>
-                   )}
-                   
-                   {/* Coração vermelho sempre visível no card dos favoritos */}
-                   <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm">
-                      <Heart className="text-red-500 fill-red-500" size={16} />
-                   </div>
-                </div>
+                {ad.status !== 'ativo' && (
+                  <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-black uppercase px-2 py-1 rounded z-10">
+                    Indisponível
+                  </div>
+                )}
 
-                <div className="p-3 flex flex-col flex-1">
-                  <h3 className="text-sm text-gray-700 line-clamp-2 mb-2 h-10 font-medium group-hover:text-red-500 transition-colors">{ad.titulo}</h3>
-                  <p className="text-xl font-black text-gray-900">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                  </p>
-                  <div className="mt-auto pt-3 text-[10px] text-gray-400 flex justify-between uppercase font-bold tracking-widest">
-                    <span>Salvo</span>
-                    <span className="flex items-center gap-1"><MapPin size={10}/> Teresina</span>
+                <div className={`aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50 ${ad.status !== 'ativo' ? 'opacity-50 grayscale' : ''}`}>
+                   {ad.imagemUrl ? (
+                      <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                   ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+                   )}
+                </div>
+                
+                <div className="p-3 md:p-4 flex flex-col flex-1">
+                  <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 font-bold group-hover:text-primary transition-colors">{ad.titulo}</h3>
+                  <div className="mt-auto pt-2 border-t border-gray-50">
+                    <p className="text-lg md:text-xl font-black text-primary mb-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                    </p>
                   </div>
                 </div>
               </Link>
