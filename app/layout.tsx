@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,11 +17,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DesapegoPI - O maior marketplace do Piauí',
     description: 'Compre e venda produtos novos e usados de forma fácil, rápida e segura no PI.',
-    url: 'https://desapegopi.com', // Altere para o seu domínio oficial futuramente
+    url: 'https://desapegopi.com', 
     siteName: 'DesapegoPI',
     images: [
       {
-        url: 'https://i.imgur.com/vHqB0aA.png', // Substitua pelo link de um banner real da sua marca
+        url: 'https://i.imgur.com/vHqB0aA.png', 
         width: 1200,
         height: 630,
         alt: 'Capa DesapegoPI',
@@ -31,13 +32,12 @@ export const metadata: Metadata = {
   },
 }
 
-// Configuração OFICIAL e forçada para dispositivos móveis
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#4c1d95', // Deixa a barra de notificações do celular roxa!
+  themeColor: '#4c1d95', 
 }
 
 export default function RootLayout({
@@ -47,7 +47,35 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      {/* w-full e overflow-x-hidden impedem o site de criar scroll para os lados */}
+      <head>
+        {/* GOOGLE ANALYTICS 4 (Troque G-SEU_ID_AQUI pelo seu ID real) */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-SEU_ID_AQUI" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-998KLBW15Q');
+          `}
+        </Script>
+
+        {/* META PIXEL DO FACEBOOK/INSTAGRAM (Troque SEU_PIXEL_ID pelo seu ID numérico) */}
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', 'SEU_PIXEL_ID');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+      </head>
+
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
         <Navbar />
         
@@ -61,7 +89,6 @@ export default function RootLayout({
         
         <BottomNav />
         
-        {/* COMPONENTE DO BANNER RENDERIZADO AQUI */}
         <CookieBanner />
       </body>
     </html>
