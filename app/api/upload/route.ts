@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
+import path from 'path';
+import fs from 'fs';
 
 // Sistema simples de Rate Limit (Limitação de requisições por IP)
 const rateLimit = new Map();
@@ -40,19 +42,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhuma imagem enviada.' }, { status: 400 });
     }
 
-    // 4. COMPRESSÃO MÁGICA COM SHARP
-    // Transforma o arquivo em Buffer para o Sharp conseguir ler
+    // 4. CORREÇÃO E COMPRESSÃO MÁGICA COM SHARP
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Redimensiona para max 1200px (não perde qualidade na tela) e converte para WebP (muito mais leve que JPG/PNG)
-    const compressedBuffer = await sharp(buffer)
-      .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 80 }) 
+    const LARGURA_FINAL = 1080;
+    const ALTURA_FINAL = 1080; // Deixando quadrado para vitrine de anúncios ficar perfeita
+    const MARGEM = 60; // Margem para a foto não colar nas bordas do fundo roxo
+
+    // 4.1 - Lê a foto do usuário, CORRIGE A ORIENTAÇÃO (foto deitada) e redimensiona
+    const fotoCorrigidaBuffer = await sharp(buffer)
+      .rotate() // ISSO AQUI RESOLVE AS FOTOS DEITADAS LENDO O EXIF DA CÂMERA
+      .resize({ 
+        width: LARGURA_FINAL - (MARGEM * 2), 
+        height: ALTURA_FINAL - (MARGEM * 2), 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
       .toBuffer();
 
-    // O ImgBB aceita arquivos em Base64, o que facilita muito o envio seguro pelo servidor
-    const base64Image = compressedBuffer.toString('base64');
+    // 4.2 - Define o fundo roxo padrão
+    const caminhoFundo = path.join(process.cwd(), 'public', 'fundo-padrao.jpg');
+    let finalBuffer;
+
+    // Verifica se a imagem de fundo existe, se não existir cria um fundo de cor sólida roxa como fallback de segurança
+    if (fs.existsSync(caminhoFundo)) {
+      // Usa a sua imagem de fundo
+      finalBuffer = await sharp(caminhoFundo)
+        .resize(LARGURA_FINAL, ALTURA_FINAL, { fit: 'cover' })
+        .composite([
+          { input: fotoCorrigidaBuffer, gravity: 'center' } // Centraliza a foto corrigida no fundo roxo
+        ])
+        .webp({ quality: 80 })
+        .toBuffer();
+    } else {
+      console.warn("⚠️ Imagem 'fundo-padrao.jpg' não encontrada na pasta public. Usando fundo roxo sólido padrão.");
+      // Cria um fundo roxo sólido padrão caso você esqueça de colocar a imagem na pasta public
+      finalBuffer = await sharp({
+        create: {
+          width: LARGURA_FINAL,
+          height: ALTURA_FINAL,
+          channels: 4,
+          background: { r: 91, g: 33, b: 182, alpha: 1 } // Tom de roxo parecido com a sua logo
+        }
+      })
+        .composite([
+          { input: fotoCorrigidaBuffer, gravity: 'center' }
+        ])
+        .webp({ quality: 80 })
+        .toBuffer();
+    }
+
+    // O ImgBB aceita arquivos em Base64
+    const base64Image = finalBuffer.toString('base64');
 
     // 5. ENVIO SEGURO PARA O IMGBB
     const imgbbFormData = new FormData();

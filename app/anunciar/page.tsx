@@ -35,7 +35,6 @@ export default function AnunciarPage() {
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [emailVerificado, setEmailVerificado] = useState(true) // Começa true para não piscar
-  const [jaUsouGratis, setJaUsouGratis] = useState(true) 
   
   const router = useRouter()
 
@@ -52,23 +51,6 @@ export default function AnunciarPage() {
           return; // Para tudo aqui e não deixa carregar o formulário
         } else {
           setEmailVerificado(true)
-        }
-        
-        // VERIFICAÇÃO ANTI-FRAUDE DUPLA PARA O PLANO GRÁTIS
-        try {
-           const userDoc = await getDoc(doc(db, 'users', u.uid))
-           const userData = userDoc.data()
-           
-           const usouNoBanco = userData?.jaUsouAnuncioGratis === true
-           const usouNoAparelho = localStorage.getItem('device_used_free_ad') === 'true'
-
-           if (usouNoBanco || usouNoAparelho) {
-             setJaUsouGratis(true)
-           } else {
-             setJaUsouGratis(false)
-           }
-        } catch (error) {
-           console.error("Erro ao verificar status do usuário", error)
         }
       }
     })
@@ -89,9 +71,12 @@ export default function AnunciarPage() {
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
 
-  const planosDisponiveis = jaUsouGratis 
-    ? PLANOS_BASE 
-    : [{ id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, desc: 'Teste de 24 horas!' }, ...PLANOS_BASE];
+  // ⚠️ MODO DE TESTES: Plano grátis forçado a aparecer sempre!
+  // Quando for lançar o site oficial, nós voltamos a regra do "jaUsouGratis"
+  const planosDisponiveis = [
+    { id: 0, nome: 'Plano Grátis (Testes)', dias: 1, valor: 0, desc: 'Ativação imediata para testes' },
+    ...PLANOS_BASE
+  ];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -146,17 +131,12 @@ export default function AnunciarPage() {
           const data = await response.json()
           
           if (data.success) {
-            urls.push(data.data.url) 
+            urls.push(data.url || data.data.url) // Adaptação para o sharp/imgbb
           } else {
             console.error("Erro no upload seguro:", data)
             alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
           }
         }
-      }
-
-      if (planoId === 0) {
-        await updateDoc(doc(db, 'users', user.uid), { jaUsouAnuncioGratis: true });
-        localStorage.setItem('device_used_free_ad', 'true');
       }
 
       const docRef = await addDoc(collection(db, 'anuncios'), {

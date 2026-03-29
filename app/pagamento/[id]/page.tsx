@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
@@ -156,6 +157,7 @@ export default function PagamentoPage() {
     }
   }
 
+  // TELA DE SUCESSO
   if (pagamentoAprovado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
@@ -172,6 +174,7 @@ export default function PagamentoPage() {
     )
   }
 
+  // TELA DE CARREGAMENTO
   if (loading && !paymentData && !erroPagamento) {
     return (
       <div className="min-h-screen flex items-center justify-center text-primary bg-gray-50 flex-col gap-4">
@@ -181,6 +184,7 @@ export default function PagamentoPage() {
     )
   }
 
+  // TELA DE PAGAMENTO (QR CODE)
   return (
     <div className="bg-gray-50 min-h-screen py-8 md:py-10 px-4 pb-24 md:pb-10">
       <div className="max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 relative">
