@@ -14,6 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         '/editar-anuncio'
       ],
     },
-    sitemap: 'https://desapegopi.com/sitemap.xml',
+    sitemap: 'https://desapegopiaui.com.br/sitemap.xml',
   }
 }
