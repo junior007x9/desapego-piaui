@@ -149,7 +149,6 @@ function CadastroForm() {
     }
   }
 
-  // FLUXO ÚNICO DE CADASTRO 100% GRATUITO E SEGURO
   const handleFinalizarCadastro = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -166,7 +165,6 @@ function CadastroForm() {
     setLoading(true)
 
     try {
-      // 1. Verificação contra robôs (reCAPTCHA)
       const recaptchaToken = await executeRecaptcha('signup')
       if (!recaptchaToken) throw new Error("Erro reCAPTCHA")
 
@@ -182,15 +180,12 @@ function CadastroForm() {
         return;
       }
 
-      // 2. Cria a conta de usuário no Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       const telLimpo = telefone.replace(/\D/g, '')
 
-      // 3. Envia o E-mail oficial de Verificação do Google (100% Grátis)
       await sendEmailVerification(user);
 
-      // 4. Salva os dados públicos e privados no banco de dados
       await setDoc(doc(db, 'users', user.uid), {
         nome: apelido, 
         email: email,
@@ -209,7 +204,8 @@ function CadastroForm() {
         endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
       })
 
-      alert("🎉 Conta criada com sucesso! Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada.");
+      // AVISO ATUALIZADO: Foca na importância de checar o SPAM
+      alert("🎉 Conta criada com sucesso!\n\n📧 Enviamos um link de confirmação para o seu e-mail.\n\n⚠️ IMPORTANTE: Não se esqueça de verificar também a sua pasta de SPAM ou Lixo Eletrônico!");
       router.push('/meus-anuncios')
       
     } catch (error: any) {
@@ -332,10 +328,16 @@ function CadastroForm() {
               </div>
             </div>
 
+            {/* NOVO AVISO DE SPAM */}
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex gap-3 text-sm mt-6 text-yellow-800">
+              <AlertCircle className="shrink-0 mt-0.5 text-yellow-600" size={20} />
+              <p><strong>Atenção:</strong> Após finalizar o cadastro, enviaremos um e-mail de confirmação. Lembre-se de verificar sua pasta de <strong>Spam ou Lixo Eletrônico</strong> caso não encontre na caixa principal.</p>
+            </div>
+
             <button 
               type="submit" 
               disabled={loading || !isFormValid} 
-              className={`w-full flex justify-center py-4 px-4 rounded-xl shadow-lg text-lg font-bold text-white transition-all transform hover:-translate-y-0.5 mt-8 
+              className={`w-full flex justify-center py-4 px-4 rounded-xl shadow-lg text-lg font-bold text-white transition-all transform hover:-translate-y-0.5 mt-4 
                 ${isFormValid ? 'bg-primary hover:bg-primary-dark cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
             >
               {loading ? <Loader2 className="animate-spin" size={24} /> : "Finalizar Cadastro e Verificar E-mail"}
