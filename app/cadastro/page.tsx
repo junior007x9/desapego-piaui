@@ -131,10 +131,10 @@ function CadastroForm() {
         const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
         const data = await res.json()
         if (!data.erro) {
-          setRua(data.logradouro)
-          setBairro(data.bairro)
-          setCidade(data.localidade)
-          setEstado(data.uf)
+          setRua(data.logradouro || '')
+          setBairro(data.bairro || '')
+          setCidade(data.localidade || '')
+          setEstado(data.uf || '')
         } else {
           alert("CEP não encontrado.");
           setRua(''); setBairro(''); setCidade(''); setEstado('');
@@ -147,10 +147,16 @@ function CadastroForm() {
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value.replace(/\D/g, '')
+    const numerosCep = valor; // Guarda apenas os números para verificação
+
     if (valor.length <= 8) {
       valor = valor.replace(/^(\d{5})(\d)/, '$1-$2')
       setCep(valor)
-      if (valor.length === 8) buscarCep(valor)
+      
+      // A CORREÇÃO ESTÁ AQUI: Só dispara quando tiver 8 números exatos
+      if (numerosCep.length === 8) {
+        buscarCep(numerosCep)
+      }
     }
   }
 

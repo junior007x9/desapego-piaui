@@ -4,9 +4,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { Save, Loader2, ArrowLeft, DollarSign, AlertCircle } from 'lucide-react'
+import { Save, Loader2, ArrowLeft, DollarSign, Camera, X } from 'lucide-react'
 
-// Mantemos as mesmas categorias da página de criar anúncio para manter consistência
+// Mantemos as mesmas categorias
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
 export default function EditarAnuncioPage() {
@@ -17,11 +17,16 @@ export default function EditarAnuncioPage() {
   const [saving, setSaving] = useState(false)
   const [user, setUser] = useState<any>(null)
   
-  // Campos do formulário
+  // Campos de texto do formulário
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
   const [preco, setPreco] = useState('')
   const [categoria, setCategoria] = useState('Outros')
+
+  // NOVOS ESTADOS PARA AS FOTOS
+  const [fotosExistentes, setFotosExistentes] = useState<string[]>([]) // Fotos que já estão salvas no banco
+  const [novasFotos, setNovasFotos] = useState<File[]>([]) // Novas fotos que o usuário escolheu agora
+  const [previews, setPreviews] = useState<string[]>([]) // Previews temporários das novas fotos
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -34,7 +39,6 @@ export default function EditarAnuncioPage() {
       if (!params.id) return;
 
       try {
-        // Busca o anúncio no banco de dados
         const adDocRef = doc(db, 'anuncios', params.id as string)
         const adSnapshot = await getDoc(adDocRef)
 
@@ -58,6 +62,9 @@ export default function EditarAnuncioPage() {
         setDescricao(adData.descricao || '')
         setPreco(adData.preco ? adData.preco.toString() : '')
         setCategoria(adData.categoria || 'Outros')
+        
+        // Puxa as fotos atuais (se houver)
+        setFotosExistentes(adData.fotos || [])
 
       } catch (error) {
         console.error("Erro ao carregar anúncio:", error)
@@ -70,31 +77,85 @@ export default function EditarAnuncioPage() {
     return () => unsubscribe()
   }, [params.id, router])
 
+  // Função para adicionar NOVAS FOTOS na edição
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files)
+      
+      if (fotosExistentes.length + novasFotos.length + selectedFiles.length > 10) {
+        alert("Você pode ter no máximo 10 fotos por anúncio.")
+        return
+      }
+
+      setNovasFotos(prev => [...prev, ...selectedFiles])
+      const selectedPreviews = selectedFiles.map(file => URL.createObjectURL(file))
+      setPreviews(prev => [...prev, ...selectedPreviews])
+    }
+  }
+
+  // Função para remover uma FOTO ANTIGA (já salva)
+  const removeFotoExistente = (index: number) => {
+    setFotosExistentes(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Função para remover uma FOTO NOVA (ainda não salva)
+  const removeNovaFoto = (index: number) => {
+    setNovasFotos(prev => prev.filter((_, i) => i !== index))
+    setPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
 
     try {
-      // Converte o preço de volta para número com segurança
       let precoNumerico = 0
       if (preco) {
         precoNumerico = parseFloat(preco.toString().replace(',', '.'))
       }
 
-      // Validação extra para evitar que o Firebase grave um "NaN"
       if (isNaN(precoNumerico) || precoNumerico <= 0) {
         alert("Por favor, insira um preço válido maior que zero.")
         setSaving(false)
         return
       }
 
-      // Atualiza apenas os campos permitidos no Firebase
+      // 1. FAZ O UPLOAD DAS NOVAS FOTOS (SE HOUVER)
+      const urlsFinais: string[] = [...fotosExistentes]
+      
+      if (novasFotos.length > 0) {
+        const idToken = await user.getIdToken();
+
+        for (const foto of novasFotos) {
+          const formData = new FormData()
+          formData.append('image', foto)
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${idToken}` },
+            body: formData,
+          })
+
+          const data = await response.json()
+          
+          if (data.success) {
+            urlsFinais.push(data.url || data.data.url) 
+          } else {
+            console.error("Erro no upload:", data)
+            alert("Erro ao enviar uma das fotos novas, ela será ignorada.")
+          }
+        }
+      }
+
+      // 2. ATUALIZA O BANCO DE DADOS
       const adDocRef = doc(db, 'anuncios', params.id as string)
       await updateDoc(adDocRef, {
         titulo: titulo,
         descricao: descricao,
         preco: precoNumerico,
         categoria: categoria,
+        fotos: urlsFinais, // Salva o array de fotos misturando as antigas mantidas com as novas
+        imagemUrl: urlsFinais.length > 0 ? urlsFinais[0] : null, // Atualiza a capa
         atualizadoEm: serverTimestamp()
       })
 
@@ -110,8 +171,9 @@ export default function EditarAnuncioPage() {
 
   if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
+  const totalFotos = fotosExistentes.length + novasFotos.length;
+
   return (
-    // pb-28 no mobile para não esconder o botão Salvar atrás da barra inferior
     <div className="bg-gray-50 min-h-screen py-6 md:py-10 px-4 pb-28 md:pb-10">
       <div className="max-w-2xl mx-auto">
         
@@ -124,10 +186,48 @@ export default function EditarAnuncioPage() {
 
         <form onSubmit={handleSave} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 space-y-6">
           
-          {/* Nota de Segurança */}
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 text-sm text-blue-800">
-            <AlertCircle className="shrink-0 text-blue-500" size={20} strokeWidth={2.5} />
-            <p><strong>Nota:</strong> Para alterar as fotos do seu desapego, será necessário excluir este anúncio e criar um novo.</p>
+          {/* SESSÃO DE FOTOS */}
+          <div className="bg-gray-50 p-4 md:p-6 rounded-2xl border border-gray-200">
+            <div className="flex justify-between items-end mb-4">
+               <label className="block text-primary font-bold">Fotos do produto</label>
+               <span className={`text-xs font-bold px-2 py-1 rounded-md ${totalFotos === 10 ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-600'}`}>
+                 {totalFotos}/10 fotos
+               </span>
+            </div>
+            
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+              
+              {/* Renderiza as FOTOS EXISTENTES */}
+              {fotosExistentes.map((src, index) => (
+                <div key={`existente-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                  <img src={src} className="w-full h-full object-cover" />
+                  <div className="absolute top-0 left-0 w-full h-full bg-black/0 group-hover:bg-black/20 transition-all"></div>
+                  <button type="button" onClick={() => removeFotoExistente(index)} className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-colors">
+                    <X size={14} strokeWidth={3}/>
+                  </button>
+                </div>
+              ))}
+
+              {/* Renderiza as NOVAS FOTOS sendo adicionadas */}
+              {previews.map((src, index) => (
+                <div key={`nova-${index}`} className="relative aspect-square rounded-xl overflow-hidden border-2 border-primary/50 group">
+                  <img src={src} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">NOVA</span>
+                  <button type="button" onClick={() => removeNovaFoto(index)} className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-colors">
+                    <X size={14} strokeWidth={3}/>
+                  </button>
+                </div>
+              ))}
+              
+              {/* Botão de Adicionar FOTO */}
+              {totalFotos < 10 && (
+                <label className="aspect-square border-2 border-dashed border-primary/40 rounded-xl flex flex-col items-center justify-center text-primary cursor-pointer hover:bg-primary/10 transition bg-white shadow-sm">
+                  <Camera size={28} />
+                  <span className="text-[10px] font-bold mt-1">ADICIONAR</span>
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+                </label>
+              )}
+            </div>
           </div>
 
           {/* Título */}
