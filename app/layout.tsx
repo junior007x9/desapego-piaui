@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
+import FeedbackButton from '@/components/FeedbackButton' // <-- IMPORTAMOS O BOTÃO AQUI
 import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -102,8 +103,8 @@ export default function RootLayout({
         </div>
         
         <BottomNav />
-        
         <CookieBanner />
+        <FeedbackButton /> {/* <-- ADICIONAMOS O BOTÃO AQUI */}
       </body>
     </html>
   )

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
-import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut } from 'lucide-react'
+import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminPage() {
@@ -19,13 +19,17 @@ export default function AdminPage() {
 
   const [ads, setAds] = useState<any[]>([])
   const [denuncias, setDenuncias] = useState<any[]>([])
+  
+  // ESTADOS PARA AS MÉTRICAS FINANCEIRAS E FEEDBACKS
+  const [adsPagos, setAdsPagos] = useState(0)
+  const [receitaTotal, setReceitaTotal] = useState(0)
+  const [feedbacks, setFeedbacks] = useState<any[]>([])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
       
       if (currentUser) {
-        // PERGUNTA AO COFRE SE O UTILIZADOR É ADMIN
         try {
           const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid))
           
@@ -51,12 +55,37 @@ export default function AdminPage() {
 
   async function fetchDados() {
     try {
+      let contagemPagos = 0
+      let totalMovimentado = 0
+
+      // 1. BUSCAR ANÚNCIOS
       const snapshotAds = await getDocs(collection(db, 'anuncios'))
       const listaAds: any[] = []
-      snapshotAds.forEach(doc => listaAds.push({ id: doc.id, ...doc.data() }))
+      
+      snapshotAds.forEach(doc => {
+        const data = doc.data()
+        listaAds.push({ id: doc.id, ...data })
+
+        if (data.planoId && data.planoId > 0) {
+           contagemPagos++
+           if (data.planoId === 1) {
+              totalMovimentado += 10.00   // Diário
+           } else if (data.planoId === 2 || data.planoId === 7) {
+              totalMovimentado += 65.00   // Semanal
+           } else if (data.planoId === 3 || data.planoId === 15) {
+              totalMovimentado += 140.00  // Quinzenal
+           } else if (data.planoId === 4 || data.planoId === 30) {
+              totalMovimentado += 280.00  // Mensal
+           }
+        }
+      })
+      
       listaAds.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
       setAds(listaAds)
+      setAdsPagos(contagemPagos)
+      setReceitaTotal(totalMovimentado)
 
+      // 2. BUSCAR DENÚNCIAS
       const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
       const listaDenuncias: any[] = []
       snapshotDenuncias.forEach(doc => {
@@ -67,6 +96,13 @@ export default function AdminPage() {
       })
       listaDenuncias.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
       setDenuncias(listaDenuncias)
+
+      // 3. BUSCAR FEEDBACKS
+      const snapshotFeedbacks = await getDocs(collection(db, 'feedbacks'))
+      const listaFeedbacks: any[] = []
+      snapshotFeedbacks.forEach(doc => listaFeedbacks.push({ id: doc.id, ...doc.data() }))
+      listaFeedbacks.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
+      setFeedbacks(listaFeedbacks)
 
     } catch (error) {
       console.error("Erro ao buscar dados admin", error)
@@ -81,7 +117,6 @@ export default function AdminPage() {
 
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
-      // O useEffect vai disparar, checar no banco se é admin, e liberar ou bloquear a tela.
     } catch (error) {
       alert("E-mail ou senha incorretos.")
       setLoginLoading(false)
@@ -196,28 +231,52 @@ export default function AdminPage() {
            </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+        {/* GRID DE MÉTRICAS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="bg-primary/10 p-4 rounded-xl text-primary">
               <ShoppingBag size={28}/>
             </div>
             <div>
-              <p className="text-gray-500 text-sm font-bold uppercase tracking-wider">Total de Anúncios</p>
-              <p className="text-3xl font-black text-gray-800">{ads.length}</p>
+              <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">Anúncios no Ar</p>
+              <p className="text-2xl md:text-3xl font-black text-gray-800">{ads.length}</p>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 flex items-center gap-4">
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-4">
+            <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
+              <TrendingUp size={28}/>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">Planos Vendidos</p>
+              <p className="text-2xl md:text-3xl font-black text-gray-800">{adsPagos}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-emerald-100 flex items-center gap-4">
+            <div className="bg-emerald-100 p-4 rounded-xl text-emerald-600">
+              <DollarSign size={28}/>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">Receita PIX</p>
+              <p className="text-xl md:text-2xl font-black text-emerald-600">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receitaTotal)}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-red-100 flex items-center gap-4">
             <div className={`p-4 rounded-xl ${denuncias.length > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-red-50 text-red-500'}`}>
               <Flag size={28}/>
             </div>
             <div>
-              <p className="text-gray-500 text-sm font-bold uppercase tracking-wider">Denúncias Pendentes</p>
-              <p className={`text-3xl font-black ${denuncias.length > 0 ? 'text-red-500' : 'text-gray-800'}`}>{denuncias.length}</p>
+              <p className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-wider">Denúncias</p>
+              <p className={`text-2xl md:text-3xl font-black ${denuncias.length > 0 ? 'text-red-500' : 'text-gray-800'}`}>{denuncias.length}</p>
             </div>
           </div>
         </div>
 
+        {/* TABELA DE DENÚNCIAS */}
         {denuncias.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border-2 border-red-100 overflow-hidden mb-10">
             <div className="p-6 bg-red-50 border-b border-red-100 flex items-center gap-3">
@@ -277,7 +336,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* TABELA DE TODOS OS ANÚNCIOS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
             <h2 className="text-xl font-black text-gray-800">Todos os Anúncios ({ads.length})</h2>
           </div>
@@ -286,7 +346,8 @@ export default function AdminPage() {
               <thead className="bg-white text-gray-500 text-sm border-b border-gray-100">
                 <tr>
                   <th className="p-4 font-bold">Título do Anúncio</th>
-                  <th className="p-4 font-bold">Preço</th>
+                  <th className="p-4 font-bold">Plano</th>
+                  <th className="p-4 font-bold">Preço do Produto</th>
                   <th className="p-4 font-bold">Status</th>
                   <th className="p-4 font-bold text-center">Excluir</th>
                 </tr>
@@ -297,6 +358,13 @@ export default function AdminPage() {
                     <td className="p-4">
                       <p className="font-bold text-gray-800 line-clamp-1">{ad.titulo}</p>
                       <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">{ad.categoria}</p>
+                    </td>
+                    <td className="p-4">
+                      {ad.planoId && ad.planoId > 0 ? (
+                        <span className="bg-emerald-100 text-emerald-700 text-[10px] uppercase font-black px-2 py-1 rounded-md">Pago (ID: {ad.planoId})</span>
+                      ) : (
+                        <span className="text-gray-400 text-xs font-medium">Grátis</span>
+                      )}
                     </td>
                     <td className="p-4 font-black text-primary">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}
@@ -331,6 +399,64 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
+        {/* NOVA TABELA DE FEEDBACKS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h2 className="text-xl font-black text-gray-800">Caixa de Feedbacks dos Usuários ({feedbacks.length})</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-white text-gray-500 text-sm border-b border-gray-100">
+                <tr>
+                  <th className="p-4 font-bold">Tipo</th>
+                  <th className="p-4 font-bold">Mensagem</th>
+                  <th className="p-4 font-bold">Data</th>
+                  <th className="p-4 font-bold text-center">Excluir</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {feedbacks.map(fb => (
+                  <tr key={fb.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4">
+                      <span className={`text-[10px] uppercase font-black px-3 py-1.5 rounded-full ${
+                        fb.tipo === 'Erro' ? 'bg-red-100 text-red-700' :
+                        fb.tipo === 'Elogio' ? 'bg-pink-100 text-pink-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {fb.tipo}
+                      </span>
+                    </td>
+                    <td className="p-4 text-sm text-gray-700 max-w-xs md:max-w-md">
+                      {fb.mensagem}
+                    </td>
+                    <td className="p-4 text-sm font-medium text-gray-500 whitespace-nowrap">
+                      {fb.criadoEm?.toDate ? fb.criadoEm.toDate().toLocaleDateString('pt-BR') : 'Recente'}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button 
+                        onClick={async () => {
+                           if(!confirm('Excluir este feedback?')) return;
+                           await deleteDoc(doc(db, 'feedbacks', fb.id));
+                           setFeedbacks(feedbacks.filter(f => f.id !== fb.id));
+                        }} 
+                        className="text-gray-400 hover:text-red-500 p-2" 
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {feedbacks.length === 0 && (
+              <div className="p-10 text-center text-gray-500 font-bold bg-gray-50">
+                Nenhum feedback recebido ainda.
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   )
