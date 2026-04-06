@@ -3,13 +3,18 @@ import { useState } from 'react'
 import { MessageSquarePlus, X, Loader2, Send } from 'lucide-react'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { usePathname } from 'next/navigation' // <-- Importamos para saber em que página estamos
 
 export default function FeedbackButton() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [tipo, setTipo] = useState('Sugestão')
   const [mensagem, setMensagem] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
+
+  // SE ESTIVERMOS NO PAINEL ADMIN, O BOTÃO NÃO APARECE!
+  if (pathname === '/admin') return null;
 
   const handleEnviar = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +45,6 @@ export default function FeedbackButton() {
 
   return (
     <>
-      {/* Botão Flutuante */}
       <button 
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 md:bottom-8 right-4 md:right-8 bg-primary hover:bg-primary-dark text-white p-3 md:p-4 rounded-full shadow-2xl z-40 transition-transform hover:scale-110 flex items-center justify-center group"
@@ -50,7 +54,6 @@ export default function FeedbackButton() {
         <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[100px] transition-all duration-300 ease-in-out font-bold group-hover:ml-2">Feedback</span>
       </button>
 
-      {/* Modal / Formulário */}
       {isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-200">
