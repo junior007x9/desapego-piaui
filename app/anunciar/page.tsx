@@ -1,14 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// LISTA NEGRA DE PALAVRAS PROIBIDAS (Filtro Anti-Golpe / Moderação Automática)
+// LISTA NEGRA DE PALAVRAS PROIBIDAS
 const PALAVRAS_PROIBIDAS = [
   'arma', 'revólver', 'pistola', 'munição', 'droga', 'maconha', 'cocaína', 
   'hack', 'clonado', 'falsificado', 'réplica perfeita', 'nota falsa',
@@ -34,7 +34,8 @@ export default function AnunciarPage() {
   
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [emailVerificado, setEmailVerificado] = useState(true) // Começa true para não piscar
+  const [emailVerificado, setEmailVerificado] = useState(true)
+  const [jaUsouGratis, setJaUsouGratis] = useState(true) // Começa true por segurança, depois verifica
   
   const router = useRouter()
 
@@ -48,16 +49,39 @@ export default function AnunciarPage() {
         // 1. TRAVA DE SEGURANÇA: O E-MAIL FOI CONFIRMADO?
         if (!u.emailVerified) {
           setEmailVerificado(false)
-          return; // Para tudo aqui e não deixa carregar o formulário
+          return; 
         } else {
           setEmailVerificado(true)
+          
+          // 2. VERIFICA SE JÁ USOU O PLANO GRÁTIS (Dispositivo ou Banco de Dados)
+          const localJaUsou = localStorage.getItem('jaUsouGratis_dev')
+          if (localJaUsou) {
+             setJaUsouGratis(true)
+          } else {
+             // Se não tiver no dispositivo, verifica no Firebase
+             try {
+               const q = query(
+                 collection(db, 'anuncios'), 
+                 where('vendedorId', '==', u.uid), 
+                 where('planoId', '==', 0)
+               )
+               const snap = await getDocs(q)
+               if (!snap.empty) {
+                  setJaUsouGratis(true)
+                  localStorage.setItem('jaUsouGratis_dev', 'true') // Trava o dispositivo também
+               } else {
+                  setJaUsouGratis(false) // Pode usar o plano grátis!
+               }
+             } catch (error) {
+               console.error("Erro ao verificar plano grátis:", error)
+             }
+          }
         }
       }
     })
     return () => unsubscribe()
   }, [router])
 
-  // Função para reenviar o e-mail caso o usuário não tenha recebido
   const handleReenviarEmail = async () => {
     if (user) {
       try {
@@ -71,12 +95,9 @@ export default function AnunciarPage() {
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
 
-  // ⚠️ MODO DE TESTES: Plano grátis forçado a aparecer sempre!
-  // Quando for lançar o site oficial, nós voltamos a regra do "jaUsouGratis"
-  const planosDisponiveis = [
-    { id: 0, nome: 'Plano Grátis (Testes)', dias: 1, valor: 0, desc: 'Ativação imediata para testes' },
-    ...PLANOS_BASE
-  ];
+  // Lógica dos Planos Disponíveis na Tela
+  const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
+  const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -102,7 +123,6 @@ export default function AnunciarPage() {
     e.preventDefault()
     if (isFormIncompleto) return
 
-    // 2. FILTRO ANTI-GOLPE E PALAVRÕES
     const textoParaVerificar = `${titulo.toLowerCase()} ${descricao.toLowerCase()}`;
     const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => textoParaVerificar.includes(palavra));
 
@@ -131,12 +151,17 @@ export default function AnunciarPage() {
           const data = await response.json()
           
           if (data.success) {
-            urls.push(data.url || data.data.url) // Adaptação para o sharp/imgbb
+            urls.push(data.url || data.data.url) 
           } else {
             console.error("Erro no upload seguro:", data)
             alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
           }
         }
+      }
+
+      // Trava o dispositivo assim que usar o plano grátis
+      if (planoId === 0) {
+         localStorage.setItem('jaUsouGratis_dev', 'true');
       }
 
       const docRef = await addDoc(collection(db, 'anuncios'), {
@@ -265,7 +290,6 @@ export default function AnunciarPage() {
                     onClick={() => setPlanoId(p.id)}
                     className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? 'border-primary bg-primary/5 shadow-md scale-[1.02]' : 'border-gray-100 hover:border-primary/30 bg-gray-50'}`}
                  >
-                    {/* Selo especial para o plano grátis */}
                     {p.valor === 0 && (
                       <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
                         <Gift size={12}/> Presente
