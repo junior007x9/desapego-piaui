@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
-import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp } from 'lucide-react'
+import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp, MessageSquarePlus } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminPage() {
@@ -58,7 +58,7 @@ export default function AdminPage() {
       let contagemPagos = 0
       let totalMovimentado = 0
 
-      // 1. BUSCAR ANÚNCIOS
+      // 1. BUSCAR ANÚNCIOS E CALCULAR FINANÇAS
       const snapshotAds = await getDocs(collection(db, 'anuncios'))
       const listaAds: any[] = []
       
@@ -400,9 +400,12 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* NOVA TABELA DE FEEDBACKS */}
+        {/* NOVA TABELA DE FEEDBACKS (TAVA FALTANDO ESSA BELEZINHA!) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+            <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+              <MessageSquarePlus size={20} />
+            </div>
             <h2 className="text-xl font-black text-gray-800">Caixa de Feedbacks dos Usuários ({feedbacks.length})</h2>
           </div>
           <div className="overflow-x-auto">
@@ -440,7 +443,7 @@ export default function AdminPage() {
                            await deleteDoc(doc(db, 'feedbacks', fb.id));
                            setFeedbacks(feedbacks.filter(f => f.id !== fb.id));
                         }} 
-                        className="text-gray-400 hover:text-red-500 p-2" 
+                        className="text-gray-400 hover:text-red-500 p-2 transition-colors" 
                       >
                         <Trash2 size={18} />
                       </button>
