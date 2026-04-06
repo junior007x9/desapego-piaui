@@ -149,7 +149,6 @@ export default function DetalhesAnuncio() {
     }
   }
 
-  // PROTEÇÃO ANTI-SCRAPING: Tranca o WhatsApp para visitantes anônimos
   const handleWhatsAppClick = () => {
     if (!user) {
       alert("🔒 Segurança: Para ver o número do vendedor e evitar fraudes, você precisa fazer login no site.");
@@ -164,7 +163,6 @@ export default function DetalhesAnuncio() {
     }
   }
 
-  // SISTEMA DE DENÚNCIAS
   const handleReportarAnuncio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -182,7 +180,7 @@ export default function DetalhesAnuncio() {
         vendedorId: ad.vendedorId,
         denuncianteId: user.uid,
         motivo: reportMotivo,
-        status: 'pendente', // pendente, analisado, resolvido
+        status: 'pendente',
         criadoEm: serverTimestamp()
       });
 
@@ -238,6 +236,8 @@ export default function DetalhesAnuncio() {
       </div>
     );
   };
+
+  const anoRegistro = vendedor?.criadoEm?.toDate ? vendedor.criadoEm.toDate().getFullYear() : '2024';
 
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
@@ -318,7 +318,6 @@ export default function DetalhesAnuncio() {
               </span>
               <div className="flex items-center justify-between text-gray-500 text-xs mt-3 font-medium">
                  <div className="flex gap-4">
-                   {/* CORRIGIDO AQUI (MOBILE): Mostrando a cidade do Anúncio */}
                    <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {ad.cidade || ad.localizacao || 'Piauí'}</span>
                    <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
                  </div>
@@ -355,7 +354,6 @@ export default function DetalhesAnuncio() {
               
               <div className="flex items-center justify-between text-gray-500 text-sm mb-6 pb-6 border-b border-gray-100 font-medium">
                  <div className="flex gap-4">
-                   {/* CORRIGIDO AQUI (DESKTOP): Mostrando a cidade do Anúncio */}
                    <span className="flex items-center gap-1"><MapPin size={16} className="text-accent" /> {ad.cidade || ad.localizacao || 'Piauí'}</span>
                    <span className="flex items-center gap-1"><Eye size={16} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
                  </div>
@@ -367,14 +365,19 @@ export default function DetalhesAnuncio() {
               <ContactButtons />
             </div>
 
+            {/* FOTO DO VENDEDOR AQUI */}
             <div className="bg-white md:rounded-2xl shadow-sm border-t md:border border-gray-100 p-0 md:p-0 overflow-hidden">
                <Link href={`/vendedor/${ad.vendedorId}`} className="p-5 md:p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer group">
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xl shrink-0 group-hover:bg-primary/20 transition-colors">
-                    {vendedor?.nome ? vendedor.nome.charAt(0).toUpperCase() : 'U'}
+                  <div className="w-14 h-14 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xl shrink-0 group-hover:bg-primary/20 transition-colors overflow-hidden border-2 border-transparent group-hover:border-primary/30">
+                    {vendedor?.fotoPerfil ? (
+                      <img src={vendedor.fotoPerfil} alt={vendedor?.nome} className="w-full h-full object-cover" />
+                    ) : (
+                      vendedor?.nome ? vendedor.nome.charAt(0).toUpperCase() : 'U'
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-gray-900 text-base md:text-lg group-hover:text-primary transition-colors">{vendedor?.nome || "Usuário"}</p>
-                    <p className="text-xs md:text-sm text-gray-500 font-medium">No Desapego Piauí desde 2024</p>
+                    <p className="text-xs md:text-sm text-gray-500 font-medium">No Desapego Piauí desde {anoRegistro}</p>
                   </div>
                   <ChevronRight className="text-gray-300 group-hover:text-primary transition-colors" />
                </Link>
