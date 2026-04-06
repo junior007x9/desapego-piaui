@@ -11,25 +11,39 @@ const inter = Inter({ subsets: ['latin'] })
 
 // OTIMIZAÇÃO GLOBAL DE SEO (Google, WhatsApp, Facebook)
 export const metadata: Metadata = {
-  title: 'DesapegoPI - O maior marketplace do Piauí',
-  description: 'Compre e venda produtos novos e usados de forma fácil, rápida e segura em Teresina e em todo o Piauí!',
-  keywords: 'desapego, piauí, teresina, comprar, vender, classificados, mercado livre, usados, desapegopi',
+  title: 'Desapego Piauí | Compra e Venda de Forma Rápida e Local',
+  description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local. Anuncie imóveis, carros, celulares e muito mais!',
+  keywords: [
+    "desapego piaui", 
+    "olx piaui", 
+    "classificados teresina", 
+    "compra e venda piaui", 
+    "vender celular teresina", 
+    "carros seminovos piaui", 
+    "imoveis piaui",
+    "desapegopi"
+  ],
+  authors: [{ name: "AARTI ESTUDIO" }],
   openGraph: {
-    title: 'DesapegoPI - O maior marketplace do Piauí',
+    title: 'Desapego Piauí | Compra e Venda',
     description: 'Compre e venda produtos novos e usados de forma fácil, rápida e segura no PI.',
-    url: 'https://desapegopi.com', 
-    siteName: 'DesapegoPI',
+    url: 'https://desapegopiaui.com.br', 
+    siteName: 'Desapego Piauí',
     images: [
       {
         url: 'https://i.imgur.com/vHqB0aA.png', 
         width: 1200,
         height: 630,
-        alt: 'Capa DesapegoPI',
+        alt: 'Capa Desapego Piauí',
       },
     ],
     locale: 'pt_BR',
     type: 'website',
   },
+  robots: {
+    index: true,
+    follow: true,
+  }
 }
 
 export const viewport: Viewport = {
@@ -48,8 +62,8 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <head>
-        {/* GOOGLE ANALYTICS 4 (Troque G-SEU_ID_AQUI pelo seu ID real) */}
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-SEU_ID_AQUI" strategy="afterInteractive" />
+        {/* GOOGLE ANALYTICS 4 */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
@@ -59,7 +73,7 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* META PIXEL DO FACEBOOK/INSTAGRAM (Troque SEU_PIXEL_ID pelo seu ID numérico) */}
+        {/* META PIXEL DO FACEBOOK/INSTAGRAM */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
