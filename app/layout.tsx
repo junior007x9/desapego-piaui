@@ -63,6 +63,9 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <head>
+        {/* GOOGLE SITE VERIFICATION (Aprovação do Search Console) */}
+        <meta name="google-site-verification" content="MpSBIeObHIeNjSIanheXLRqWVLvCtzPsu2Qtv2Ydo8E" />
+
         {/* GOOGLE ANALYTICS 4 */}
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
