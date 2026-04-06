@@ -3,20 +3,46 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, Search, PlusCircle, MessageCircle, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle } from 'lucide-react'
-import { auth } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase' // Adicionado db
 import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { collection, query, where, onSnapshot } from 'firebase/firestore' // Importado funções do Firestore
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [unreadCount, setUnreadCount] = useState(0) // Estado da bolinha vermelha
 
+  // Verifica usuário e escuta as mensagens não lidas
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
+
+      if (currentUser) {
+        // Escuta os chats do usuário
+        const q = query(
+          collection(db, 'chats'),
+          where('participantes', 'array-contains', currentUser.uid)
+        )
+
+        const unsubscribeChats = onSnapshot(q, (snapshot) => {
+          let naoLidas = 0
+          snapshot.forEach((doc) => {
+            const data = doc.data()
+            if (data.lido === false && data.ultimoRemetenteId && data.ultimoRemetenteId !== currentUser.uid) {
+              naoLidas++
+            }
+          })
+          setUnreadCount(naoLidas)
+        })
+
+        return () => unsubscribeChats()
+      } else {
+        setUnreadCount(0)
+      }
     })
-    return () => unsubscribe()
+    return () => unsubscribeAuth()
   }, [])
 
   const handleLogout = async () => {
@@ -30,7 +56,6 @@ export default function BottomNav() {
 
   const closeMenu = () => setIsMenuOpen(false)
 
-  // Ocultar a barra inferior em páginas específicas se quiser (opcional)
   if (pathname === '/login' || pathname === '/cadastro') return null
 
   return (
@@ -58,8 +83,16 @@ export default function BottomNav() {
             <span className="text-[10px] font-bold mt-1 text-accent">Anunciar</span>
           </Link>
 
+          {/* BOTÃO DO CHAT COM A BOLINHA VERMELHA NA BARRA INFERIOR */}
           <Link href="/chat" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname.includes('/chat') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <MessageCircle size={24} strokeWidth={pathname.includes('/chat') ? 2.5 : 2} />
+            <div className="relative">
+              <MessageCircle size={24} strokeWidth={pathname.includes('/chat') ? 2.5 : 2} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
             <span className="text-[10px] font-bold mt-1">Chat</span>
           </Link>
 
@@ -81,8 +114,6 @@ export default function BottomNav() {
 
       {/* GAVETA DO MENU (BOTTOM SHEET) */}
       <div className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[2rem] z-50 md:hidden transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-y-0 shadow-[0_-20px_40px_rgba(0,0,0,0.2)]' : 'translate-y-full'}`}>
-        
-        {/* Barra pequena para indicar que pode arrastar para baixo */}
         <div className="w-full flex justify-center pt-3 pb-1" onClick={closeMenu}>
           <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
@@ -96,7 +127,6 @@ export default function BottomNav() {
           </div>
 
           <div className="space-y-2">
-            
             {user ? (
               <>
                 <Link href="/perfil" onClick={closeMenu} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl hover:bg-primary/10 transition group">

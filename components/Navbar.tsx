@@ -2,41 +2,36 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, MessageCircle } from 'lucide-react'; // Adicionado MessageCircle e removido o Bell
-import { auth, db } from '@/lib/firebase'; // Adicionado o db aqui
+import { MapPin, Bell } from 'lucide-react';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore'; // Imports para buscar as mensagens
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   
-  // Novos estados
   const [locFull, setLocFull] = useState('Carregando...');
   const [locShort, setLocShort] = useState('...');
-  const [unreadCount, setUnreadCount] = useState(0); // Estado para contar as notificações
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const router = useRouter();
 
-  // Verifica se o usuário está logado E busca notificações de chat não lidas
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
 
       if (currentUser) {
-        // Busca todos os chats onde o usuário participa (Filtro simples para não pedir Índice no Firebase)
         const q = query(
           collection(db, 'chats'),
           where('participantes', 'array-contains', currentUser.uid)
         );
 
-        // onSnapshot vai rodar assim que o site abrir E em tempo real
         const unsubscribeChats = onSnapshot(q, (snapshot) => {
           let naoLidas = 0;
           snapshot.forEach((doc) => {
             const data = doc.data();
-            // Verifica se não está lido e se a ÚLTIMA MENSAGEM FOI DE OUTRA PESSOA (comprador)
             if (data.lido === false && data.ultimoRemetenteId && data.ultimoRemetenteId !== currentUser.uid) {
               naoLidas++;
             }
@@ -53,7 +48,6 @@ export default function Navbar() {
     return () => unsubscribeAuth();
   }, []);
 
-  // MÁGICA: Pega a localização automaticamente pela internet do usuário (Sem pedir permissão)
   useEffect(() => {
     async function fetchLocation() {
       try {
@@ -63,7 +57,6 @@ export default function Navbar() {
         const city = data.city || data.locality || 'Teresina';
         let state = 'PI';
         
-        // Formata o estado (Ex: tira o "BR-" de "BR-SP" e deixa só "SP")
         if (data.principalSubdivisionCode && data.principalSubdivisionCode.includes('-')) {
           state = data.principalSubdivisionCode.split('-')[1]; 
         } else if (data.principalSubdivision) {
@@ -119,7 +112,6 @@ export default function Navbar() {
               <span className="text-sm font-medium">{locFull}</span>
             </div>
             
-            {/* LINK DO CHAT COM NOTIFICAÇÃO (Desktop) */}
             <Link href="/chat" className="relative flex items-center gap-1 text-gray-600 hover:text-primary font-medium transition">
               Chat
               {unreadCount > 0 && (
@@ -149,24 +141,15 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* ICONES MOBILE */}
-          <div className="flex md:hidden items-center gap-4">
+          {/* ICONES MOBILE (Sem o chat, apenas a localização e o sino original) */}
+          <div className="flex md:hidden items-center gap-3">
              <div className="flex items-center gap-1 text-gray-800 font-bold text-xs bg-gray-100 px-2 py-1.5 rounded-full">
                 <MapPin size={14} className="text-accent" />
                 <span className="truncate max-w-[100px]">{locShort}</span>
              </div>
-             
-             {/* ÍCONE DE CHAT MOBILE COM BOLINHA VERMELHA */}
-             {user && (
-               <Link href="/chat" className="relative text-gray-500 hover:text-primary transition mt-1">
-                  <MessageCircle size={22} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                      {unreadCount}
-                    </span>
-                  )}
-               </Link>
-             )}
+             <button className="text-gray-500 hover:text-primary transition">
+                <Bell size={20} />
+             </button>
           </div>
 
         </div>
