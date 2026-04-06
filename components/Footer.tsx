@@ -61,8 +61,21 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
-          <p>&copy; {new Date().getFullYear()} Desapego Piauí. Todos os direitos reservados.</p>
+        {/* NOVA ÁREA DE CRÉDITOS */}
+        <div className="border-t border-gray-800 pt-8 text-center flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+          <p>&copy; {new Date().getFullYear()} Desapego Piauí. Todos os direitos reservados. <span className="hidden md:inline">|</span><br className="md:hidden" /> Versão Beta</p>
+          
+          <p>
+            Desenvolvido e entregue por{' '}
+            <a 
+              href="https://aarti-studio-ten.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-accent hover:text-white font-bold transition-colors"
+            >
+              AARTI ESTUDIO
+            </a>
+          </p>
         </div>
       </div>
     </footer>
