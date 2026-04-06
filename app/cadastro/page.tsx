@@ -5,16 +5,15 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Mail, Lock, User, Phone, CheckCircle, Shield, Eye, AlertCircle, MessageSquare } from 'lucide-react'
+import { Loader2, Mail, Lock, User, Phone, CheckCircle, Shield, Eye, AlertCircle } from 'lucide-react'
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
-// 1. BLACKLIST: BLOQUEIO DE E-MAILS DESCARTÁVEIS
+// BLACKLIST: BLOQUEIO DE E-MAILS DESCARTÁVEIS
 const DOMINIOS_PROIBIDOS = [
   '10minutemail.com', 'yopmail.com', 'mailinator.com', 'tempmail.com', 
   'guerrillamail.com', 'throwawaymail.com', 'dropmail.me', 'temp-mail.org'
 ]
 
-// 2. FUNÇÕES MATEMÁTICAS PARA VALIDAR CPF E CNPJ
 const validarCPF = (cpf: string) => {
   cpf = cpf.replace(/[^\d]+/g, '');
   if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
@@ -58,12 +57,7 @@ function CadastroForm() {
   const router = useRouter()
   const { executeRecaptcha } = useGoogleReCaptcha()
   const [loading, setLoading] = useState(false)
-  
-  // ETAPA DO FORMULÁRIO (1 = Dados, 2 = OTP)
-  const [etapa, setEtapa] = useState<'dados' | 'otp'>('dados')
-  const [codigoOTP, setCodigoOTP] = useState('')
 
-  // Dados
   const [apelido, setApelido] = useState('')
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
@@ -79,7 +73,6 @@ function CadastroForm() {
   const [cidade, setCidade] = useState('')
   const [estado, setEstado] = useState('')
 
-  // 3. VALIDAÇÕES EM TEMPO REAL
   const dominioEmail = email.includes('@') ? email.split('@')[1].toLowerCase() : '';
   const isEmailDescartavel = DOMINIOS_PROIBIDOS.includes(dominioEmail);
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !isEmailDescartavel;
@@ -88,7 +81,6 @@ function CadastroForm() {
   const docLenght = documento.replace(/\D/g, '').length;
   const isDocError = (tipoConta === 'Fisica' && docLenght === 11 && !isCpfCnpjValid) || (tipoConta === 'Juridica' && docLenght === 14 && !isCpfCnpjValid);
 
-  // Botão só acende se TODOS os campos estiverem preenchidos e válidos
   const isFormValid = 
     nomeCompleto.trim().length > 2 && apelido.trim().length > 2 &&
     isEmailValid && password.length >= 6 && telefone.replace(/\D/g, '').length >= 10 &&
@@ -147,25 +139,22 @@ function CadastroForm() {
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value.replace(/\D/g, '')
-    const numerosCep = valor; // Guarda apenas os números para verificação
-
+    const numerosCep = valor;
     if (valor.length <= 8) {
       valor = valor.replace(/^(\d{5})(\d)/, '$1-$2')
       setCep(valor)
-      
-      // A CORREÇÃO ESTÁ AQUI: Só dispara quando tiver 8 números exatos
       if (numerosCep.length === 8) {
         buscarCep(numerosCep)
       }
     }
   }
 
-  // 4. PASSO 1: AVANÇAR PARA OTP
-  const handleAvancarOTP = async (e: React.FormEvent) => {
+  // FLUXO ÚNICO DE CADASTRO 100% GRATUITO E SEGURO
+  const handleFinalizarCadastro = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!isFormValid) {
-      alert("Por favor, preencha todos os campos corretamente com dados reais.");
+      alert("Por favor, preencha todos os campos corretamente.");
       return;
     }
 
@@ -177,6 +166,7 @@ function CadastroForm() {
     setLoading(true)
 
     try {
+      // 1. Verificação contra robôs (reCAPTCHA)
       const recaptchaToken = await executeRecaptcha('signup')
       if (!recaptchaToken) throw new Error("Erro reCAPTCHA")
 
@@ -192,42 +182,15 @@ function CadastroForm() {
         return;
       }
 
-      // AQUI ENTRARIA A API DE WHATSAPP PAGA (Ex: Twilio)
-      // fetch('/api/enviar-whatsapp', { method: 'POST', body: JSON.stringify({ telefone }) })
-      
-      // Como não tem API, mudamos a tela para o utilizador digitar o código (Simulação: 123456)
-      setEtapa('otp');
-      alert(`SIMULAÇÃO: Um código de 6 dígitos seria enviado para o WhatsApp ${telefone}. Para testes, digite: 123456`);
-      
-    } catch (error) {
-      console.error(error)
-      alert("Erro ao validar segurança.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 5. PASSO 2: VERIFICAR OTP E CRIAR CONTA DE VERDADE
-  const handleFinalizarCadastro = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // Validação fictícia para a interface funcionar
-    if (codigoOTP !== '123456') {
-      alert("Código OTP incorreto. (Dica: digite 123456 para testar)");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Cria a conta
+      // 2. Cria a conta de usuário no Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       const telLimpo = telefone.replace(/\D/g, '')
 
-      // Dispara o E-mail oficial de Verificação do Google
+      // 3. Envia o E-mail oficial de Verificação do Google (100% Grátis)
       await sendEmailVerification(user);
 
+      // 4. Salva os dados públicos e privados no banco de dados
       await setDoc(doc(db, 'users', user.uid), {
         nome: apelido, 
         email: email,
@@ -246,65 +209,21 @@ function CadastroForm() {
         endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
       })
 
-      alert("Conta verificada e criada com sucesso! 📧 Enviamos um e-mail de confirmação para a sua caixa de entrada.");
+      alert("🎉 Conta criada com sucesso! Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada.");
       router.push('/meus-anuncios')
       
     } catch (error: any) {
       console.error(error)
       if (error.code === 'auth/email-already-in-use') {
-        alert("Este email já está em uso.")
-        setEtapa('dados')
+        alert("Este email já está em uso na plataforma.")
       } else {
-        alert("Erro ao criar conta.")
+        alert("Erro ao criar conta. Verifique sua conexão e tente novamente.")
       }
     } finally {
       setLoading(false)
     }
   }
 
-  // RENDERIZA A TELA DE OTP SE ESTIVER NA ETAPA 2
-  if (etapa === 'otp') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-10 px-6 shadow-xl sm:rounded-[2rem] border border-gray-100 text-center">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <MessageSquare size={36} />
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-2">Verifique seu WhatsApp</h2>
-            <p className="text-gray-500 mb-8 font-medium">
-              Enviamos um código de 6 dígitos para o número <br/><strong className="text-gray-900">{telefone}</strong>
-            </p>
-
-            <form onSubmit={handleFinalizarCadastro}>
-              <input 
-                type="text" 
-                maxLength={6}
-                value={codigoOTP}
-                onChange={e => setCodigoOTP(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-                className="w-full text-center text-3xl tracking-[0.5em] font-black px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition mb-6"
-              />
-              
-              <button 
-                type="submit" 
-                disabled={loading || codigoOTP.length !== 6} 
-                className="w-full flex justify-center py-4 rounded-xl shadow-lg text-lg font-bold text-white transition-all transform hover:-translate-y-0.5 bg-primary hover:bg-primary-dark disabled:bg-gray-300 disabled:transform-none"
-              >
-                {loading ? <Loader2 className="animate-spin" size={24} /> : "Confirmar e Criar Conta"}
-              </button>
-            </form>
-            
-            <button onClick={() => setEtapa('dados')} className="mt-6 text-sm font-bold text-gray-500 hover:text-primary transition">
-              Voltar e editar número
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // RENDERIZA O FORMULÁRIO NORMAL (ETAPA 1)
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-2xl">
@@ -320,9 +239,8 @@ function CadastroForm() {
              <p><strong>Segurança LGPD:</strong> Seus dados pessoais como CPF, nome completo e endereço exato são estritamente confidenciais e nunca serão exibidos publicamente.</p>
           </div>
 
-          <form onSubmit={handleAvancarOTP} className="space-y-8">
+          <form onSubmit={handleFinalizarCadastro} className="space-y-8">
             
-            {/* SESSÃO 1: DADOS PESSOAIS */}
             <div>
               <h3 className="text-lg font-black text-gray-900 border-b border-gray-100 pb-2 mb-4">Dados Pessoais (Privado)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -359,7 +277,6 @@ function CadastroForm() {
               </div>
             </div>
 
-            {/* SESSÃO 2: ENDEREÇO */}
             <div>
               <h3 className="text-lg font-black text-gray-900 border-b border-gray-100 pb-2 mb-4">Seu Endereço (Privado)</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -386,7 +303,6 @@ function CadastroForm() {
               </div>
             </div>
 
-            {/* SESSÃO 3: PERFIL PÚBLICO */}
             <div className="bg-primary/5 p-4 md:p-6 rounded-2xl border border-primary/10">
               <h3 className="text-lg font-black text-primary border-b border-primary/10 pb-2 mb-4 flex items-center gap-2"><Eye size={20}/> Perfil Público (Visível para todos)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +317,6 @@ function CadastroForm() {
               </div>
             </div>
 
-            {/* SESSÃO 4: ACESSO */}
             <div>
               <h3 className="text-lg font-black text-gray-900 border-b border-gray-100 pb-2 mb-4">Dados de Acesso</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -423,7 +338,7 @@ function CadastroForm() {
               className={`w-full flex justify-center py-4 px-4 rounded-xl shadow-lg text-lg font-bold text-white transition-all transform hover:-translate-y-0.5 mt-8 
                 ${isFormValid ? 'bg-primary hover:bg-primary-dark cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
             >
-              {loading ? <Loader2 className="animate-spin" size={24} /> : "Finalizar Cadastro"}
+              {loading ? <Loader2 className="animate-spin" size={24} /> : "Finalizar Cadastro e Verificar E-mail"}
             </button>
             {!isFormValid && (
               <p className="text-center text-sm text-red-500 font-bold mt-2">
