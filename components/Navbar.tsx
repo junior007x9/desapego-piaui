@@ -2,27 +2,55 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Bell } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { MapPin, MessageCircle } from 'lucide-react'; // Adicionado MessageCircle e removido o Bell
+import { auth, db } from '@/lib/firebase'; // Adicionado o db aqui
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore'; // Imports para buscar as mensagens
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   
-  // Novos estados para a localização dinâmica
+  // Novos estados
   const [locFull, setLocFull] = useState('Carregando...');
   const [locShort, setLocShort] = useState('...');
+  const [unreadCount, setUnreadCount] = useState(0); // Estado para contar as notificações
   
   const router = useRouter();
 
-  // Verifica se o usuário está logado
+  // Verifica se o usuário está logado E busca notificações de chat não lidas
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+
+      if (currentUser) {
+        // Busca todos os chats onde o usuário participa (Filtro simples para não pedir Índice no Firebase)
+        const q = query(
+          collection(db, 'chats'),
+          where('participantes', 'array-contains', currentUser.uid)
+        );
+
+        // onSnapshot vai rodar assim que o site abrir E em tempo real
+        const unsubscribeChats = onSnapshot(q, (snapshot) => {
+          let naoLidas = 0;
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            // Verifica se não está lido e se a ÚLTIMA MENSAGEM FOI DE OUTRA PESSOA (comprador)
+            if (data.lido === false && data.ultimoRemetenteId && data.ultimoRemetenteId !== currentUser.uid) {
+              naoLidas++;
+            }
+          });
+          setUnreadCount(naoLidas);
+        });
+
+        return () => unsubscribeChats();
+      } else {
+        setUnreadCount(0);
+      }
     });
-    return () => unsubscribe();
+    
+    return () => unsubscribeAuth();
   }, []);
 
   // MÁGICA: Pega a localização automaticamente pela internet do usuário (Sem pedir permissão)
@@ -88,10 +116,19 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-6">
             <div className="flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition mr-2">
               <MapPin size={18} />
-              {/* Localização Dinâmica Desktop */}
               <span className="text-sm font-medium">{locFull}</span>
             </div>
-            <Link href="/chat" className="text-gray-600 hover:text-primary font-medium transition">Chat</Link>
+            
+            {/* LINK DO CHAT COM NOTIFICAÇÃO (Desktop) */}
+            <Link href="/chat" className="relative flex items-center gap-1 text-gray-600 hover:text-primary font-medium transition">
+              Chat
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+
             <Link href="/favoritos" className="text-gray-600 hover:text-primary font-medium transition">Favoritos</Link>
             
             {user ? (
@@ -113,15 +150,23 @@ export default function Navbar() {
           </div>
 
           {/* ICONES MOBILE */}
-          <div className="flex md:hidden items-center gap-3">
+          <div className="flex md:hidden items-center gap-4">
              <div className="flex items-center gap-1 text-gray-800 font-bold text-xs bg-gray-100 px-2 py-1.5 rounded-full">
                 <MapPin size={14} className="text-accent" />
-                {/* Localização Dinâmica Mobile */}
                 <span className="truncate max-w-[100px]">{locShort}</span>
              </div>
-             <button className="text-gray-500 hover:text-primary transition">
-                <Bell size={20} />
-             </button>
+             
+             {/* ÍCONE DE CHAT MOBILE COM BOLINHA VERMELHA */}
+             {user && (
+               <Link href="/chat" className="relative text-gray-500 hover:text-primary transition mt-1">
+                  <MessageCircle size={22} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                      {unreadCount}
+                    </span>
+                  )}
+               </Link>
+             )}
           </div>
 
         </div>

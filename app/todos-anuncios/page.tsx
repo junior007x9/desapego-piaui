@@ -7,14 +7,16 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, MapPin, X, ShoppingBag, ChevronDown, Loader2, Sparkles } from 'lucide-react'
 
 const CATEGORIAS = ["Todas", "Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
-const ITENS_POR_PAGINA = 8 
+// Aumentei o limite de itens por página para que a busca encontre mais resultados
+const ITENS_POR_PAGINA = 50 
 
 function ConteudoAnuncios() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
   const queryBusca = searchParams.get('q')
-  const queryCategoria = searchParams.get('cat')
+  // CORREÇÃO APLICADA AQUI: 'cat' trocado para 'categoria' para conectar com a Home
+  const queryCategoria = searchParams.get('categoria')
 
   const [ads, setAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
