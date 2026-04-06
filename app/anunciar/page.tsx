@@ -23,6 +23,56 @@ const PLANOS_BASE = [
   { id: 4, nome: 'Mensal', dias: 30, valor: 280, desc: '30 dias de destaque' }
 ]
 
+// 🚀 NOVA FUNÇÃO: COMPRESSOR MÁGICO DE IMAGENS
+const comprimirImagem = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        // Tamanho máximo permitido (1200px não perde qualidade em ecrãs e fica super leve)
+        const max_size = 1200;
+
+        if (width > height) {
+          if (width > max_size) {
+            height *= max_size / width;
+            width = max_size;
+          }
+        } else {
+          if (height > max_size) {
+            width *= max_size / height;
+            height = max_size;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Comprime para formato JPEG com 80% de qualidade
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          } else {
+            resolve(file); // Se falhar, devolve a original
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 export default function AnunciarPage() {
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -33,9 +83,10 @@ export default function AnunciarPage() {
   const [planoId, setPlanoId] = useState<number | null>(null)
   
   const [loading, setLoading] = useState(false)
+  const [comprimindo, setComprimindo] = useState(false) // Estado para mostrar que está a processar fotos
   const [user, setUser] = useState<any>(null)
   const [emailVerificado, setEmailVerificado] = useState(true)
-  const [jaUsouGratis, setJaUsouGratis] = useState(true) // Começa true por segurança, depois verifica
+  const [jaUsouGratis, setJaUsouGratis] = useState(true) 
   
   const router = useRouter()
 
@@ -53,12 +104,11 @@ export default function AnunciarPage() {
         } else {
           setEmailVerificado(true)
           
-          // 2. VERIFICA SE JÁ USOU O PLANO GRÁTIS (Dispositivo ou Banco de Dados)
+          // 2. VERIFICA SE JÁ USOU O PLANO GRÁTIS
           const localJaUsou = localStorage.getItem('jaUsouGratis_dev')
           if (localJaUsou) {
              setJaUsouGratis(true)
           } else {
-             // Se não tiver no dispositivo, verifica no Firebase
              try {
                const q = query(
                  collection(db, 'anuncios'), 
@@ -68,9 +118,9 @@ export default function AnunciarPage() {
                const snap = await getDocs(q)
                if (!snap.empty) {
                   setJaUsouGratis(true)
-                  localStorage.setItem('jaUsouGratis_dev', 'true') // Trava o dispositivo também
+                  localStorage.setItem('jaUsouGratis_dev', 'true')
                } else {
-                  setJaUsouGratis(false) // Pode usar o plano grátis!
+                  setJaUsouGratis(false) 
                }
              } catch (error) {
                console.error("Erro ao verificar plano grátis:", error)
@@ -95,11 +145,11 @@ export default function AnunciarPage() {
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
 
-  // Lógica dos Planos Disponíveis na Tela
   const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 🚀 ADICIONÁMOS A COMPRESSÃO AQUI!
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
       
@@ -108,9 +158,20 @@ export default function AnunciarPage() {
         return
       }
 
-      setFotos(prev => [...prev, ...selectedFiles])
-      const selectedPreviews = selectedFiles.map(file => URL.createObjectURL(file))
-      setPreviews(prev => [...prev, ...selectedPreviews])
+      setComprimindo(true)
+      try {
+        // Comprime todas as fotos selecionadas antes de as guardar na memória
+        const compressedFiles = await Promise.all(selectedFiles.map(file => comprimirImagem(file)))
+        
+        setFotos(prev => [...prev, ...compressedFiles])
+        const selectedPreviews = compressedFiles.map(file => URL.createObjectURL(file))
+        setPreviews(prev => [...prev, ...selectedPreviews])
+      } catch (error) {
+        console.error("Erro ao comprimir imagem", error)
+        alert("Erro ao processar uma das imagens. Tente com outra foto.")
+      } finally {
+        setComprimindo(false)
+      }
     }
   }
 
@@ -159,7 +220,6 @@ export default function AnunciarPage() {
         }
       }
 
-      // Trava o dispositivo assim que usar o plano grátis
       if (planoId === 0) {
          localStorage.setItem('jaUsouGratis_dev', 'true');
       }
@@ -187,7 +247,6 @@ export default function AnunciarPage() {
     } 
   }
 
-  // TELA DE BLOQUEIO SE O E-MAIL NÃO ESTIVER VERIFICADO
   if (!emailVerificado && user) {
     return (
       <div className="bg-gray-50 min-h-screen py-10 px-4 flex items-center justify-center pb-28">
@@ -236,7 +295,10 @@ export default function AnunciarPage() {
           
           <div>
             <div className="flex justify-between items-end mb-4">
-               <label className="block text-primary font-bold">Fotos do produto (Opcional)</label>
+               <label className="block text-primary font-bold flex items-center gap-2">
+                 Fotos do produto (Opcional) 
+                 {comprimindo && <Loader2 size={16} className="animate-spin text-accent"/>}
+               </label>
                <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">{fotos.length}/10 fotos</span>
             </div>
             
@@ -249,10 +311,10 @@ export default function AnunciarPage() {
               ))}
               
               {fotos.length < 10 && (
-                <label className="aspect-square border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center justify-center text-primary cursor-pointer hover:bg-primary/5 transition bg-gray-50">
+                <label className={`aspect-square border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center justify-center text-primary transition bg-gray-50 ${comprimindo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/5'}`}>
                   <Camera size={32} />
-                  <span className="text-[10px] font-bold mt-1">ADICIONAR</span>
-                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+                  <span className="text-[10px] font-bold mt-1">{comprimindo ? 'PROCESSANDO...' : 'ADICIONAR'}</span>
+                  <input disabled={comprimindo} type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
                 </label>
               )}
             </div>
@@ -312,9 +374,9 @@ export default function AnunciarPage() {
           <div className="pt-6">
             <button 
               type="submit" 
-              disabled={loading || isFormIncompleto}
+              disabled={loading || isFormIncompleto || comprimindo}
               className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all flex items-center justify-center gap-3 transform
-                ${isFormIncompleto ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent hover:bg-accent-dark text-white hover:-translate-y-0.5'}`}
+                ${(isFormIncompleto || comprimindo) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent hover:bg-accent-dark text-white hover:-translate-y-0.5'}`}
             >
               {loading ? <Loader2 className="animate-spin" /> : 'PUBLICAR ANÚNCIO'}
             </button>
