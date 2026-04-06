@@ -16,45 +16,11 @@ export default function DetalhesAnuncio() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [loadingChat, setLoadingChat] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [locFull, setLocFull] = useState('Carregando...')
 
   // Estados da Denúncia
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [reportMotivo, setReportMotivo] = useState('')
   const [isReporting, setIsReporting] = useState(false)
-
-  // MÁGICA DE PERFORMANCE: Cache da Localização
-  useEffect(() => {
-    async function fetchLocation() {
-      const cachedFullLocation = localStorage.getItem('user_full_location');
-      if (cachedFullLocation) {
-        setLocFull(cachedFullLocation);
-        return;
-      }
-
-      try {
-        const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
-        const data = await res.json();
-        const city = data.city || data.locality || 'Teresina';
-        let state = 'PI';
-        
-        if (data.principalSubdivisionCode && data.principalSubdivisionCode.includes('-')) {
-          state = data.principalSubdivisionCode.split('-')[1]; 
-        } else if (data.principalSubdivision) {
-          state = data.principalSubdivision.substring(0, 2).toUpperCase();
-        }
-        
-        const fullLocation = `${city}, ${state}`;
-        setLocFull(fullLocation);
-        
-        localStorage.setItem('user_full_location', fullLocation);
-        localStorage.setItem('user_city', city);
-      } catch (error) {
-        setLocFull('Teresina, PI');
-      }
-    }
-    fetchLocation();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -352,7 +318,8 @@ export default function DetalhesAnuncio() {
               </span>
               <div className="flex items-center justify-between text-gray-500 text-xs mt-3 font-medium">
                  <div className="flex gap-4">
-                   <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {locFull}</span>
+                   {/* CORRIGIDO AQUI (MOBILE): Mostrando a cidade do Anúncio */}
+                   <span className="flex items-center gap-1"><MapPin size={14} className="text-accent" /> {ad.cidade || ad.localizacao || 'Piauí'}</span>
                    <span className="flex items-center gap-1"><Eye size={14} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
                  </div>
                  <button onClick={() => setIsReportModalOpen(true)} className="flex items-center gap-1 text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded-md transition-colors font-bold">
@@ -388,7 +355,8 @@ export default function DetalhesAnuncio() {
               
               <div className="flex items-center justify-between text-gray-500 text-sm mb-6 pb-6 border-b border-gray-100 font-medium">
                  <div className="flex gap-4">
-                   <span className="flex items-center gap-1"><MapPin size={16} className="text-accent" /> {locFull}</span>
+                   {/* CORRIGIDO AQUI (DESKTOP): Mostrando a cidade do Anúncio */}
+                   <span className="flex items-center gap-1"><MapPin size={16} className="text-accent" /> {ad.cidade || ad.localizacao || 'Piauí'}</span>
                    <span className="flex items-center gap-1"><Eye size={16} className="text-accent" /> {ad.visualizacoes || 1} visitas</span>
                  </div>
                  <button onClick={() => setIsReportModalOpen(true)} className="flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors font-bold bg-red-50 px-3 py-1.5 rounded-lg">

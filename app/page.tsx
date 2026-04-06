@@ -23,7 +23,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // MÁGICA DE PERFORMANCE: Verifica se a cidade já está salva no telemóvel
+  // MÁGICA DE PERFORMANCE: Verifica se a cidade já está salva no telemóvel para a mensagem de Boas Vindas
   useEffect(() => {
     async function fetchCity() {
       const cachedCity = localStorage.getItem('user_city');
@@ -100,6 +100,7 @@ export default function Home() {
           <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
+          {/* AQUI DEIXAMOS O userCity PARA A MENSAGEM DO BANNER (Ex: "Compre e venda em Timon") */}
           <p className="text-primary-100 font-medium mb-8 text-sm md:text-lg">Compre e venda de forma rápida, fácil e segura em {userCity}.</p>
           
           <form onSubmit={handleSearch} className="flex bg-white p-2 md:p-2 rounded-full md:rounded-2xl shadow-xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all">
@@ -182,11 +183,12 @@ export default function Home() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
                   
-                  {/* Seu rodapé customizado com a Cidade */}
+                  {/* AQUI FOI CORRIGIDO! Trocamos {userCity} pela localização real do anúncio */}
                   <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
                     <span>Hoje</span>
                     <span className="flex items-center gap-0.5 truncate max-w-[60%]">
-                       <MapPin size={10} className="text-accent shrink-0"/> <span className="truncate">{userCity}</span>
+                       <MapPin size={10} className="text-accent shrink-0"/> 
+                       <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
                     </span>
                   </div>
                 </div>

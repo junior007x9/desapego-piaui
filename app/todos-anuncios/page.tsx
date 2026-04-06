@@ -216,8 +216,10 @@ function ConteudoAnuncios() {
                       <p className="text-base md:text-xl font-black text-primary">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                       </p>
+                      
+                      {/* AQUI FOI CORRIGIDO! Trocamos userCity pela cidade do anúncio */}
                       <div className="flex items-center gap-1 text-[9px] md:text-[10px] text-gray-400 mt-1.5 md:mt-2 font-black uppercase tracking-wider">
-                         <span>Hoje</span> <span className="mx-1">•</span> <MapPin size={10} className="text-accent shrink-0" /> <span className="truncate">{userCity}</span>
+                         <span>Hoje</span> <span className="mx-1">•</span> <MapPin size={10} className="text-accent shrink-0" /> <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
                       </div>
                     </div>
                   </div>
