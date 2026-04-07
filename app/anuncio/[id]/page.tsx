@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore'
-import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Ban, Flag, X, Loader2, Maximize2, Share2 } from 'lucide-react'
+import { doc, getDoc, setDoc, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore'
+import { MapPin, MessageCircle, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Flag, X, Maximize2, Share2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DetalhesAnuncio() {
@@ -13,11 +13,12 @@ export default function DetalhesAnuncio() {
   const [ad, setAd] = useState<any>(null)
   const [vendedor, setVendedor] = useState<any>(null)
   const [user, setUser] = useState<FirebaseUser | null>(null)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [loadingChat, setLoadingChat] = useState(false)
-  const [isFavorite, setIsFavorite] = useState(false)
   
-  const [isZoomOpen, setIsZoomOpen] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isZoomOpen, setIsZoomOpen] = useState(false) // Controla a tela cheia
+  const [isFavorite, setIsFavorite] = useState(false)
+
+  // Estados da Denúncia
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [reportMotivo, setReportMotivo] = useState('')
   const [isReporting, setIsReporting] = useState(false)
@@ -119,6 +120,7 @@ export default function DetalhesAnuncio() {
     }
   }
 
+  // Funções das Setinhas
   const handleNextImage = () => {
     setCurrentImageIndex(prev => prev === ad.fotos.length - 1 ? 0 : prev + 1)
   }
@@ -152,63 +154,52 @@ export default function DetalhesAnuncio() {
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
       
-      {/* 📱 EXPERIÊNCIA DE ZOOM MOBILE-FIRST (LIGHTBOX) */}
+      {/* 🔍 TELA CHEIA (LIGHTBOX) - TOTALMENTE CORRIGIDA E LIMPA */}
       {isZoomOpen && (
-        <div className="fixed inset-0 bg-black/98 z-[100] flex flex-col animate-in fade-in zoom-in-95 duration-200">
-          {/* Topo com Contador e Fechar */}
-          <div className="flex justify-between items-center p-4 md:p-6 text-white absolute top-0 w-full z-20 bg-gradient-to-b from-black/60 to-transparent">
-            <span className="font-bold tracking-widest text-xs md:text-sm bg-white/10 px-4 py-2 rounded-full backdrop-blur-md">
+        <div className="fixed inset-0 bg-black z-[99999] flex flex-col">
+          
+          {/* Barra Superior do Zoom */}
+          <div className="absolute top-0 w-full p-4 flex justify-between items-center z-50">
+            <span className="text-white font-bold text-sm bg-black/60 px-4 py-2 rounded-full">
               {currentImageIndex + 1} / {ad.fotos.length}
             </span>
-            <button onClick={() => setIsZoomOpen(false)} className="bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-md transition-colors">
+            <button onClick={() => setIsZoomOpen(false)} className="text-white bg-black/60 p-3 rounded-full hover:bg-black/80 transition">
               <X size={24} />
             </button>
           </div>
 
-          {/* Área da Imagem com Tap Zones Invisíveis */}
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-             
-             {ad.fotos.length > 1 && (
-               <>
-                 {/* Zonas de Toque para Mobile (Sem necessidade de mirar na setinha) */}
-                 <div className="absolute left-0 top-0 w-1/3 h-full z-10 md:hidden" onClick={handlePrevImage} />
-                 <div className="absolute right-0 top-0 w-1/3 h-full z-10 md:hidden" onClick={handleNextImage} />
-                 
-                 {/* Setas Visíveis apenas no Desktop */}
-                 <button onClick={handlePrevImage} className="hidden md:block absolute left-6 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full backdrop-blur-md transition z-20"><ChevronLeft size={32}/></button>
-                 <button onClick={handleNextImage} className="hidden md:block absolute right-6 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full backdrop-blur-md transition z-20"><ChevronRight size={32}/></button>
-               </>
-             )}
-
+          {/* Área da Imagem - Permite Zoom de Pinça (overflow-auto) */}
+          <div className="flex-1 w-full h-full flex items-center justify-center overflow-auto p-2">
              <img 
                src={ad.fotos[currentImageIndex]} 
-               className="w-full h-full object-contain select-none"
+               className="max-w-full max-h-full object-contain"
                alt="Zoom do produto"
              />
-
-             {/* Bolinhas Indicadoras (Estilo Instagram) */}
-             {ad.fotos.length > 1 && (
-               <div className="absolute bottom-8 left-0 w-full flex justify-center gap-2 z-20">
-                 {ad.fotos.map((_: any, i: number) => (
-                    <div key={i} className={`h-1.5 md:h-2 rounded-full transition-all duration-300 ${i === currentImageIndex ? 'w-6 md:w-8 bg-white' : 'w-1.5 md:w-2 bg-white/40'}`} />
-                 ))}
-               </div>
-             )}
           </div>
+
+          {/* Setas do Zoom (Sempre visíveis se houver >1 foto) */}
+          {ad.fotos.length > 1 && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 bg-black/60 text-white p-3 md:p-4 rounded-full z-50 hover:bg-black/80">
+                <ChevronLeft size={32}/>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 bg-black/60 text-white p-3 md:p-4 rounded-full z-50 hover:bg-black/80">
+                <ChevronRight size={32}/>
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {/* CABEÇALHO MOBILE FLUTUANTE (GLASSMORPHISM) */}
-      <div className="md:hidden fixed top-0 w-full z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 p-3 flex justify-between items-center">
-        <button onClick={() => router.back()} className="flex items-center gap-1 bg-gray-100/80 p-2 pr-4 rounded-full text-gray-800 font-bold text-sm">
+      {/* CABEÇALHO MOBILE (Fixo e Limpo) */}
+      <div className="md:hidden sticky top-0 w-full z-40 bg-white border-b border-gray-100 p-3 flex justify-between items-center shadow-sm">
+        <button onClick={() => router.back()} className="flex items-center gap-1 bg-gray-100 p-2 pr-4 rounded-full text-primary font-bold text-sm">
           <ChevronLeft size={20} /> Voltar
         </button>
         <div className="flex gap-2">
-          <button onClick={handleShare} className="p-2.5 bg-gray-100/80 rounded-full text-gray-700">
-             <Share2 size={20} />
-          </button>
-          <button onClick={toggleFavorite} className="p-2.5 bg-gray-100/80 rounded-full">
-            <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-700"} size={20} />
+          <button onClick={handleShare} className="p-2.5 bg-gray-100 rounded-full text-gray-700"><Share2 size={20} /></button>
+          <button onClick={toggleFavorite} className="p-2.5 bg-gray-100 rounded-full">
+            <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"} size={20} />
           </button>
         </div>
       </div>
@@ -216,10 +207,10 @@ export default function DetalhesAnuncio() {
       <div className="container mx-auto px-0 md:px-4 pt-0 md:pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
           
-          <div className="lg:col-span-2 space-y-2 md:space-y-4">
+          <div className="lg:col-span-2 space-y-0 md:space-y-4">
             
-            {/* GALERIA IN-PAGE COM ESTILO APP */}
-            <div className="bg-black md:rounded-[2rem] overflow-hidden relative h-[400px] sm:h-[450px] md:h-[550px] group">
+            {/* 📸 GALERIA PRINCIPAL DO ANÚNCIO */}
+            <div className="bg-black md:rounded-3xl relative h-[350px] sm:h-[450px] md:h-[550px] flex items-center justify-center">
               {ad.fotos && ad.fotos.length > 0 ? (
                 <>
                   <img 
@@ -229,44 +220,43 @@ export default function DetalhesAnuncio() {
                     onClick={() => setIsZoomOpen(true)}
                   />
                   
-                  {/* Botão de Dica de Zoom */}
+                  {/* Botão de Maximizar Canto Inferior */}
                   <button 
                     onClick={() => setIsZoomOpen(true)}
-                    className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white p-2.5 rounded-full md:opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-xs font-bold tracking-widest"
+                    className="absolute bottom-4 right-4 bg-black/60 text-white p-3 rounded-full flex items-center justify-center"
                   >
-                    <Maximize2 size={16} /> ZOOM
+                    <Maximize2 size={20} />
                   </button>
 
-                  {/* Indicadores de bolinhas na foto normal também */}
+                  {/* Contador Base */}
                   {ad.fotos.length > 1 && (
-                    <div className="absolute bottom-4 left-0 w-full flex justify-center gap-1.5 z-10">
-                      {ad.fotos.map((_: any, i: number) => (
-                         <div key={i} className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${i === currentImageIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/60'}`} />
-                      ))}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest">
+                      {currentImageIndex + 1} / {ad.fotos.length}
                     </div>
                   )}
 
-                  {/* Setas Desktop */}
+                  {/* Setas da Galeria Padrão */}
                   {ad.fotos.length > 1 && (
                     <>
-                      <button onClick={handlePrevImage} className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition"><ChevronLeft size={24}/></button>
-                      <button onClick={handleNextImage} className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition"><ChevronRight size={24}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-full transition"><ChevronLeft size={24}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-full transition"><ChevronRight size={24}/></button>
                     </>
                   )}
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 font-medium">Sem fotos cadastradas</div>
+                <div className="text-gray-500 font-medium">Sem fotos cadastradas</div>
               )}
             </div>
 
-            <div className="md:hidden bg-white p-5 rounded-t-3xl -mt-6 relative z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
+            {/* CONTEÚDO NO CELULAR (Faz sobreposição redondinha na foto) */}
+            <div className="md:hidden bg-white p-5 rounded-t-3xl -mt-6 relative z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] border-t border-gray-100">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-accent bg-accent/10 px-3 py-1.5 rounded-full inline-block">
                   {ad.categoria}
                 </span>
                 <span className="text-gray-400 text-xs font-bold">{ad.visualizacoes || 1} visualizações</span>
               </div>
-              <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-tight mb-2">{ad.titulo}</h1>
+              <h1 className="text-2xl font-black text-gray-900 leading-tight mb-2">{ad.titulo}</h1>
               <span className="text-3xl font-black text-primary block mb-4">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
               </span>
@@ -279,30 +269,28 @@ export default function DetalhesAnuncio() {
               </div>
             </div>
 
-            <div className="bg-white p-5 md:p-8 md:rounded-[2rem] shadow-sm md:border border-gray-100">
-              <h2 className="text-lg md:text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
-                 Detalhes
-              </h2>
+            {/* DESCRIÇÃO E DICA */}
+            <div className="bg-white p-6 md:p-8 md:rounded-3xl shadow-sm md:border border-gray-100 mt-2 md:mt-0">
+              <h2 className="text-xl font-black text-gray-800 mb-4 border-b border-gray-100 pb-3">Detalhes</h2>
               <p className="whitespace-pre-wrap text-gray-600 text-base leading-relaxed bg-gray-50 p-4 rounded-2xl">{ad.descricao}</p>
               
               <div className="mt-6 bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 text-sm text-orange-800">
                 <AlertTriangle className="shrink-0 text-orange-500" size={20} />
-                <p><strong>Dica de Segurança:</strong> Não faça pagamentos antecipados (PIX, Boleto) sem conferir o produto pessoalmente.</p>
+                <p><strong>Dica de Segurança:</strong> Não faça pagamentos antecipados sem conferir o produto pessoalmente.</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 md:space-y-6 px-4 md:px-0 mb-6">
-            <div className="hidden md:block bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+          {/* BARRA LATERAL (DESKTOP) E VENDEDOR */}
+          <div className="space-y-4 md:space-y-6 px-4 md:px-0 mb-6 mt-4 md:mt-0">
+            <div className="hidden md:block bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-start mb-4">
                  <span className="text-xs font-black uppercase tracking-wider text-accent bg-accent/10 px-3 py-1.5 rounded-full inline-block">
                    {ad.categoria}
                  </span>
                  <div className="flex gap-2">
-                   <button onClick={handleShare} className="p-2 hover:bg-gray-50 rounded-full text-gray-400 hover:text-gray-700 transition" title="Compartilhar">
-                      <Share2 size={20} />
-                   </button>
-                   <button onClick={toggleFavorite} className="p-2 hover:bg-red-50 rounded-full transition" title="Favoritar">
+                   <button onClick={handleShare} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition"><Share2 size={20} /></button>
+                   <button onClick={toggleFavorite} className="p-2 bg-gray-50 hover:bg-red-50 rounded-full transition">
                      <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"} size={20} />
                    </button>
                  </div>
@@ -326,9 +314,10 @@ export default function DetalhesAnuncio() {
               <ContactButtons />
             </div>
 
-            <div className="bg-white md:rounded-[2rem] rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative group">
-               <div className="absolute top-0 left-0 w-full h-16 bg-gradient-to-r from-primary to-accent opacity-20"></div>
-               <Link href={`/vendedor/${ad.vendedorId}`} className="p-5 md:p-6 flex items-center gap-4 hover:bg-gray-50/50 transition-colors cursor-pointer relative z-10">
+            {/* CARD DO VENDEDOR */}
+            <div className="bg-white md:rounded-3xl rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+               <div className="absolute top-0 left-0 w-full h-16 bg-primary/10"></div>
+               <Link href={`/vendedor/${ad.vendedorId}`} className="p-5 md:p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer relative z-10">
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-primary font-black text-2xl shrink-0 overflow-hidden border-4 border-white shadow-md">
                     {vendedor?.fotoPerfil ? (
                       <img src={vendedor.fotoPerfil} alt={vendedor?.nome} className="w-full h-full object-cover" />
@@ -337,10 +326,10 @@ export default function DetalhesAnuncio() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-black text-gray-900 text-lg group-hover:text-primary transition-colors">{vendedor?.nome || "Vendedor"}</p>
+                    <p className="font-black text-gray-900 text-lg">{vendedor?.nome || "Vendedor"}</p>
                     <p className="text-xs text-gray-500 font-bold uppercase">No site desde {anoRegistro}</p>
                   </div>
-                  <ChevronRight className="text-gray-300 group-hover:text-primary transition-colors" />
+                  <ChevronRight className="text-gray-300" />
                </Link>
             </div>
             
