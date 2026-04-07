@@ -259,6 +259,20 @@ export default function AnunciarPage() {
         expiraEm: dataExpiracaoISO // Salva no banco o limite de vida do anúncio
       })
 
+      // 🚀 NOVO: DISPARO DO E-MAIL DE FORMA INVISÍVEL NO FUNDO
+      if (statusFinal === 'ativo') {
+        fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'anuncio_aprovado',
+            email: user.email,
+            nome: user.displayName || 'Vendedor',
+            produto: titulo
+          })
+        }).catch(console.error); // O catch invisível evita que o site trave se o envio falhar
+      }
+
       // Redirecionamento Dinâmico
       if (planoId === 0) {
          // Se for grátis, pula o pagamento e vai para os meus anúncios
