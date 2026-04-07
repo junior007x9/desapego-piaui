@@ -5,15 +5,16 @@ import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
-import FeedbackButton from '@/components/FeedbackButton' // <-- IMPORTAMOS O BOTÃO AQUI
+import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
-// OTIMIZAÇÃO GLOBAL DE SEO (Google, WhatsApp, Facebook)
+// OTIMIZAÇÃO GLOBAL DE SEO (Google, WhatsApp, Facebook) E PWA
 export const metadata: Metadata = {
   title: 'Desapego Piauí | Compra e Venda de Forma Rápida e Local',
   description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local. Anuncie imóveis, carros, celulares e muito mais!',
+  manifest: '/manifest.json', // 🚀 ATIVADOR DO PWA (Ícone na tela inicial)
   keywords: [
     "desapego piaui", 
     "olx piaui", 
@@ -50,8 +51,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Bloqueios de zoom removidos para o movimento de pinça nas fotos funcionar!
   themeColor: '#4c1d95', 
 }
 
@@ -95,6 +95,22 @@ export default function RootLayout({
       </head>
 
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
+        
+        {/* 🚀 ATIVADOR DO APLICATIVO (Service Worker) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
+
         <Navbar />
         
         <main className="flex-grow pb-16 md:pb-0 w-full overflow-x-hidden">
@@ -107,7 +123,7 @@ export default function RootLayout({
         
         <BottomNav />
         <CookieBanner />
-        <FeedbackButton /> {/* <-- ADICIONAMOS O BOTÃO AQUI */}
+        <FeedbackButton />
       </body>
     </html>
   )
