@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 // Esta função corre no Servidor antes da página carregar, desenhando o "Cartão" de SEO
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   try {
-    // CORREÇÃO AQUI: Agora o Next.js exige o 'await' antes de ler o params
+    // Agora o Next.js exige o 'await' antes de ler o params
     const resolvedParams = await params;
     const id = resolvedParams?.id;
     
@@ -22,9 +22,17 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
     if (res.ok) {
       const data = await res.json();
       
-      // O Firestore REST API guarda os dados dentro de "fields" e indica o tipo ("stringValue", etc.)
+      // O Firestore REST API guarda os dados dentro de "fields" e indica o tipo
       const titulo = data.fields?.titulo?.stringValue || 'Anúncio no DesapegoPI';
       const descricao = data.fields?.descricao?.stringValue || 'Confira este produto excelente no nosso marketplace.';
+      
+      // EXTRAINDO E FORMATANDO O PREÇO PARA O SEO
+      const precoRaw = data.fields?.preco?.doubleValue || data.fields?.preco?.integerValue || 0;
+      const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(precoRaw));
+      
+      // Monta o título matador para o WhatsApp e Google
+      const tituloSEO = `${titulo} por ${precoFormatado} | DesapegoPI`;
+      const descSEO = descricao.substring(0, 150) + (descricao.length > 150 ? '...' : '');
       
       // Tenta pegar a imagem principal ou a primeira foto da galeria
       const imagem = data.fields?.imagemUrl?.stringValue || 
@@ -32,19 +40,19 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
                      '';
 
       return {
-        title: `${titulo} | DesapegoPI`,
-        description: descricao.substring(0, 160) + '...', // Limita o texto para não quebrar o cartão
+        title: tituloSEO,
+        description: descSEO,
         openGraph: {
-          title: titulo,
-          description: descricao.substring(0, 160),
+          title: tituloSEO,
+          description: descSEO,
           siteName: 'DesapegoPI',
           images: imagem ? [{ url: imagem, width: 800, height: 600 }] : [],
           type: 'website',
         },
         twitter: {
           card: 'summary_large_image',
-          title: titulo,
-          description: descricao.substring(0, 160),
+          title: tituloSEO,
+          description: descSEO,
           images: imagem ? [imagem] : [],
         },
       }
@@ -56,7 +64,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
   // Fallback caso o anúncio não exista ou dê erro
   return {
     title: 'Anúncio | DesapegoPI',
-    description: 'Compre e venda de tudo no Piauí.'
+    description: 'Compre e venda de tudo no Piauí de forma rápida e segura.'
   }
 }
 
