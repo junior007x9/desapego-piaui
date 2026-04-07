@@ -1,205 +1,230 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { db } from '@/lib/firebase'
-import { collection, getDocs, query, where, orderBy, limit, startAfter } from 'firebase/firestore'
-import Link from 'next/link'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Search, MapPin, X, ShoppingBag, ChevronDown, Loader2, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2 } from 'lucide-react'
 
-const CATEGORIAS = ["Todas", "Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
-// Aumentei o limite de itens por página para que a busca encontre mais resultados
-const ITENS_POR_PAGINA = 50 
+const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-function ConteudoAnuncios() {
+function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
-  const queryBusca = searchParams.get('q')
-  // CORREÇÃO APLICADA AQUI: 'cat' trocado para 'categoria' para conectar com a Home
-  const queryCategoria = searchParams.get('categoria')
+  // Puxa o que foi digitado na Home
+  const queryBusca = searchParams.get('q') || ''
+  const queryCategoria = searchParams.get('categoria') || ''
 
   const [ads, setAds] = useState<any[]>([])
+  const [filteredAds, setFilteredAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [lastDoc, setLastDoc] = useState<any>(null) 
-  const [hasMore, setHasMore] = useState(true) 
+
+  // Estados dos Filtros
+  const [busca, setBusca] = useState(queryBusca)
+  const [categoria, setCategoria] = useState(queryCategoria)
+  const [precoMin, setPrecoMin] = useState('')
+  const [precoMax, setPrecoMax] = useState('')
+  const [ordenacao, setOrdenacao] = useState('recentes')
   
-  const [busca, setBusca] = useState(queryBusca || '')
-  const [categoria, setCategoria] = useState(queryCategoria || 'Todas')
-  const [userCity, setUserCity] = useState('sua região') 
+  const [showFiltersMobile, setShowFiltersMobile] = useState(false)
 
-  // Pega a cidade de forma invisível
   useEffect(() => {
-    async function fetchCity() {
-      const cachedCity = localStorage.getItem('user_city');
-      if (cachedCity) {
-        setUserCity(cachedCity);
-        return;
-      }
+    async function fetchAds() {
       try {
-        const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
-        const data = await res.json();
-        const city = data.city || data.locality || 'Teresina';
-        setUserCity(city);
-        localStorage.setItem('user_city', city);
+        // Busca todos os anúncios ATIVOS
+        const q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'))
+        const snap = await getDocs(q)
+        const list: any[] = []
+        
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() })
+        })
+        
+        setAds(list)
       } catch (error) {
-        setUserCity('Teresina');
+        console.error("Erro ao buscar anúncios:", error)
+      } finally {
+        setLoading(false)
       }
     }
-    fetchCity();
-  }, []);
+    fetchAds()
+  }, [])
 
+  // MÁGICA DOS FILTROS (Roda automaticamente sempre que o usuário mexe em algo)
   useEffect(() => {
-    if (queryBusca) setBusca(queryBusca)
-    if (queryCategoria) setCategoria(queryCategoria)
-  }, [queryBusca, queryCategoria])
+    let result = [...ads]
 
-  const fetchAds = async (isFirstLoad = true) => {
-    if (isFirstLoad) setLoading(true)
-    else setLoadingMore(true)
-
-    try {
-      let q;
-
-      if (categoria !== 'Todas') {
-         if (!isFirstLoad && lastDoc) {
-             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), where('categoria', '==', categoria), orderBy('criadoEm', 'desc'), startAfter(lastDoc), limit(ITENS_POR_PAGINA));
-         } else {
-             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), where('categoria', '==', categoria), orderBy('criadoEm', 'desc'), limit(ITENS_POR_PAGINA));
-         }
-      } else {
-         if (!isFirstLoad && lastDoc) {
-             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), startAfter(lastDoc), limit(ITENS_POR_PAGINA));
-         } else {
-             q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), limit(ITENS_POR_PAGINA));
-         }
-      }
-
-      const snapshot = await getDocs(q)
-      const data: any[] = []
-      
-      snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }))
-
-      // Frontend sort temporário para colocar os Destaques (planoId > 0) da página atual no topo
-      data.sort((a, b) => (b.planoId || 0) - (a.planoId || 0))
-
-      if (isFirstLoad) {
-        setAds(data)
-      } else {
-        setAds(prev => [...prev, ...data])
-      }
-
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1])
-      
-      if (snapshot.docs.length < ITENS_POR_PAGINA) {
-        setHasMore(false)
-      } else {
-        setHasMore(true)
-      }
-
-    } catch (error) {
-      console.error("Erro ao carregar anúncios:", error)
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
+    if (busca.trim()) {
+      const termo = busca.toLowerCase()
+      result = result.filter(ad => 
+        ad.titulo.toLowerCase().includes(termo) || 
+        ad.descricao.toLowerCase().includes(termo)
+      )
     }
+
+    if (categoria) {
+      result = result.filter(ad => ad.categoria === categoria)
+    }
+
+    if (precoMin) {
+      result = result.filter(ad => ad.preco >= parseFloat(precoMin))
+    }
+    if (precoMax) {
+      result = result.filter(ad => ad.preco <= parseFloat(precoMax))
+    }
+
+    // Ordenação Inteligente
+    result.sort((a, b) => {
+      if (ordenacao === 'recentes') {
+        // Fura-fila para os VIPs
+        if ((b.planoId || 0) !== (a.planoId || 0)) return (b.planoId || 0) - (a.planoId || 0);
+        return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0)
+      }
+      if (ordenacao === 'menor_preco') return a.preco - b.preco
+      if (ordenacao === 'maior_preco') return b.preco - a.preco
+      return 0
+    })
+
+    setFilteredAds(result)
+  }, [ads, busca, categoria, precoMin, precoMax, ordenacao])
+
+  const clearFilters = () => {
+    setBusca('')
+    setCategoria('')
+    setPrecoMin('')
+    setPrecoMax('')
+    setOrdenacao('recentes')
+    router.push('/todos-anuncios')
   }
 
-  useEffect(() => {
-    fetchAds(true)
-  }, [categoria]) 
+  const FiltrosComponent = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center md:hidden mb-6 border-b pb-4">
+        <h2 className="text-xl font-black text-gray-900 flex items-center gap-2"><SlidersHorizontal size={20}/> Filtros</h2>
+        <button onClick={() => setShowFiltersMobile(false)} className="bg-gray-100 p-2 rounded-full text-gray-600"><X size={20}/></button>
+      </div>
 
-  const filteredAds = ads.filter(ad => 
-    ad.titulo.toLowerCase().includes(busca.toLowerCase())
-  )
-
-  return (
-    <div className="bg-gray-50 min-h-screen pb-20 md:pb-10">
-      
-      {/* BARRA SUPERIOR E FILTROS */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 md:py-4 max-w-6xl">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative w-full md:flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
-              <input 
-                type="text" 
-                placeholder={`Buscar em ${userCity}...`} 
-                className="w-full pl-12 pr-10 py-3 md:py-4 bg-gray-50 border border-gray-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-full outline-none transition-all font-medium text-gray-800"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-              {busca && (
-                <button onClick={() => setBusca('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors p-1 bg-gray-100 hover:bg-red-50 rounded-full">
-                  <X size={16} strokeWidth={3} />
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-2.5 mt-4 overflow-x-auto pb-2 no-scrollbar scrollbar-hide items-center">
-            {CATEGORIAS.map((cat) => (
-              <button key={cat} onClick={() => setCategoria(cat)}
-                className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] md:text-sm font-bold transition-all ${
-                  categoria === cat 
-                    ? 'bg-primary text-white shadow-md scale-105' 
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-primary/30 hover:bg-primary/5 hover:text-primary'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+      <div>
+        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">O que procura?</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input type="text" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Ex: iPhone, Bicicleta..." className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
         </div>
       </div>
 
-      <div className="container mx-auto px-3 md:px-4 py-6 md:py-8 max-w-6xl">
-        <h1 className="text-xl md:text-2xl font-black text-gray-900 mb-6 md:mb-8 uppercase tracking-tight ml-1 flex items-center gap-2">
-          {loading ? 'Buscando...' : (
-            <>
-              {categoria === 'Todas' ? 'Explorar Anúncios' : `Anúncios em ${categoria}`}
-            </>
-          )}
-        </h1>
+      <div>
+        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Categoria</label>
+        <select value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium text-gray-700">
+          <option value="">Todas as Categorias</option>
+          {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+      </div>
 
-        {loading ? (
-           // SKELETON ANIMADO
-           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-             {[1,2,3,4,5,6,7,8].map(i => (
-               <div key={i} className="bg-white rounded-xl md:rounded-2xl h-60 md:h-80 animate-pulse border border-gray-100 shadow-sm overflow-hidden">
-                 <div className="h-32 md:h-48 bg-gray-100"></div>
-                 <div className="p-3 md:p-4 space-y-3">
-                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                   <div className="h-6 bg-gray-200 rounded w-1/3 mt-4"></div>
-                 </div>
-               </div>
-             ))}
-           </div>
-        ) : filteredAds.length === 0 ? (
-           <div className="text-center py-16 md:py-20 bg-white rounded-[2rem] shadow-sm border border-gray-100 mt-4">
-             <ShoppingBag size={56} className="mx-auto text-primary/30 mb-4" />
-             <h3 className="text-2xl font-black text-gray-800">Nenhum anúncio encontrado</h3>
-             <p className="text-gray-500 mt-2 font-medium px-4">Tente buscar por outras palavras ou mude a categoria.</p>
-             <button onClick={() => {setBusca(''); setCategoria('Todas');}} className="mt-6 text-primary font-bold hover:underline bg-primary/10 px-6 py-3 rounded-full transition-colors hover:bg-primary/20">Limpar Filtros</button>
-           </div>
-        ) : (
-          <>
-            {/* GRID DE ANÚNCIOS (2 colunas no celular, 4 no PC) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+      <div>
+        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Faixa de Preço (R$)</label>
+        <div className="flex items-center gap-2">
+          <input type="number" value={precoMin} onChange={e => setPrecoMin(e.target.value)} placeholder="Mín." className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
+          <span className="text-gray-400 font-bold">-</span>
+          <input type="number" value={precoMax} onChange={e => setPrecoMax(e.target.value)} placeholder="Máx." className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium" />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Ordenar por</label>
+        <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium text-gray-700">
+          <option value="recentes">Mais Relevantes / Recentes</option>
+          <option value="menor_preco">Menor Preço</option>
+          <option value="maior_preco">Maior Preço</option>
+        </select>
+      </div>
+
+      <button onClick={clearFilters} className="w-full py-3 bg-red-50 text-red-500 hover:bg-red-100 font-bold rounded-xl transition-colors">
+        Limpar Filtros
+      </button>
+      
+      {/* Botão de aplicar apenas no mobile */}
+      <button onClick={() => setShowFiltersMobile(false)} className="w-full py-4 bg-primary text-white font-bold rounded-xl transition-colors md:hidden mt-4 shadow-lg">
+        Ver {filteredAds.length} resultados
+      </button>
+    </div>
+  )
+
+  return (
+    <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
+      
+      {/* CABEÇALHO MOBILE */}
+      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-100 p-3 flex justify-between items-center shadow-sm">
+        <button onClick={() => router.push('/')} className="flex items-center gap-1 bg-gray-100 p-2 pr-4 rounded-full text-gray-800 font-bold text-sm">
+          <ChevronLeft size={20} /> Voltar
+        </button>
+        <button onClick={() => setShowFiltersMobile(true)} className="flex items-center gap-2 bg-primary/10 text-primary p-2 px-4 rounded-full font-bold text-sm">
+          <SlidersHorizontal size={18} /> Filtros
+        </button>
+      </div>
+
+      {/* MODAL DE FILTROS MOBILE */}
+      {showFiltersMobile && (
+        <div className="md:hidden fixed inset-0 bg-white z-50 p-6 overflow-y-auto animate-in slide-in-from-bottom-full duration-300">
+           <FiltrosComponent />
+        </div>
+      )}
+
+      <div className="bg-primary pt-8 pb-16 px-4 rounded-b-[2rem] shadow-sm mb-8 hidden md:block relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+        <div className="max-w-6xl mx-auto relative z-10 flex items-center gap-4">
+           <button onClick={() => router.push('/')} className="bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition"><ChevronLeft size={24}/></button>
+           <h1 className="text-3xl font-black text-white tracking-tight">Encontre o que precisa</h1>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row gap-8 relative z-20 md:-mt-10">
+        
+        {/* BARRA LATERAL (FILTROS DESKTOP) */}
+        <div className="hidden md:block w-72 shrink-0">
+          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 sticky top-24">
+             <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+               <SlidersHorizontal className="text-primary" size={24} />
+               <h2 className="text-xl font-black text-gray-900">Filtros</h2>
+             </div>
+             <FiltrosComponent />
+          </div>
+        </div>
+
+        {/* ÁREA DE RESULTADOS */}
+        <div className="flex-1">
+          <div className="mb-6 flex justify-between items-end px-2 md:px-0">
+            <div>
+              <h2 className="text-xl md:text-2xl font-black text-gray-900">Resultados da busca</h2>
+              <p className="text-gray-500 font-medium text-sm mt-1">{filteredAds.length} anúncios encontrados</p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={48} /></div>
+          ) : filteredAds.length === 0 ? (
+            <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100">
+               <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4"><Search size={40} /></div>
+               <h3 className="text-xl font-black text-gray-800 mb-2">Nenhum resultado</h3>
+               <p className="text-gray-500 mb-6 max-w-md mx-auto">Não encontramos anúncios com os filtros selecionados. Tente usar termos diferentes ou limpar os filtros.</p>
+               <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md">
+                  Limpar todos os filtros
+               </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
               {filteredAds.map((ad) => (
-                <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group flex flex-col h-full bg-white rounded-xl md:rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden relative">
+                <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group bg-white rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative ${ad.planoId > 0 ? 'border-primary/30 shadow-[0_4px_20px_rgba(76,29,149,0.05)]' : 'border-gray-100'}`}>
                   
-                  {/* SELO DE DESTAQUE */}
                   {ad.planoId > 0 && (
-                    <div className="absolute top-2 left-2 bg-accent text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
-                      <Sparkles size={10}/> Destaque
+                    <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
+                      <Sparkles size={10}/> Patrocinado
                     </div>
                   )}
 
-                  <div className="h-32 md:h-52 overflow-hidden bg-gray-50 relative border-b border-gray-50">
+                  <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
                      {ad.imagemUrl ? (
-                        <img src={ad.imagemUrl} alt={ad.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+                        <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                      ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
                      )}
@@ -209,54 +234,36 @@ function ConteudoAnuncios() {
                     <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
                       {ad.categoria}
                     </span>
-                    <h3 className="text-xs md:text-sm text-gray-800 font-bold line-clamp-2 mb-1.5 md:mb-2 group-hover:text-primary transition-colors leading-snug">
-                      {ad.titulo}
-                    </h3>
-                    <div className="mt-auto pt-2 md:pt-4 border-t border-gray-50">
-                      <p className="text-base md:text-xl font-black text-primary">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                      </p>
-                      
-                      {/* AQUI FOI CORRIGIDO! Trocamos userCity pela cidade do anúncio */}
-                      <div className="flex items-center gap-1 text-[9px] md:text-[10px] text-gray-400 mt-1.5 md:mt-2 font-black uppercase tracking-wider">
-                         <span>Hoje</span> <span className="mx-1">•</span> <MapPin size={10} className="text-accent shrink-0" /> <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
-                      </div>
+                    <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
+                    
+                    <p className="text-lg md:text-xl font-black text-primary mt-auto">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                    </p>
+                    
+                    <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
+                      <span>Hoje</span>
+                      <span className="flex items-center gap-0.5 truncate max-w-[60%]">
+                         <MapPin size={10} className="text-accent shrink-0"/> 
+                         <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
+                      </span>
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
+          )}
+        </div>
 
-            {/* BOTÃO CARREGAR MAIS */}
-            {hasMore && (
-              <div className="mt-10 md:mt-16 flex justify-center">
-                <button 
-                  onClick={() => fetchAds(false)}
-                  disabled={loadingMore}
-                  className="flex items-center gap-2 bg-white border-2 border-primary text-primary px-8 py-4 rounded-full font-black hover:bg-primary hover:text-white transition-all shadow-md disabled:opacity-50 transform hover:-translate-y-0.5"
-                >
-                  {loadingMore ? (
-                    <Loader2 className="animate-spin" size={24} />
-                  ) : (
-                    <>
-                      Carregar mais anúncios
-                      <ChevronDown size={24} strokeWidth={2.5} />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   )
 }
 
+// O Next.js exige que qualquer página que leia a URL (useSearchParams) seja empacotada no Suspense
 export default function TodosAnunciosPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-primary font-bold animate-pulse text-xl">Preparando vitrine...</div>}>
-      <ConteudoAnuncios />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>}>
+      <SearchContent />
     </Suspense>
   )
 }
