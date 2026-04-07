@@ -84,7 +84,7 @@ export default function AnunciarPage() {
   const [planoId, setPlanoId] = useState<number | null>(null)
   
   const [loading, setLoading] = useState(false)
-  const [comprimindo, setComprimindo] = useState(false) // Estado para mostrar que está a processar fotos
+  const [comprimindo, setComprimindo] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [emailVerificado, setEmailVerificado] = useState(true)
   const [jaUsouGratis, setJaUsouGratis] = useState(true) 
@@ -149,7 +149,6 @@ export default function AnunciarPage() {
   const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
 
-  // 🚀 ADICIONÁMOS A COMPRESSÃO AQUI!
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
@@ -161,7 +160,6 @@ export default function AnunciarPage() {
 
       setComprimindo(true)
       try {
-        // Comprime todas as fotos selecionadas antes de as guardar na memória
         const compressedFiles = await Promise.all(selectedFiles.map(file => comprimirImagem(file)))
         
         setFotos(prev => [...prev, ...compressedFiles])
@@ -221,9 +219,28 @@ export default function AnunciarPage() {
         }
       }
 
+      // 🚀 LÓGICA DE STATUS E EXPIRAÇÃO
+      let statusFinal = 'pendente';
+      
+      // Validação Extra de Segurança para o Plano Grátis
       if (planoId === 0) {
-         localStorage.setItem('jaUsouGratis_dev', 'true');
+        if (jaUsouGratis) {
+          alert("Acesso negado: Você já usou o plano grátis neste dispositivo ou conta.");
+          setLoading(false);
+          return;
+        }
+        statusFinal = 'ativo'; // Plano grátis vai para o ar imediatamente
+        localStorage.setItem('jaUsouGratis_dev', 'true'); // Trava o dispositivo
       }
+
+      // Encontrar os dias de duração do plano escolhido
+      const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
+      const diasDuracao = planoEscolhido ? planoEscolhido.dias : 1;
+      
+      // Calcular a data e hora exata que vai expirar
+      const dataCalculada = new Date();
+      dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
+      const dataExpiracaoISO = dataCalculada.toISOString();
 
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
@@ -233,13 +250,21 @@ export default function AnunciarPage() {
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
-        status: 'pendente', 
+        status: statusFinal, 
         planoId: planoId,
         visualizacoes: 0,
-        criadoEm: serverTimestamp()
+        criadoEm: serverTimestamp(),
+        expiraEm: dataExpiracaoISO // 🚀 Salva no banco o limite de vida do anúncio
       })
 
-      router.push(`/pagamento/${docRef.id}`)
+      // Redirecionamento Dinâmico
+      if (planoId === 0) {
+         // Se for grátis, pula o pagamento e vai para os meus anúncios
+         router.push('/meus-anuncios');
+      } else {
+         // Se for pago, vai para a tela do PIX
+         router.push(`/pagamento/${docRef.id}`);
+      }
       
     } catch (error) {
       console.error(error)
