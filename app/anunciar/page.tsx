@@ -8,11 +8,13 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, Shield
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// LISTA NEGRA DE PALAVRAS PROIBIDAS
+// 🚀 LISTA NEGRA ATUALIZADA: Bloqueio de animais, remédios, armas e golpes
 const PALAVRAS_PROIBIDAS = [
   'arma', 'revólver', 'pistola', 'munição', 'droga', 'maconha', 'cocaína', 
   'hack', 'clonado', 'falsificado', 'réplica perfeita', 'nota falsa',
-  'caralho', 'porra', 'buceta', 'puta', 'merda', 'cu'
+  'caralho', 'porra', 'buceta', 'puta', 'merda', 'cu',
+  'cachorro', 'cachorros', 'cão', 'cães', 'filhote', 'pitbull', 'buldogue',
+  'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
 // PLANOS PAGOS PADRÃO
@@ -23,7 +25,7 @@ const PLANOS_BASE = [
   { id: 4, nome: 'Mensal', dias: 30, valor: 280, desc: '30 dias de destaque' }
 ]
 
-// 🚀 NOVA FUNÇÃO: COMPRESSOR MÁGICO DE IMAGENS EM ALTA DEFINIÇÃO
+// COMPRESSOR MÁGICO DE IMAGENS EM ALTA DEFINIÇÃO
 const comprimirImagem = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -219,7 +221,7 @@ export default function AnunciarPage() {
         }
       }
 
-      // 🚀 LÓGICA DE STATUS E EXPIRAÇÃO
+      // LÓGICA DE STATUS E EXPIRAÇÃO
       let statusFinal = 'pendente';
       
       // Validação Extra de Segurança para o Plano Grátis
@@ -254,7 +256,7 @@ export default function AnunciarPage() {
         planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp(),
-        expiraEm: dataExpiracaoISO // 🚀 Salva no banco o limite de vida do anúncio
+        expiraEm: dataExpiracaoISO // Salva no banco o limite de vida do anúncio
       })
 
       // Redirecionamento Dinâmico
