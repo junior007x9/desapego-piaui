@@ -4,9 +4,8 @@ import { db } from '@/lib/firebase'
 import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles, Loader2 } from 'lucide-react'
+import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles } from 'lucide-react'
 
-// Categorias com a nova identidade visual (cores dinâmicas) e mantendo os seus slugs!
 const CATEGORIAS_OLX = [
   { nome: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, slug: 'Imóveis', cor: "bg-blue-100 text-blue-600" },
   { nome: 'Veículos', icon: <Car size={28} strokeWidth={2.5} />, slug: 'Veículos', cor: "bg-orange-100 text-orange-600" },
@@ -18,12 +17,12 @@ const CATEGORIAS_OLX = [
 
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
+  const [vipAds, setVipAds] = useState<any[]>([]) // 🚀 NOVO ESTADO: Apenas anúncios pagos
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // MÁGICA DE PERFORMANCE: Verifica se a cidade já está salva no telemóvel para a mensagem de Boas Vindas
   useEffect(() => {
     async function fetchCity() {
       const cachedCity = localStorage.getItem('user_city');
@@ -31,12 +30,10 @@ export default function Home() {
         setUserCity(cachedCity);
         return;
       }
-
       try {
         const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=pt');
         const data = await res.json();
         const city = data.city || data.locality || 'Teresina';
-        
         setUserCity(city);
         localStorage.setItem('user_city', city);
       } catch (error) {
@@ -46,13 +43,13 @@ export default function Home() {
     fetchCity();
   }, []);
 
-  // Lógica inteligente de busca e verificação de expiração
   useEffect(() => {
     async function fetchRecentAds() {
       try {
-        const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(20))
+        const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(30))
         const snap = await getDocs(q)
-        const list: any[] = []
+        const listGeral: any[] = []
+        const listVIP: any[] = []
         const agora = new Date()
 
         for (const document of snap.docs) {
@@ -68,14 +65,26 @@ export default function Home() {
           }
 
           if (statusFinal === 'ativo') {
-            list.push({ id: document.id, ...data })
+            const adFinal = { id: document.id, ...data }
+            listGeral.push(adFinal)
+            
+            // 🚀 SE PAGOU (Plano > 0), VAI PARA A VITRINE VIP!
+            if (data.planoId && data.planoId > 0) {
+              listVIP.push(adFinal)
+            }
           }
         }
         
-        // Puxa os destaques (Planos pagos) para cima
-        list.sort((a, b) => (b.planoId || 0) - (a.planoId || 0))
+        // Fura-fila no Feed Geral: Pagos primeiro, depois grátis (ordenados por data)
+        listGeral.sort((a, b) => {
+          if ((b.planoId || 0) !== (a.planoId || 0)) {
+            return (b.planoId || 0) - (a.planoId || 0);
+          }
+          return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
+        })
         
-        setAds(list.slice(0, 8))
+        setVipAds(listVIP.slice(0, 5)) // Máximo de 5 VIPs na Vitrine Carrossel
+        setAds(listGeral.slice(0, 16)) // Feed geral com 16 anúncios
       } catch (error) {
         console.error("Erro ao buscar anúncios recentes:", error)
       } finally {
@@ -90,17 +99,28 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
+  // 🚀 COMPONENTE SKELETON (Carregamento Premium)
+  const SkeletonCard = () => (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse">
+      <div className="aspect-square bg-gray-200"></div>
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div className="h-6 bg-gray-200 rounded w-1/2 mt-4"></div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
       
-      {/* HERO SECTION PREMIUM */}
       <div className="bg-primary pt-12 pb-24 px-4 rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
-          {/* AQUI DEIXAMOS O userCity PARA A MENSAGEM DO BANNER (Ex: "Compre e venda em Timon") */}
           <p className="text-primary-100 font-medium mb-8 text-sm md:text-lg">Compre e venda de forma rápida, fácil e segura em {userCity}.</p>
           
           <form onSubmit={handleSearch} className="flex bg-white p-2 md:p-2 rounded-full md:rounded-2xl shadow-xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all">
@@ -121,7 +141,6 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-20">
         
-        {/* CATEGORIAS FLUTUANTES */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-10 overflow-x-auto scrollbar-hide">
           <div className="flex md:grid md:grid-cols-6 gap-4 min-w-max md:min-w-0 px-2 justify-between">
             {CATEGORIAS_OLX.map(cat => (
@@ -135,18 +154,51 @@ export default function Home() {
           </div>
         </div>
 
-        {/* VITRINE DE ANÚNCIOS */}
-        <div className="flex items-center justify-between mb-6">
-           <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight">
-              <Sparkles className="text-accent hidden md:block"/> Destaques
+        {/* 🚀 VITRINE VIP (Só aparece se tiver anúncios pagos carregados) */}
+        {!loading && vipAds.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight mb-4 px-2">
+              <Sparkles className="text-amber-500"/> Destaques da Semana
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide px-2">
+              {vipAds.map(ad => (
+                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-64 bg-white rounded-2xl border-2 border-amber-200 hover:border-amber-400 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(251,191,36,0.2)] transition-all overflow-hidden flex flex-col group relative">
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10">
+                    VIP
+                  </div>
+                  <div className="aspect-video bg-gray-50 overflow-hidden relative">
+                     {ad.imagemUrl ? (
+                        <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                     ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+                     )}
+                  </div>
+                  <div className="p-4 flex flex-col flex-1 bg-gradient-to-b from-amber-50/50 to-white">
+                    <h3 className="text-sm text-gray-800 line-clamp-2 mb-2 font-bold group-hover:text-amber-600 transition-colors h-10">{ad.titulo}</h3>
+                    <p className="text-xl font-black text-amber-600 mt-auto">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* FEED GERAL */}
+        <div className="flex items-center justify-between mb-6 px-2">
+           <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
+              Anúncios Recentes
            </h2>
            <Link href="/todos-anuncios" className="text-primary font-bold hover:underline text-sm md:text-base bg-primary/10 px-4 py-2 rounded-full transition-colors hover:bg-primary/20">
-             Ver todos
+              Ver todos
            </Link>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={48} /></div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
+          </div>
         ) : ads.length === 0 ? (
           <div className="text-center py-16 text-gray-400 font-medium text-lg bg-white rounded-2xl border border-gray-100 shadow-sm">
              <ShoppingBag size={48} className="mx-auto mb-3 opacity-30 text-primary" />
@@ -156,12 +208,11 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => (
-              <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group bg-white rounded-xl md:rounded-2xl border border-gray-100 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative">
+              <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group bg-white rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative ${ad.planoId > 0 ? 'border-primary/30 shadow-[0_4px_20px_rgba(76,29,149,0.05)]' : 'border-gray-100'}`}>
                 
-                {/* Selo de Destaque para quem pagou */}
                 {ad.planoId > 0 && (
-                  <div className="absolute top-2 left-2 bg-accent text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
-                    <Sparkles size={10}/> Destaque
+                  <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
+                    <Sparkles size={10}/> Patrocinado
                   </div>
                 )}
 
@@ -183,7 +234,6 @@ export default function Home() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
                   
-                  {/* AQUI FOI CORRIGIDO! Trocamos {userCity} pela localização real do anúncio */}
                   <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
                     <span>Hoje</span>
                     <span className="flex items-center gap-0.5 truncate max-w-[60%]">
