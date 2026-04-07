@@ -8,12 +8,14 @@ import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, Shield
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
+// LISTA NEGRA DE PALAVRAS PROIBIDAS
 const PALAVRAS_PROIBIDAS = [
   'arma', 'revólver', 'pistola', 'munição', 'droga', 'maconha', 'cocaína', 
   'hack', 'clonado', 'falsificado', 'réplica perfeita', 'nota falsa',
   'caralho', 'porra', 'buceta', 'puta', 'merda', 'cu'
 ]
 
+// PLANOS PAGOS PADRÃO
 const PLANOS_BASE = [
   { id: 1, nome: 'Diário', dias: 1, valor: 10, desc: '1 dia de destaque' },
   { id: 2, nome: 'Semanal', dias: 7, valor: 65, desc: '7 dias de destaque' },
@@ -21,7 +23,7 @@ const PLANOS_BASE = [
   { id: 4, nome: 'Mensal', dias: 30, valor: 280, desc: '30 dias de destaque' }
 ]
 
-// 🚀 COMPRESSOR EM ALTA DEFINIÇÃO (1600px / 90% Qualidade)
+// 🚀 NOVA FUNÇÃO: COMPRESSOR MÁGICO DE IMAGENS EM ALTA DEFINIÇÃO
 const comprimirImagem = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -34,7 +36,7 @@ const comprimirImagem = (file: File): Promise<File> => {
         let width = img.width;
         let height = img.height;
         
-        // Aumentamos para 1600 para permitir um zoom com qualidade!
+        // Tamanho máximo aumentado para 1600px (Permite zoom com qualidade)
         const max_size = 1600;
 
         if (width > height) {
@@ -53,7 +55,7 @@ const comprimirImagem = (file: File): Promise<File> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Aumentamos a qualidade para 90% (0.9)
+        // Qualidade aumentada para 90% (0.9)
         canvas.toBlob((blob) => {
           if (blob) {
             const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
@@ -62,7 +64,7 @@ const comprimirImagem = (file: File): Promise<File> => {
             });
             resolve(newFile);
           } else {
-            resolve(file); 
+            resolve(file); // Se falhar, devolve a original
           }
         }, 'image/jpeg', 0.9);
       };
@@ -82,7 +84,7 @@ export default function AnunciarPage() {
   const [planoId, setPlanoId] = useState<number | null>(null)
   
   const [loading, setLoading] = useState(false)
-  const [comprimindo, setComprimindo] = useState(false) 
+  const [comprimindo, setComprimindo] = useState(false) // Estado para mostrar que está a processar fotos
   const [user, setUser] = useState<any>(null)
   const [emailVerificado, setEmailVerificado] = useState(true)
   const [jaUsouGratis, setJaUsouGratis] = useState(true) 
@@ -96,12 +98,14 @@ export default function AnunciarPage() {
       } else {
         setUser(u)
         
+        // 1. TRAVA DE SEGURANÇA: O E-MAIL FOI CONFIRMADO?
         if (!u.emailVerified) {
           setEmailVerificado(false)
           return; 
         } else {
           setEmailVerificado(true)
           
+          // 2. VERIFICA SE JÁ USOU O PLANO GRÁTIS
           const localJaUsou = localStorage.getItem('jaUsouGratis_dev')
           if (localJaUsou) {
              setJaUsouGratis(true)
@@ -145,6 +149,7 @@ export default function AnunciarPage() {
   const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
 
+  // 🚀 ADICIONÁMOS A COMPRESSÃO AQUI!
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
@@ -156,6 +161,7 @@ export default function AnunciarPage() {
 
       setComprimindo(true)
       try {
+        // Comprime todas as fotos selecionadas antes de as guardar na memória
         const compressedFiles = await Promise.all(selectedFiles.map(file => comprimirImagem(file)))
         
         setFotos(prev => [...prev, ...compressedFiles])
@@ -247,21 +253,33 @@ export default function AnunciarPage() {
       <div className="bg-gray-50 min-h-screen py-10 px-4 flex items-center justify-center pb-28">
         <div className="max-w-md w-full bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
+          
           <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <MailWarning size={40} strokeWidth={2} />
           </div>
+          
           <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Verificação Necessária</h2>
+          
           <p className="text-gray-600 font-medium mb-6 leading-relaxed">
             Para manter a segurança do Desapego Piauí, você precisa confirmar o seu e-mail (<strong className="text-gray-900">{user.email}</strong>) antes de publicar um anúncio.
           </p>
+
           <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 text-sm text-orange-800 text-left mb-8">
              <ShieldAlert className="shrink-0 text-orange-500" size={20} />
              <p>Esta é uma medida de segurança para evitar perfis falsos e fraudes na plataforma.</p>
           </div>
-          <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4">
+
+          <button 
+            onClick={() => window.location.reload()} 
+            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4"
+          >
             Já confirmei, recarregar página
           </button>
-          <button onClick={handleReenviarEmail} className="text-primary font-bold hover:underline text-sm">
+          
+          <button 
+            onClick={handleReenviarEmail} 
+            className="text-primary font-bold hover:underline text-sm"
+          >
             Não recebeu? Reenviar e-mail de confirmação
           </button>
         </div>
@@ -275,6 +293,7 @@ export default function AnunciarPage() {
         <h1 className="text-3xl font-black text-primary mb-8 uppercase italic tracking-tight">O que você está anunciando?</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-gray-100">
+          
           <div>
             <div className="flex justify-between items-end mb-4">
                <label className="block text-primary font-bold flex items-center gap-2">
