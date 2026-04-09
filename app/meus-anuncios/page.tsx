@@ -5,7 +5,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, AlertCircle, Sparkles, PlusCircle } from 'lucide-react'
+import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, AlertCircle, Sparkles, PlusCircle, Calendar } from 'lucide-react'
 
 export default function MeusAnunciosPage() {
   const [ads, setAds] = useState<any[]>([])
@@ -41,27 +41,23 @@ export default function MeusAnunciosPage() {
       const list: any[] = []
       let views = 0
       let ativos = 0
-      const agora = new Date() // 🚀 RELÓGIO INTELIGENTE INICIADO
+      const agora = new Date()
 
-      // Alterado para um loop FOR para conseguirmos processar as datas corretamente
       for (const document of snap.docs) {
         const data = document.data()
         let statusFinal = data.status
 
-        // 🚀 VERIFICAÇÃO AUTOMÁTICA DE VALIDADE
+        // VERIFICAÇÃO AUTOMÁTICA DE VALIDADE
         if (data.expiraEm) {
           const dataExpiracao = new Date(data.expiraEm);
           if (dataExpiracao < agora && statusFinal === 'ativo') {
              statusFinal = 'expirado';
-             // Atualiza no banco silenciosamente para não voltar a aparecer na vitrine
              updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
           }
         }
 
-        // Adicionamos à lista forçando o status correto (mesmo antes da internet atualizar)
         list.push({ id: document.id, ...data, status: statusFinal })
         
-        // Somando as métricas com os valores reais corrigidos
         views += (data.visualizacoes || 0)
         if (statusFinal === 'ativo') ativos++
       }
@@ -181,10 +177,18 @@ export default function MeusAnunciosPage() {
                   </div>
                   
                   <Link href={`/anuncio/${ad.id}`}>
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight mb-2 hover:text-primary transition-colors line-clamp-2">{ad.titulo}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1 hover:text-primary transition-colors line-clamp-2">{ad.titulo}</h3>
                   </Link>
+
+                  {/* 🚀 DATA DE CRIAÇÃO DO ANÚNCIO (NOVIDADE) */}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-3">
+                     <Calendar size={12} />
+                     <span>
+                        {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds * 1000).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
+                     </span>
+                  </div>
                   
-                  <div className="flex items-end justify-between mt-4">
+                  <div className="flex items-end justify-between mt-2">
                     <p className="text-2xl font-black text-primary">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                     </p>
