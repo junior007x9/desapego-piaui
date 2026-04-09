@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
@@ -38,7 +38,6 @@ const comprimirImagem = (file: File): Promise<File> => {
         let width = img.width;
         let height = img.height;
         
-        // Tamanho máximo aumentado para 1600px (Permite zoom com qualidade)
         const max_size = 1600;
 
         if (width > height) {
@@ -57,7 +56,6 @@ const comprimirImagem = (file: File): Promise<File> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Qualidade aumentada para 90% (0.9)
         canvas.toBlob((blob) => {
           if (blob) {
             const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
@@ -66,7 +64,7 @@ const comprimirImagem = (file: File): Promise<File> => {
             });
             resolve(newFile);
           } else {
-            resolve(file); // Se falhar, devolve a original
+            resolve(file); 
           }
         }, 'image/jpeg', 0.9);
       };
@@ -81,6 +79,7 @@ export default function AnunciarPage() {
   const [descricao, setDescricao] = useState('')
   const [preco, setPreco] = useState('')
   const [categoria, setCategoria] = useState('')
+  const [localizacao, setLocalizacao] = useState('') // 🚀 NOVO CAMPO: Localização
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [planoId, setPlanoId] = useState<number | null>(null)
@@ -100,14 +99,12 @@ export default function AnunciarPage() {
       } else {
         setUser(u)
         
-        // 1. TRAVA DE SEGURANÇA: O E-MAIL FOI CONFIRMADO?
         if (!u.emailVerified) {
           setEmailVerificado(false)
           return; 
         } else {
           setEmailVerificado(true)
           
-          // 2. VERIFICA SE JÁ USOU O PLANO GRÁTIS
           const localJaUsou = localStorage.getItem('jaUsouGratis_dev')
           if (localJaUsou) {
              setJaUsouGratis(true)
@@ -146,7 +143,8 @@ export default function AnunciarPage() {
     }
   }
 
-  const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || planoId === null;
+  // 🚀 ADICIONADA A VALIDAÇÃO DO NOVO CAMPO DE LOCALIZAÇÃO
+  const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || planoId === null;
 
   const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
@@ -221,25 +219,21 @@ export default function AnunciarPage() {
         }
       }
 
-      // LÓGICA DE STATUS E EXPIRAÇÃO
       let statusFinal = 'pendente';
       
-      // Validação Extra de Segurança para o Plano Grátis
       if (planoId === 0) {
         if (jaUsouGratis) {
           alert("Acesso negado: Você já usou o plano grátis neste dispositivo ou conta.");
           setLoading(false);
           return;
         }
-        statusFinal = 'ativo'; // Plano grátis vai para o ar imediatamente
-        localStorage.setItem('jaUsouGratis_dev', 'true'); // Trava o dispositivo
+        statusFinal = 'ativo'; 
+        localStorage.setItem('jaUsouGratis_dev', 'true'); 
       }
 
-      // Encontrar os dias de duração do plano escolhido
       const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
       const diasDuracao = planoEscolhido ? planoEscolhido.dias : 1;
       
-      // Calcular a data e hora exata que vai expirar
       const dataCalculada = new Date();
       dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
       const dataExpiracaoISO = dataCalculada.toISOString();
@@ -249,6 +243,7 @@ export default function AnunciarPage() {
         descricao,
         preco: parseFloat(preco.replace(',', '.')),
         categoria,
+        localizacao, // 🚀 SALVANDO A LOCALIZAÇÃO NO BANCO DE DADOS
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
@@ -256,29 +251,28 @@ export default function AnunciarPage() {
         planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp(),
-        expiraEm: dataExpiracaoISO // Salva no banco o limite de vida do anúncio
+        expiraEm: dataExpiracaoISO
       })
 
-      // 🚀 NOVO: DISPARO DO E-MAIL DE FORMA INVISÍVEL NO FUNDO
       if (statusFinal === 'ativo') {
         fetch('/api/email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_KEY}`
+          },
           body: JSON.stringify({
             tipo: 'anuncio_aprovado',
             email: user.email,
             nome: user.displayName || 'Vendedor',
             produto: titulo
           })
-        }).catch(console.error); // O catch invisível evita que o site trave se o envio falhar
+        }).catch(console.error);
       }
 
-      // Redirecionamento Dinâmico
       if (planoId === 0) {
-         // Se for grátis, pula o pagamento e vai para os meus anúncios
          router.push('/meus-anuncios');
       } else {
-         // Se for pago, vai para a tela do PIX
          router.push(`/pagamento/${docRef.id}`);
       }
       
@@ -294,33 +288,21 @@ export default function AnunciarPage() {
       <div className="bg-gray-50 min-h-screen py-10 px-4 flex items-center justify-center pb-28">
         <div className="max-w-md w-full bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
-          
           <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <MailWarning size={40} strokeWidth={2} />
           </div>
-          
           <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Verificação Necessária</h2>
-          
           <p className="text-gray-600 font-medium mb-6 leading-relaxed">
             Para manter a segurança do Desapego Piauí, você precisa confirmar o seu e-mail (<strong className="text-gray-900">{user.email}</strong>) antes de publicar um anúncio.
           </p>
-
           <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 text-sm text-orange-800 text-left mb-8">
              <ShieldAlert className="shrink-0 text-orange-500" size={20} />
              <p>Esta é uma medida de segurança para evitar perfis falsos e fraudes na plataforma.</p>
           </div>
-
-          <button 
-            onClick={() => window.location.reload()} 
-            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4"
-          >
+          <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4">
             Já confirmei, recarregar página
           </button>
-          
-          <button 
-            onClick={handleReenviarEmail} 
-            className="text-primary font-bold hover:underline text-sm"
-          >
+          <button onClick={handleReenviarEmail} className="text-primary font-bold hover:underline text-sm">
             Não recebeu? Reenviar e-mail de confirmação
           </button>
         </div>
@@ -373,6 +355,14 @@ export default function AnunciarPage() {
               <option value="">Selecione uma categoria</option>
               {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
+          </div>
+
+          {/* 🚀 NOVO CAMPO: Cidade e Bairro */}
+          <div>
+            <label className="block text-primary font-bold mb-2 flex items-center gap-2">
+              <MapPin size={18} /> Cidade / Bairro*
+            </label>
+            <input required type="text" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: Teresina - Dirceu" />
           </div>
 
           <div>

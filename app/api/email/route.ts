@@ -5,6 +5,13 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY || 'chave_nao_configurada');
 
 export async function POST(request: Request) {
+  // 🛡️ O SEGURANÇA DA PORTA: Só deixa passar quem tiver a senha secreta
+  const authHeader = request.headers.get('authorization');
+  if (authHeader !== `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_KEY}`) {
+    console.warn("⚠️ Tentativa de envio de e-mail bloqueada por falta de autorização.");
+    return NextResponse.json({ error: 'Acesso Negado. Senha incorreta.' }, { status: 401 });
+  }
+
   try {
     const { tipo, email, nome, produto } = await request.json();
 
