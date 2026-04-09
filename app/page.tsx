@@ -15,10 +15,8 @@ const CATEGORIAS_OLX = [
   { nome: 'Outros', icon: <ShoppingBag size={28} strokeWidth={2.5} />, slug: 'Outros', cor: "bg-gray-100 text-gray-600" },
 ]
 
-// 🚀 FUNÇÃO INTELIGENTE DE TEMPO
 function formatTimeAgo(timestampSeconds: number) {
   if (!timestampSeconds) return 'Data desconhecida';
-  
   const now = new Date();
   const date = new Date(timestampSeconds * 1000);
   const diffInTime = now.getTime() - date.getTime();
@@ -71,22 +69,28 @@ export default function Home() {
         for (const document of snap.docs) {
           const data = document.data()
           let statusFinal = data.status
+          let isExpired = false;
 
-          // 🚀 RELÓGIO INTELIGENTE: Verifica se o anúncio passou da validade
+          // 🚀 VARREDURA ABSOLUTA
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
-            if (dataExpiracao < agora && statusFinal === 'ativo') {
-               statusFinal = 'expirado';
-               updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
-            }
+            if (dataExpiracao < agora) isExpired = true;
+          } else if (data.criadoEm) {
+            const dataCriacao = new Date(data.criadoEm.seconds * 1000);
+            const diasDuracao = data.planoId === 1 ? 1 : data.planoId === 2 ? 7 : data.planoId === 3 ? 15 : data.planoId === 4 ? 30 : 1;
+            dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
+            if (dataCriacao < agora) isExpired = true;
           }
 
-          // Só adiciona na vitrine se estiver ATIVO (Expirado é bloqueado aqui)
+          if (isExpired && statusFinal === 'ativo') {
+             statusFinal = 'expirado';
+             updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
+          }
+
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data }
             listGeral.push(adFinal)
             
-            // SE PAGOU (Plano > 0), VAI PARA A VITRINE VIP!
             if (data.planoId && data.planoId > 0) {
               listVIP.push(adFinal)
             }
@@ -249,7 +253,6 @@ export default function Home() {
                   </p>
                   
                   <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                    {/* 🚀 AQUI ESTÁ A INTELIGÊNCIA APLICADA */}
                     <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
                     <span className="flex items-center gap-0.5 truncate max-w-[60%]">
                        <MapPin size={10} className="text-accent shrink-0"/> 

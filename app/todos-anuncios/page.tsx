@@ -1,14 +1,13 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { db } from '@/lib/firebase'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2 } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
-// 🚀 FUNÇÃO INTELIGENTE DE TEMPO
 function formatTimeAgo(timestampSeconds: number) {
   if (!timestampSeconds) return 'Data desconhecida';
   
@@ -21,7 +20,7 @@ function formatTimeAgo(timestampSeconds: number) {
   if (diffInDays === 1) return 'Ontem';
   if (diffInDays < 7) return `Há ${diffInDays} dias`;
   if (diffInDays < 30) return `Há ${Math.floor(diffInDays / 7)} sem.`;
-  return date.toLocaleDateString('pt-BR'); // Se for muito antigo, mostra a data normal
+  return date.toLocaleDateString('pt-BR');
 }
 
 function SearchContent() {
@@ -49,10 +48,35 @@ function SearchContent() {
         const q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'))
         const snap = await getDocs(q)
         const list: any[] = []
-        
-        snap.forEach(doc => {
-          list.push({ id: doc.id, ...doc.data() })
-        })
+        const agora = new Date()
+
+        for (const document of snap.docs) {
+          const data = document.data()
+          let statusFinal = data.status
+          let isExpired = false;
+
+          // 🚀 VARREDURA ABSOLUTA: Verifica expiração oficial OU calcula para os testes antigos
+          if (data.expiraEm) {
+            const dataExpiracao = new Date(data.expiraEm);
+            if (dataExpiracao < agora) isExpired = true;
+          } else if (data.criadoEm) {
+            // Fallback para anúncios velhos sem expiraEm
+            const dataCriacao = new Date(data.criadoEm.seconds * 1000);
+            const diasDuracao = data.planoId === 1 ? 1 : data.planoId === 2 ? 7 : data.planoId === 3 ? 15 : data.planoId === 4 ? 30 : 1;
+            dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
+            if (dataCriacao < agora) isExpired = true;
+          }
+
+          if (isExpired && statusFinal === 'ativo') {
+             statusFinal = 'expirado';
+             updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
+          }
+
+          // Só exibe se sobreviveu à varredura
+          if (statusFinal === 'ativo') {
+             list.push({ id: document.id, ...data })
+          }
+        }
         
         setAds(list)
       } catch (error) {
@@ -246,7 +270,6 @@ function SearchContent() {
                     </p>
                     
                     <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                      {/* 🚀 AQUI A MÁGICA ACONTECE */}
                       <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
                       <span className="flex items-center gap-0.5 truncate max-w-[60%]">
                          <MapPin size={10} className="text-accent shrink-0"/> 
