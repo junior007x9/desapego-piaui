@@ -8,11 +8,26 @@ import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, 
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
+// 🚀 FUNÇÃO INTELIGENTE DE TEMPO
+function formatTimeAgo(timestampSeconds: number) {
+  if (!timestampSeconds) return 'Data desconhecida';
+  
+  const now = new Date();
+  const date = new Date(timestampSeconds * 1000);
+  const diffInTime = now.getTime() - date.getTime();
+  const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+
+  if (diffInDays === 0) return 'Hoje';
+  if (diffInDays === 1) return 'Ontem';
+  if (diffInDays < 7) return `Há ${diffInDays} dias`;
+  if (diffInDays < 30) return `Há ${Math.floor(diffInDays / 7)} sem.`;
+  return date.toLocaleDateString('pt-BR'); // Se for muito antigo, mostra a data normal
+}
+
 function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
-  // Puxa o que foi digitado na Home
   const queryBusca = searchParams.get('q') || ''
   const queryCategoria = searchParams.get('categoria') || ''
 
@@ -20,7 +35,6 @@ function SearchContent() {
   const [filteredAds, setFilteredAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Estados dos Filtros
   const [busca, setBusca] = useState(queryBusca)
   const [categoria, setCategoria] = useState(queryCategoria)
   const [precoMin, setPrecoMin] = useState('')
@@ -32,7 +46,6 @@ function SearchContent() {
   useEffect(() => {
     async function fetchAds() {
       try {
-        // Busca todos os anúncios ATIVOS
         const q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'))
         const snap = await getDocs(q)
         const list: any[] = []
@@ -51,7 +64,6 @@ function SearchContent() {
     fetchAds()
   }, [])
 
-  // MÁGICA DOS FILTROS (Roda automaticamente sempre que o usuário mexe em algo)
   useEffect(() => {
     let result = [...ads]
 
@@ -74,10 +86,8 @@ function SearchContent() {
       result = result.filter(ad => ad.preco <= parseFloat(precoMax))
     }
 
-    // Ordenação Inteligente
     result.sort((a, b) => {
       if (ordenacao === 'recentes') {
-        // Fura-fila para os VIPs
         if ((b.planoId || 0) !== (a.planoId || 0)) return (b.planoId || 0) - (a.planoId || 0);
         return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0)
       }
@@ -143,7 +153,6 @@ function SearchContent() {
         Limpar Filtros
       </button>
       
-      {/* Botão de aplicar apenas no mobile */}
       <button onClick={() => setShowFiltersMobile(false)} className="w-full py-4 bg-primary text-white font-bold rounded-xl transition-colors md:hidden mt-4 shadow-lg">
         Ver {filteredAds.length} resultados
       </button>
@@ -153,7 +162,6 @@ function SearchContent() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
       
-      {/* CABEÇALHO MOBILE */}
       <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-100 p-3 flex justify-between items-center shadow-sm">
         <button onClick={() => router.push('/')} className="flex items-center gap-1 bg-gray-100 p-2 pr-4 rounded-full text-gray-800 font-bold text-sm">
           <ChevronLeft size={20} /> Voltar
@@ -163,7 +171,6 @@ function SearchContent() {
         </button>
       </div>
 
-      {/* MODAL DE FILTROS MOBILE */}
       {showFiltersMobile && (
         <div className="md:hidden fixed inset-0 bg-white z-50 p-6 overflow-y-auto animate-in slide-in-from-bottom-full duration-300">
            <FiltrosComponent />
@@ -180,7 +187,6 @@ function SearchContent() {
 
       <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row gap-8 relative z-20 md:-mt-10">
         
-        {/* BARRA LATERAL (FILTROS DESKTOP) */}
         <div className="hidden md:block w-72 shrink-0">
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 sticky top-24">
              <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
@@ -191,7 +197,6 @@ function SearchContent() {
           </div>
         </div>
 
-        {/* ÁREA DE RESULTADOS */}
         <div className="flex-1">
           <div className="mb-6 flex justify-between items-end px-2 md:px-0">
             <div>
@@ -241,7 +246,8 @@ function SearchContent() {
                     </p>
                     
                     <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                      <span>Hoje</span>
+                      {/* 🚀 AQUI A MÁGICA ACONTECE */}
+                      <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
                       <span className="flex items-center gap-0.5 truncate max-w-[60%]">
                          <MapPin size={10} className="text-accent shrink-0"/> 
                          <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
@@ -259,7 +265,6 @@ function SearchContent() {
   )
 }
 
-// O Next.js exige que qualquer página que leia a URL (useSearchParams) seja empacotada no Suspense
 export default function TodosAnunciosPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>}>

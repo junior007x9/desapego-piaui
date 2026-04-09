@@ -15,6 +15,22 @@ const CATEGORIAS_OLX = [
   { nome: 'Outros', icon: <ShoppingBag size={28} strokeWidth={2.5} />, slug: 'Outros', cor: "bg-gray-100 text-gray-600" },
 ]
 
+// 🚀 FUNÇÃO INTELIGENTE DE TEMPO
+function formatTimeAgo(timestampSeconds: number) {
+  if (!timestampSeconds) return 'Data desconhecida';
+  
+  const now = new Date();
+  const date = new Date(timestampSeconds * 1000);
+  const diffInTime = now.getTime() - date.getTime();
+  const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+
+  if (diffInDays === 0) return 'Hoje';
+  if (diffInDays === 1) return 'Ontem';
+  if (diffInDays < 7) return `Há ${diffInDays} dias`;
+  if (diffInDays < 30) return `Há ${Math.floor(diffInDays / 7)} sem.`;
+  return date.toLocaleDateString('pt-BR');
+}
+
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
   const [vipAds, setVipAds] = useState<any[]>([]) 
@@ -233,7 +249,8 @@ export default function Home() {
                   </p>
                   
                   <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                    <span>Hoje</span>
+                    {/* 🚀 AQUI ESTÁ A INTELIGÊNCIA APLICADA */}
+                    <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
                     <span className="flex items-center gap-0.5 truncate max-w-[60%]">
                        <MapPin size={10} className="text-accent shrink-0"/> 
                        <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
