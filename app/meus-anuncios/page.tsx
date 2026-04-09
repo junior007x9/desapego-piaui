@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-import { collection, query, where, getDocs, doc, deleteDoc, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, AlertCircle, Sparkles, PlusCircle } from 'lucide-react'
@@ -41,15 +41,30 @@ export default function MeusAnunciosPage() {
       const list: any[] = []
       let views = 0
       let ativos = 0
+      const agora = new Date() // 🚀 RELÓGIO INTELIGENTE INICIADO
 
-      snap.forEach(doc => {
-        const data = doc.data()
-        list.push({ id: doc.id, ...data })
+      // Alterado para um loop FOR para conseguirmos processar as datas corretamente
+      for (const document of snap.docs) {
+        const data = document.data()
+        let statusFinal = data.status
+
+        // 🚀 VERIFICAÇÃO AUTOMÁTICA DE VALIDADE
+        if (data.expiraEm) {
+          const dataExpiracao = new Date(data.expiraEm);
+          if (dataExpiracao < agora && statusFinal === 'ativo') {
+             statusFinal = 'expirado';
+             // Atualiza no banco silenciosamente para não voltar a aparecer na vitrine
+             updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
+          }
+        }
+
+        // Adicionamos à lista forçando o status correto (mesmo antes da internet atualizar)
+        list.push({ id: document.id, ...data, status: statusFinal })
         
-        // Somando as métricas
+        // Somando as métricas com os valores reais corrigidos
         views += (data.visualizacoes || 0)
-        if (data.status === 'ativo') ativos++
-      })
+        if (statusFinal === 'ativo') ativos++
+      }
 
       // Ordenar os mais recentes primeiro
       list.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))

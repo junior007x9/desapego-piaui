@@ -17,7 +17,7 @@ const CATEGORIAS_OLX = [
 
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
-  const [vipAds, setVipAds] = useState<any[]>([]) // 🚀 NOVO ESTADO: Apenas anúncios pagos
+  const [vipAds, setVipAds] = useState<any[]>([]) 
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
@@ -56,6 +56,7 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
 
+          // 🚀 RELÓGIO INTELIGENTE: Verifica se o anúncio passou da validade
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora && statusFinal === 'ativo') {
@@ -64,18 +65,18 @@ export default function Home() {
             }
           }
 
+          // Só adiciona na vitrine se estiver ATIVO (Expirado é bloqueado aqui)
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data }
             listGeral.push(adFinal)
             
-            // 🚀 SE PAGOU (Plano > 0), VAI PARA A VITRINE VIP!
+            // SE PAGOU (Plano > 0), VAI PARA A VITRINE VIP!
             if (data.planoId && data.planoId > 0) {
               listVIP.push(adFinal)
             }
           }
         }
         
-        // Fura-fila no Feed Geral: Pagos primeiro, depois grátis (ordenados por data)
         listGeral.sort((a, b) => {
           if ((b.planoId || 0) !== (a.planoId || 0)) {
             return (b.planoId || 0) - (a.planoId || 0);
@@ -83,8 +84,8 @@ export default function Home() {
           return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
         })
         
-        setVipAds(listVIP.slice(0, 5)) // Máximo de 5 VIPs na Vitrine Carrossel
-        setAds(listGeral.slice(0, 16)) // Feed geral com 16 anúncios
+        setVipAds(listVIP.slice(0, 5)) 
+        setAds(listGeral.slice(0, 16)) 
       } catch (error) {
         console.error("Erro ao buscar anúncios recentes:", error)
       } finally {
@@ -99,7 +100,6 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
-  // 🚀 COMPONENTE SKELETON (Carregamento Premium)
   const SkeletonCard = () => (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse">
       <div className="aspect-square bg-gray-200"></div>
@@ -154,7 +154,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🚀 VITRINE VIP (Só aparece se tiver anúncios pagos carregados) */}
         {!loading && vipAds.length > 0 && (
           <div className="mb-12">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight mb-4 px-2">
@@ -185,7 +184,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* FEED GERAL */}
         <div className="flex items-center justify-between mb-6 px-2">
            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
               Anúncios Recentes
