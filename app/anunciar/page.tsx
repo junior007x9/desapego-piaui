@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
@@ -79,7 +79,7 @@ export default function AnunciarPage() {
   const [descricao, setDescricao] = useState('')
   const [preco, setPreco] = useState('')
   const [categoria, setCategoria] = useState('')
-  const [localizacao, setLocalizacao] = useState('') // 🚀 NOVO CAMPO: Localização
+  const [localizacao, setLocalizacao] = useState('') 
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [planoId, setPlanoId] = useState<number | null>(null)
@@ -193,6 +193,20 @@ export default function AnunciarPage() {
 
     setLoading(true)
     try {
+      
+      // 🚀 CONVERSÃO DO PREÇO COM MÁSCARA PARA O BANCO DE DADOS
+      let precoNumerico = 0
+      if (preco) {
+        const precoLimpo = preco.toString().replace(/\./g, '').replace(',', '.')
+        precoNumerico = parseFloat(precoLimpo)
+      }
+
+      if (isNaN(precoNumerico) || precoNumerico <= 0) {
+        alert("Por favor, insira um preço válido maior que zero.");
+        setLoading(false);
+        return;
+      }
+
       const urls: string[] = []
       
       if (fotos.length > 0) {
@@ -241,9 +255,9 @@ export default function AnunciarPage() {
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
-        preco: parseFloat(preco.replace(',', '.')),
+        preco: precoNumerico, // 🚀 SALVA O NÚMERO LIMPO NO BANCO
         categoria,
-        localizacao, // 🚀 SALVANDO A LOCALIZAÇÃO NO BANCO DE DADOS
+        localizacao,
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
@@ -357,7 +371,6 @@ export default function AnunciarPage() {
             </select>
           </div>
 
-          {/* 🚀 NOVO CAMPO: Cidade e Bairro */}
           <div>
             <label className="block text-primary font-bold mb-2 flex items-center gap-2">
               <MapPin size={18} /> Cidade / Bairro*
@@ -365,9 +378,32 @@ export default function AnunciarPage() {
             <input required type="text" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: Teresina - Dirceu" />
           </div>
 
+          {/* 🚀 NOVO CAMPO DE PREÇO COM MÁSCARA */}
           <div>
             <label className="block text-primary font-bold mb-2">Preço (R$)*</label>
-            <input required type="number" value={preco} onChange={(e) => setPreco(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="0,00" />
+            <div className="relative">
+              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/50" size={20} />
+              <input 
+                type="text" 
+                inputMode="numeric"
+                placeholder="0,00"
+                required
+                value={preco}
+                onChange={(e) => {
+                  const valor = e.target.value.replace(/\D/g, '');
+                  if (!valor) {
+                    setPreco('');
+                    return;
+                  }
+                  const formatado = (Number(valor) / 100).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  });
+                  setPreco(formatado);
+                }}
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800"
+              />
+            </div>
           </div>
 
           <div>

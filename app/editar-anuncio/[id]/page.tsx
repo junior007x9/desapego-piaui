@@ -60,8 +60,14 @@ export default function EditarAnuncioPage() {
         // Preenche os campos com os dados atuais
         setTitulo(adData.titulo || '')
         setDescricao(adData.descricao || '')
-        setPreco(adData.preco ? adData.preco.toString() : '')
         setCategoria(adData.categoria || 'Outros')
+        
+        // 🚀 MÁSCARA APLICADA AQUI AO CARREGAR DO BANCO
+        if (adData.preco) {
+           setPreco(Number(adData.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+        } else {
+           setPreco('')
+        }
         
         // Puxa as fotos atuais (se houver)
         setFotosExistentes(adData.fotos || [])
@@ -109,9 +115,12 @@ export default function EditarAnuncioPage() {
     setSaving(true)
 
     try {
+      // 🚀 CONVERSÃO DO PREÇO COM MÁSCARA PARA O BANCO DE DADOS
       let precoNumerico = 0
       if (preco) {
-        precoNumerico = parseFloat(preco.toString().replace(',', '.'))
+        // Remove os pontos de milhares e troca a vírgula dos centavos por ponto
+        const precoLimpo = preco.toString().replace(/\./g, '').replace(',', '.')
+        precoNumerico = parseFloat(precoLimpo)
       }
 
       if (isNaN(precoNumerico) || precoNumerico <= 0) {
@@ -243,17 +252,35 @@ export default function EditarAnuncioPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Preço */}
+            
+            {/* 🚀 NOVO CAMPO DE PREÇO COM MÁSCARA */}
             <div>
               <label className="block text-primary font-bold mb-2">Preço (R$)</label>
               <div className="relative">
                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/50" size={20} />
                 <input 
-                  type="number" 
-                  step="0.01"
+                  type="text" 
+                  inputMode="numeric"
+                  placeholder="0,00"
                   required
                   value={preco}
-                  onChange={e => setPreco(e.target.value)}
+                  onChange={(e) => {
+                    // Remove tudo que não for número
+                    const valor = e.target.value.replace(/\D/g, '');
+                    
+                    if (!valor) {
+                      setPreco('');
+                      return;
+                    }
+
+                    // Transforma em decimal e formata
+                    const formatado = (Number(valor) / 100).toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    });
+                    
+                    setPreco(formatado);
+                  }}
                   className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800"
                 />
               </div>
