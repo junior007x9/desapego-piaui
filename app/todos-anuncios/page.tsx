@@ -133,7 +133,7 @@ function SearchContent() {
   }, [])
 
   // 🚀 OBSERVAR O SCROLL (O espião do final da tela)
-  const observer = useRef<IntersectionObserver>()
+  const observer = useRef<IntersectionObserver | null>(null)
   const lastAdElementRef = useCallback((node: any) => {
     if (loading || loadingMore) return
     if (observer.current) observer.current.disconnect()
