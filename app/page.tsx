@@ -5,6 +5,7 @@ import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from 'fire
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles } from 'lucide-react'
+import ContadorEstatisticas from '@/components/ContadorEstatisticas' // 🚀 IMPORTAÇÃO DO NOVO COMPONENTE
 
 const CATEGORIAS_OLX = [
   { nome: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, slug: 'Imóveis', cor: "bg-blue-100 text-blue-600" },
@@ -161,7 +162,7 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-20">
         
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-10 overflow-x-auto scrollbar-hide">
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-6 overflow-x-auto scrollbar-hide">
           <div className="flex md:grid md:grid-cols-6 gap-4 min-w-max md:min-w-0 px-2 justify-between">
             {CATEGORIAS_OLX.map(cat => (
               <Link href={`/todos-anuncios?categoria=${cat.slug}`} key={cat.nome} className="flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-auto">
@@ -174,8 +175,11 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 🚀 COMPONENTE DE ESTATÍSTICAS ADICIONADO AQUI */}
+        <ContadorEstatisticas />
+
         {!loading && vipAds.length > 0 && (
-          <div className="mb-12">
+          <div className="mb-12 mt-6">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight mb-4 px-2">
               <Sparkles className="text-amber-500"/> Destaques da Semana
             </h2>
@@ -204,7 +208,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6 px-2">
+        <div className="flex items-center justify-between mb-6 px-2 mt-6">
            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
               Anúncios Recentes
            </h2>
