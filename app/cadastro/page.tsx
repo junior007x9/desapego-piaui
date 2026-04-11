@@ -204,7 +204,11 @@ function CadastroForm() {
         endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
       })
 
-      // AVISO ATUALIZADO: Foca na importância de checar o SPAM
+      // 🚀 ATUALIZA O CONTADOR DE USUÁRIOS
+      await setDoc(doc(db, 'usuarios', user.uid), {
+        cadastradoEm: serverTimestamp()
+      }).catch(console.error);
+
       alert("🎉 Conta criada com sucesso!\n\n📧 Enviamos um link de confirmação para o seu e-mail.\n\n⚠️ IMPORTANTE: Não se esqueça de verificar também a sua pasta de SPAM ou Lixo Eletrônico!");
       router.push('/meus-anuncios')
       
@@ -328,7 +332,6 @@ function CadastroForm() {
               </div>
             </div>
 
-            {/* NOVO AVISO DE SPAM */}
             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex gap-3 text-sm mt-6 text-yellow-800">
               <AlertCircle className="shrink-0 mt-0.5 text-yellow-600" size={20} />
               <p><strong>Atenção:</strong> Após finalizar o cadastro, enviaremos um e-mail de confirmação. Lembre-se de verificar sua pasta de <strong>Spam ou Lixo Eletrônico</strong> caso não encontre na caixa principal.</p>

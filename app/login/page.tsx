@@ -49,7 +49,6 @@ function LoginForm() {
 
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       
-      // BARREIRA DE SEGURANÇA: Verifica se o perfil está completo
       const userRef = doc(db, 'users', userCredential.user.uid)
       const userDoc = await getDoc(userRef)
       
@@ -98,9 +97,14 @@ function LoginForm() {
           favoritos: [],
           criadoEm: serverTimestamp()
         })
+
+        // 🚀 ATUALIZA O CONTADOR DE USUÁRIOS
+        await setDoc(doc(db, 'usuarios', user.uid), {
+          cadastradoEm: serverTimestamp()
+        }).catch(console.error);
+
         router.push('/completar-perfil')
       } else {
-        // Se já tem conta, verifica se o perfil foi completado alguma vez
         const userData = userDoc.data();
         if (!userData.telefone || userData.telefone.trim() === '') {
           router.push('/completar-perfil')
