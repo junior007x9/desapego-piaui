@@ -5,7 +5,7 @@ import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from 'fire
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles } from 'lucide-react'
-import ContadorEstatisticas from '@/components/ContadorEstatisticas' // 🚀 IMPORTAÇÃO DO NOVO COMPONENTE
+import ContadorEstatisticas from '@/components/ContadorEstatisticas'
 
 const CATEGORIAS_OLX = [
   { nome: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, slug: 'Imóveis', cor: "bg-blue-100 text-blue-600" },
@@ -72,7 +72,6 @@ export default function Home() {
           let statusFinal = data.status
           let isExpired = false;
 
-          // 🚀 VARREDURA ABSOLUTA
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora) isExpired = true;
@@ -136,9 +135,13 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
       
-      <div className="bg-primary pt-12 pb-24 px-4 rounded-b-[3rem] shadow-lg relative overflow-hidden">
+      <div className="bg-primary pt-10 pb-24 px-4 rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
+          
+          {/* 🚀 CONTADOR FOI MOVIDO PARA CÁ: BEM DISCRETO NO TOPO DO BANNER */}
+          <ContadorEstatisticas />
+
           <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
@@ -174,9 +177,6 @@ export default function Home() {
             ))}
           </div>
         </div>
-
-        {/* 🚀 COMPONENTE DE ESTATÍSTICAS ADICIONADO AQUI */}
-        <ContadorEstatisticas />
 
         {!loading && vipAds.length > 0 && (
           <div className="mb-12 mt-6">
