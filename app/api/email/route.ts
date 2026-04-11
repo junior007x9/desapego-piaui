@@ -17,6 +17,7 @@ export async function POST(request: Request) {
 
     let assunto = '';
     let htmlContent = '';
+    let textContent = ''; // 🚀 NOVO: Versão em texto puro contra Spam
 
     if (tipo === 'anuncio_aprovado') {
       assunto = `🎉 Seu anúncio está no ar: ${produto}`;
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
           <a href="https://desapegopiaui.com.br/meus-anuncios" style="background-color: #4c1d95; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Ver meu anúncio</a>
         </div>
       `;
+      textContent = `Olá, ${nome}! Ótimas notícias! O seu anúncio ${produto} foi aprovado e já está disponível para milhares de compradores no Desapego Piauí. Acesse: https://desapegopiaui.com.br/meus-anuncios`;
     } else if (tipo === 'plano_expirando') {
       assunto = `⚠️ Seu destaque para ${produto} expira amanhã!`;
       htmlContent = `
@@ -36,13 +38,15 @@ export async function POST(request: Request) {
           <p>Não perca as suas posições no topo das buscas. Renove agora para continuar vendendo rápido!</p>
         </div>
       `;
+      textContent = `Olá, ${nome}! O plano VIP do seu anúncio ${produto} vai expirar em 24 horas. Não perca as suas posições no topo das buscas. Renove agora!`;
     }
 
     const data = await resend.emails.send({
-      from: 'Desapego Piauí <contato@desapegopiaui.com.br>', // Quando verificar seu domínio no Resend, coloque ele aqui
+      from: 'Equipe Desapego Piauí <contato@desapegopiaui.com.br>',
       to: [email],
       subject: assunto,
       html: htmlContent,
+      text: textContent, // 🛡️ O ESCUDO ANTI-SPAM APLICADO AQUI
     });
 
     return NextResponse.json({ success: true, data });

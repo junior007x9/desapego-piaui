@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react'
 import { db } from '@/lib/firebase'
-import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, updateDoc, limit, startAfter, orderBy } from 'firebase/firestore'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2 } from 'lucide-react'
@@ -32,7 +32,12 @@ function SearchContent() {
 
   const [ads, setAds] = useState<any[]>([])
   const [filteredAds, setFilteredAds] = useState<any[]>([])
+  
+  // 🚀 ESTADOS DO INFINITE SCROLL
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [lastVisible, setLastVisible] = useState<any>(null)
+  const [hasMore, setHasMore] = useState(true)
 
   const [busca, setBusca] = useState(queryBusca)
   const [categoria, setCategoria] = useState(queryCategoria)
@@ -42,25 +47,51 @@ function SearchContent() {
   
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
 
-  useEffect(() => {
-    async function fetchAds() {
-      try {
-        const q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'))
-        const snap = await getDocs(q)
-        const list: any[] = []
-        const agora = new Date()
+  // 🚀 FUNÇÃO DE BUSCA PAGINADA
+  const fetchAds = async (isLoadMore = false) => {
+    try {
+      if (isLoadMore) setLoadingMore(true)
+      else setLoading(true)
+
+      const agora = new Date()
+      
+      // Carrega de 12 em 12, ordenando pelos mais recentes
+      let q = query(
+        collection(db, 'anuncios'), 
+        where('status', '==', 'ativo'),
+        orderBy('criadoEm', 'desc'),
+        limit(12)
+      )
+
+      // Se for "Carregar Mais", começa a partir do último anúncio que vimos
+      if (isLoadMore && lastVisible) {
+        q = query(
+          collection(db, 'anuncios'), 
+          where('status', '==', 'ativo'),
+          orderBy('criadoEm', 'desc'),
+          startAfter(lastVisible),
+          limit(12)
+        )
+      }
+
+      const snap = await getDocs(q)
+      const list: any[] = []
+
+      if (snap.empty) {
+        setHasMore(false)
+      } else {
+        // Salva o último documento para a próxima página
+        setLastVisible(snap.docs[snap.docs.length - 1])
 
         for (const document of snap.docs) {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
 
-          // 🚀 VARREDURA ABSOLUTA: Verifica expiração oficial OU calcula para os testes antigos
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora) isExpired = true;
           } else if (data.criadoEm) {
-            // Fallback para anúncios velhos sem expiraEm
             const dataCriacao = new Date(data.criadoEm.seconds * 1000);
             const diasDuracao = data.planoId === 1 ? 1 : data.planoId === 2 ? 7 : data.planoId === 3 ? 15 : data.planoId === 4 ? 30 : 1;
             dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
@@ -72,22 +103,52 @@ function SearchContent() {
              updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
           }
 
-          // Só exibe se sobreviveu à varredura
           if (statusFinal === 'ativo') {
              list.push({ id: document.id, ...data })
           }
         }
-        
-        setAds(list)
-      } catch (error) {
-        console.error("Erro ao buscar anúncios:", error)
-      } finally {
-        setLoading(false)
       }
+      
+      if (isLoadMore) {
+        setAds(prev => [...prev, ...list])
+      } else {
+        setAds(list)
+        setHasMore(snap.docs.length === 12)
+      }
+
+    } catch (error) {
+      console.error("Erro ao buscar anúncios:", error)
+      // DICA DE FIREBASE: Se a tela ficar carregando infinitamente e der erro no console,
+      // é porque o Firebase vai pedir para você clicar num link no console para criar um "Índice Composto"
+      // para juntar o 'status' com o 'criadoEm'. É só clicar no link que ele gera e aguardar 2 minutos!
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
     }
+  }
+
+  // Carrega a primeira página ao entrar
+  useEffect(() => {
     fetchAds()
   }, [])
 
+  // 🚀 OBSERVAR O SCROLL (O espião do final da tela)
+  const observer = useRef<IntersectionObserver>()
+  const lastAdElementRef = useCallback((node: any) => {
+    if (loading || loadingMore) return
+    if (observer.current) observer.current.disconnect()
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        fetchAds(true) // Carrega a próxima página
+      }
+    })
+    
+    if (node) observer.current.observe(node)
+  }, [loading, loadingMore, hasMore, lastVisible])
+
+
+  // Organiza e filtra os anúncios que já foram carregados
   useEffect(() => {
     let result = [...ads]
 
@@ -225,61 +286,80 @@ function SearchContent() {
           <div className="mb-6 flex justify-between items-end px-2 md:px-0">
             <div>
               <h2 className="text-xl md:text-2xl font-black text-gray-900">Resultados da busca</h2>
-              <p className="text-gray-500 font-medium text-sm mt-1">{filteredAds.length} anúncios encontrados</p>
+              <p className="text-gray-500 font-medium text-sm mt-1">Navegando nos anúncios mais recentes</p>
             </div>
           </div>
 
-          {loading ? (
+          {loading && ads.length === 0 ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={48} /></div>
           ) : filteredAds.length === 0 ? (
             <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100">
                <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4"><Search size={40} /></div>
                <h3 className="text-xl font-black text-gray-800 mb-2">Nenhum resultado</h3>
-               <p className="text-gray-500 mb-6 max-w-md mx-auto">Não encontramos anúncios com os filtros selecionados. Tente usar termos diferentes ou limpar os filtros.</p>
+               <p className="text-gray-500 mb-6 max-w-md mx-auto">Não encontramos anúncios com os filtros selecionados ou não há mais anúncios.</p>
                <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md">
                   Limpar todos os filtros
                </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
-              {filteredAds.map((ad) => (
-                <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group bg-white rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative ${ad.planoId > 0 ? 'border-primary/30 shadow-[0_4px_20px_rgba(76,29,149,0.05)]' : 'border-gray-100'}`}>
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+                {filteredAds.map((ad, index) => {
+                  // 🚀 SE FOR O ÚLTIMO ITEM DA LISTA, ATIVAMOS O ESPIÃO
+                  const isLastElement = filteredAds.length === index + 1;
                   
-                  {ad.planoId > 0 && (
-                    <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
-                      <Sparkles size={10}/> Patrocinado
-                    </div>
-                  )}
+                  return (
+                    <Link 
+                      ref={isLastElement ? lastAdElementRef : null} 
+                      href={`/anuncio/${ad.id}`} 
+                      key={ad.id} 
+                      className={`group bg-white rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative ${ad.planoId > 0 ? 'border-primary/30 shadow-[0_4px_20px_rgba(76,29,149,0.05)]' : 'border-gray-100'}`}
+                    >
+                      
+                      {ad.planoId > 0 && (
+                        <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
+                          <Sparkles size={10}/> Patrocinado
+                        </div>
+                      )}
 
-                  <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
-                     {ad.imagemUrl ? (
-                        <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
-                     )}
-                  </div>
-                  
-                  <div className="p-3 md:p-4 flex flex-col flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
-                      {ad.categoria}
-                    </span>
-                    <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
-                    
-                    <p className="text-lg md:text-xl font-black text-primary mt-auto">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                    </p>
-                    
-                    <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                      <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
-                      <span className="flex items-center gap-0.5 truncate max-w-[60%]">
-                         <MapPin size={10} className="text-accent shrink-0"/> 
-                         <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                      <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
+                         {ad.imagemUrl ? (
+                            <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                         ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+                         )}
+                      </div>
+                      
+                      <div className="p-3 md:p-4 flex flex-col flex-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
+                          {ad.categoria}
+                        </span>
+                        <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
+                        
+                        <p className="text-lg md:text-xl font-black text-primary mt-auto">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                        </p>
+                        
+                        <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
+                          <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
+                          <span className="flex items-center gap-0.5 truncate max-w-[60%]">
+                             <MapPin size={10} className="text-accent shrink-0"/> 
+                             <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              {/* Loader para quando estiver descendo a tela */}
+              {loadingMore && (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                </div>
+              )}
+            </>
           )}
         </div>
 
