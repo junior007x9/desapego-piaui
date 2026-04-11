@@ -103,22 +103,24 @@ export default function DetalhesAnuncio() {
     }
   }
 
+  // 🚀 FUNÇÃO MÁGICA DE COMPARTILHAMENTO NATIVO
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: ad.titulo,
-          text: `Olha o que eu encontrei no Desapego Piauí: ${ad.titulo} por apenas R$ ${ad.preco}`,
-          url: window.location.href,
+          title: `${ad.titulo} - Desapego Piauí`,
+          text: `Olha o que encontrei no Desapego Piauí: ${ad.titulo} por apenas R$ ${ad.preco}`,
+          url: window.location.href, // Pega o link exato da página
         });
       } catch (error) {
-        console.log('Erro ao compartilhar', error);
+        console.log('Compartilhamento cancelado', error);
       }
     } else {
+      // Fallback para quem está no computador ou navegador antigo
       navigator.clipboard.writeText(window.location.href);
-      alert("Link copiado para a área de transferência!");
+      alert("Link do anúncio copiado! Cole no WhatsApp ou Instagram para enviar aos amigos.");
     }
-  }
+  };
 
   // Funções das Setinhas
   const handleNextImage = () => {
@@ -197,7 +199,8 @@ export default function DetalhesAnuncio() {
           <ChevronLeft size={20} /> Voltar
         </button>
         <div className="flex gap-2">
-          <button onClick={handleShare} className="p-2.5 bg-gray-100 rounded-full text-gray-700"><Share2 size={20} /></button>
+          {/* 🚀 BOTÃO DE COMPARTILHAR MOBILE */}
+          <button onClick={handleShare} className="p-2.5 bg-gray-100 rounded-full text-gray-700 hover:bg-gray-200 transition"><Share2 size={20} /></button>
           <button onClick={toggleFavorite} className="p-2.5 bg-gray-100 rounded-full">
             <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"} size={20} />
           </button>
@@ -223,7 +226,7 @@ export default function DetalhesAnuncio() {
                   {/* Botão de Maximizar Canto Inferior */}
                   <button 
                     onClick={() => setIsZoomOpen(true)}
-                    className="absolute bottom-4 right-4 bg-black/60 text-white p-3 rounded-full flex items-center justify-center"
+                    className="absolute bottom-4 right-4 bg-black/60 text-white p-3 rounded-full flex items-center justify-center hover:bg-black/80 transition"
                   >
                     <Maximize2 size={20} />
                   </button>
@@ -289,6 +292,7 @@ export default function DetalhesAnuncio() {
                    {ad.categoria}
                  </span>
                  <div className="flex gap-2">
+                   {/* 🚀 BOTÃO DE COMPARTILHAR DESKTOP */}
                    <button onClick={handleShare} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition"><Share2 size={20} /></button>
                    <button onClick={toggleFavorite} className="p-2 bg-gray-50 hover:bg-red-50 rounded-full transition">
                      <Heart className={isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"} size={20} />
