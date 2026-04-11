@@ -201,20 +201,28 @@ export default function MeusAnunciosPage() {
                   </div>
                 </div>
 
-                {/* Ações */}
-                <div className="w-full md:w-auto flex flex-row md:flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                  {ad.status === 'expirado' || ad.status === 'pendente' ? (
+                {/* Ações Corrigidas */}
+                <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+                  
+                  {/* Se estiver expirado ou pendente, mostra o botão de Renovar no topo */}
+                  {(ad.status === 'expirado' || ad.status === 'pendente') && (
                      <Link href={`/pagamento/${ad.id}`} className="flex-1 md:flex-none text-center bg-accent hover:bg-accent-dark text-white font-bold text-sm px-4 py-3 rounded-xl transition shadow-sm">
                        Renovar Plano
                      </Link>
-                  ) : (
-                     <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-100 text-gray-400 font-bold text-sm px-4 py-3 rounded-xl cursor-not-allowed">
-                       <Edit size={16}/> Editar
-                     </button>
                   )}
-                  <button onClick={() => handleDelete(ad.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 font-bold text-sm px-4 py-3 rounded-xl transition">
-                    <Trash2 size={16}/> Excluir
-                  </button>
+
+                  <div className="flex gap-2 w-full">
+                    {/* Botão de Editar funcionando e apontando para a página correta */}
+                    <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-sm px-4 py-3 rounded-xl transition">
+                      <Edit size={16}/> Editar
+                    </Link>
+
+                    {/* Botão de Excluir */}
+                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 font-bold text-sm px-4 py-3 rounded-xl transition">
+                      <Trash2 size={16}/> Excluir
+                    </button>
+                  </div>
+
                 </div>
 
               </div>
