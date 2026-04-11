@@ -8,21 +8,16 @@ export default function ContadorEstatisticas() {
   const [totalUsuarios, setTotalUsuarios] = useState<number | null>(null)
   const [usuariosOnline, setUsuariosOnline] = useState<number | null>(null)
 
-  // 🚀 O número de usuários que você já tem no Firebase Auth
-  const USUARIOS_ANTIGOS = 163;
-
   useEffect(() => {
     async function buscarTotalUsuarios() {
       try {
-        // Conta quantos usuários novos estão na coleção 'usuarios' do Firestore
-        const snap = await getCountFromServer(collection(db, 'usuarios'))
-        const novosUsuarios = snap.data().count
-        
-        // Soma os antigos (163) com os novos que virão pelo Firestore
-        setTotalUsuarios(USUARIOS_ANTIGOS + novosUsuarios)
+        // 🚀 AGORA ELE CONTA DIRETAMENTE A SUA COLEÇÃO OFICIAL DE 'users'
+        // Pega o número real e exato de perfis cadastrados no seu banco de dados
+        const snap = await getCountFromServer(collection(db, 'users'))
+        setTotalUsuarios(snap.data().count)
       } catch (error) {
-        // Se a coleção ainda não existir ou der erro, mostra pelo menos os 163
-        setTotalUsuarios(USUARIOS_ANTIGOS)
+        console.error("Erro ao contar usuários:", error)
+        setTotalUsuarios(163) // Mantemos 163 apenas como backup se a internet falhar
       }
     }
 
