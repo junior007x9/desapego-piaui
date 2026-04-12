@@ -7,6 +7,7 @@ import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
 import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
+import { Toaster } from 'react-hot-toast' // 🚀 IMPORTAÇÃO DOS AVISOS (TOASTS)
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -124,6 +125,25 @@ export default function RootLayout({
         <BottomNav />
         <CookieBanner />
         <FeedbackButton />
+        
+        {/* 🚀 O ALTO-FALANTE DE NOTIFICAÇÕES (Instalado em todas as páginas) */}
+        <Toaster position="top-right" toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#333',
+            color: '#fff',
+            fontWeight: 'bold',
+            borderRadius: '12px',
+            padding: '16px',
+          },
+          success: {
+            style: { background: '#10B981' }
+          },
+          error: {
+            style: { background: '#EF4444' }
+          }
+        }} />
+
       </body>
     </html>
   )

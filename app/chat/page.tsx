@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { auth, db } from '@/lib/firebase'
+import { app, auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore'
+import { getMessaging, getToken } from 'firebase/messaging'
 import { Send, ArrowLeft, Loader2, MessageCircle, ShoppingBag, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 
@@ -20,10 +21,8 @@ function ChatConteudo() {
   const [loadingChats, setLoadingChats] = useState(true)
   const [isSending, setIsSending] = useState(false)
   
-  // NOVA REFERÊNCIA: Captura a caixa de mensagens inteira
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-  // FUNÇÃO BLINDADA DE SCROLL: Rola apenas a caixa, sem afetar a página
   const scrollToBottom = () => {
     setTimeout(() => {
       if (messagesContainerRef.current) {
@@ -42,6 +41,28 @@ function ChatConteudo() {
     })
     return () => unsubscribe()
   }, [router])
+
+  // 🚀 MÁGICA 1: PEDIR PERMISSÃO PARA NOTIFICAÇÕES (PUSH) COM A SUA CHAVE
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && user) {
+      try {
+        const messaging = getMessaging(app);
+        
+        getToken(messaging, { vapidKey: "BBE4apa4GG0lTsWHJvcHH85tbob3OMDHS5ZNEwLlVG2YIr2Vrj_Bgj0nEN-LxPKiXgvHoIN8Mz0Xax_E9vz7XAY" })
+          .then((currentToken) => {
+            if (currentToken) {
+              updateDoc(doc(db, 'users', user.uid), { 
+                fcmToken: currentToken 
+              }).catch(console.error);
+            }
+          }).catch((err) => {
+            console.log('Permissão de notificação negada ou erro:', err);
+          });
+      } catch (error) {
+        console.log("Erro ao inicializar o messaging", error);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) return
@@ -89,44 +110,33 @@ function ChatConteudo() {
         listaMensagens.push({ id: doc.id, ...doc.data() })
       })
       setMessages(listaMensagens)
-      
-      // Chama o nosso novo scroll perfeito sempre que chegar mensagem
       scrollToBottom()
     })
 
     return () => unsubscribe()
   }, [activeChatId, user, chats])
 
-
-  // ==========================================
-  // FILTRO ANTI-GOLPE (CÃO DE GUARDA)
-  // ==========================================
   const analisarMensagemSuspeita = (texto: string) => {
     const textoMin = texto.toLowerCase();
     
-    // Regra 1: Links (Phishing)
     const contemLink = /http|www\.|\.com|\.br/i.test(textoMin);
-    
-    // Regra 2: Pedido de PIX ou "Sinal" em dinheiro
     const contemPix = textoMin.includes('pix') || textoMin.includes('chave pix') || textoMin.includes('sinal') || textoMin.includes('cpf');
-    
-    // Regra 3: Tentativa de levar para fora do site
     const contemContato = textoMin.includes('me chama no zap') || textoMin.includes('whatsapp') || /\d{8,11}/.test(textoMin);
 
     if (contemLink) {
       return "⚠️ ALERTA DE SEGURANÇA: O Desapego Piauí nunca pede pagamentos por links externos. Não clique em links suspeitos que peçam dados ou senhas.";
     }
-    
     if (contemPix) {
       return "🚨 DICA DE SEGURANÇA: Nunca faça transferências ou PIX antecipado (sinal) para reservar um produto. Só pague no momento da entrega presencial.";
     }
-
     if (contemContato && !contemPix) {
       return "💡 DICA: Mantenha a negociação dentro do nosso chat para a sua segurança. Evite partilhar dados pessoais com desconhecidos.";
     }
 
-    return null; // A mensagem é segura
+    return null;
   }
+
+  const activeChatDetails = chats.find(c => c.id === activeChatId)
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -135,22 +145,17 @@ function ChatConteudo() {
     const text = newMessage.trim()
     setNewMessage('') 
     setIsSending(true)
-    
-    // Força o scroll assim que o utilizador clica em enviar, para ficar super rápido
     scrollToBottom()
 
     try {
-      // 1. Envia a mensagem do usuário normalmente
       await addDoc(collection(db, `chats/${activeChatId}/mensagens`), {
         texto: text,
         remetenteId: user.uid,
         criadoEm: serverTimestamp()
       })
 
-      // 2. O SISTEMA ANALISA SE HÁ GOLPE E INJETA UM AVISO!
       const avisoSeguranca = analisarMensagemSuspeita(text);
       if (avisoSeguranca) {
-        // Envia uma segunda mensagem assinada pelo 'SISTEMA' alertando o comprador
         await addDoc(collection(db, `chats/${activeChatId}/mensagens`), {
           texto: avisoSeguranca,
           remetenteId: 'SISTEMA',
@@ -158,13 +163,28 @@ function ChatConteudo() {
         })
       }
 
-      // 3. Atualiza o status do chat (Lido/Não Lido)
       await updateDoc(doc(db, 'chats', activeChatId), {
         ultimaMensagem: text,
         ultimoRemetenteId: user.uid,
         lido: false,
         atualizadoEm: serverTimestamp()
       })
+
+      // 🚀 MÁGICA 2: DISPARAR NOTIFICAÇÕES (E-MAIL E PUSH)
+      const destinatarioId = activeChatDetails?.participantes.find((id: string) => id !== user.uid);
+      
+      fetch('/api/notificacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          remetenteId: user.uid,
+          destinatarioId: destinatarioId,
+          mensagem: text,
+          tituloAnuncio: activeChatDetails?.anuncioTitulo,
+          chatId: activeChatId
+        })
+      }).catch(err => console.error("Erro ao chamar API de notificação:", err));
+
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error)
       alert("Falha ao enviar mensagem. Se o erro persistir, verifique as regras do Firebase.")
@@ -173,8 +193,6 @@ function ChatConteudo() {
     }
   }
 
-  const activeChatDetails = chats.find(c => c.id === activeChatId)
-  
   const getOtherParticipantName = (chat: any) => {
     if (!chat || !user) return 'Usuário'
     const otherId = chat.participantes.find((id: string) => id !== user.uid)
@@ -260,7 +278,7 @@ function ChatConteudo() {
                 )}
               </div>
 
-              {/* LISTA DE MENSAGENS COM A NOVA REFERÊNCIA APLICADA AQUI */}
+              {/* LISTA DE MENSAGENS */}
               <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/90 bg-blend-overlay scroll-smooth">
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-400 mt-10 text-sm bg-white py-2 px-4 rounded-full w-fit mx-auto shadow-sm border border-gray-100 font-medium">
@@ -268,7 +286,6 @@ function ChatConteudo() {
                   </div>
                 ) : (
                   messages.map((msg) => {
-                    // SE FOR UMA MENSAGEM DO SISTEMA ANTI-GOLPE:
                     if (msg.remetenteId === 'SISTEMA') {
                       return (
                         <div key={msg.id} className="flex justify-center my-4">
@@ -279,7 +296,6 @@ function ChatConteudo() {
                       )
                     }
 
-                    // Mensagens normais de usuários
                     const isMe = msg.remetenteId === user?.uid
                     return (
                       <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
