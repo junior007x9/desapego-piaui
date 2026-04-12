@@ -5,14 +5,13 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, AlertCircle, Sparkles, PlusCircle, Calendar } from 'lucide-react'
+import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle } from 'lucide-react'
 
 export default function MeusAnunciosPage() {
   const [ads, setAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<FirebaseUser | null>(null)
   
-  // Métricas do Vendedor
   const [totalViews, setTotalViews] = useState(0)
   const [activeAds, setActiveAds] = useState(0)
 
@@ -47,7 +46,6 @@ export default function MeusAnunciosPage() {
         const data = document.data()
         let statusFinal = data.status
 
-        // VERIFICAÇÃO AUTOMÁTICA DE VALIDADE
         if (data.expiraEm) {
           const dataExpiracao = new Date(data.expiraEm);
           if (dataExpiracao < agora && statusFinal === 'ativo') {
@@ -62,7 +60,6 @@ export default function MeusAnunciosPage() {
         if (statusFinal === 'ativo') ativos++
       }
 
-      // Ordenar os mais recentes primeiro
       list.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
 
       setAds(list)
@@ -76,15 +73,27 @@ export default function MeusAnunciosPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este anúncio permanentemente?")) return;
+    if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações dele no Google. Recomendamos usar o botão 'Marcar como Vendido'. Deseja excluir mesmo assim?")) return;
     
     try {
       await deleteDoc(doc(db, 'anuncios', id))
       setAds(ads.filter(ad => ad.id !== id))
-      alert("Anúncio excluído com sucesso!")
     } catch (error) {
-      console.error("Erro ao excluir:", error)
       alert("Ocorreu um erro ao excluir o anúncio.")
+    }
+  }
+
+  // 🚀 NOVA FUNÇÃO: MARCAR COMO VENDIDO (SOFT DELETE)
+  const handleMarkAsSold = async (id: string) => {
+    if (!confirm("Tem certeza que deseja marcar este anúncio como VENDIDO? Ele sairá das buscas, mas a página continuará a existir para quem tiver o link.")) return;
+    
+    try {
+      await updateDoc(doc(db, 'anuncios', id), { status: 'vendido' })
+      setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido' } : ad))
+      alert("Parabéns pela venda! 🎉")
+    } catch (error) {
+      console.error("Erro ao vender:", error)
+      alert("Ocorreu um erro ao atualizar o anúncio.")
     }
   }
 
@@ -148,16 +157,22 @@ export default function MeusAnunciosPage() {
               <div key={ad.id} className="bg-white p-4 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative overflow-hidden">
                 
                 {/* Imagem */}
-                <Link href={`/anuncio/${ad.id}`} className="shrink-0 relative w-full md:w-32 h-48 md:h-32 bg-gray-50 rounded-2xl overflow-hidden block">
+                <Link href={`/anuncio/${ad.id}`} className="shrink-0 relative w-full md:w-32 h-48 md:h-32 bg-gray-50 rounded-2xl overflow-hidden block group">
                   {ad.imagemUrl ? (
-                    <img src={ad.imagemUrl} alt={ad.titulo} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                    <img src={ad.imagemUrl} alt={ad.titulo} className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${ad.status === 'vendido' ? 'grayscale opacity-70' : ''}`} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>
                   )}
-                  {ad.planoId > 0 && (
+                  {ad.planoId > 0 && ad.status === 'ativo' && (
                     <div className="absolute top-2 left-2 bg-accent text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
                       <Sparkles size={10}/> VIP
                     </div>
+                  )}
+                  {/* Tarja de Vendido por cima da imagem */}
+                  {ad.status === 'vendido' && (
+                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white font-black text-xs tracking-widest uppercase rotate-[-15deg] border-2 border-white px-2 py-1">Vendido</span>
+                     </div>
                   )}
                 </Link>
 
@@ -169,6 +184,7 @@ export default function MeusAnunciosPage() {
                     </span>
                     <span className={`text-[10px] uppercase font-black px-2 py-1 rounded tracking-wider ${
                       ad.status === 'ativo' ? 'bg-green-100 text-green-700' :
+                      ad.status === 'vendido' ? 'bg-gray-200 text-gray-700' :
                       ad.status === 'pendente' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-600'
                     }`}>
@@ -177,10 +193,9 @@ export default function MeusAnunciosPage() {
                   </div>
                   
                   <Link href={`/anuncio/${ad.id}`}>
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1 hover:text-primary transition-colors line-clamp-2">{ad.titulo}</h3>
+                    <h3 className={`text-lg font-bold leading-tight mb-1 transition-colors line-clamp-2 ${ad.status === 'vendido' ? 'text-gray-500 line-through' : 'text-gray-900 hover:text-primary'}`}>{ad.titulo}</h3>
                   </Link>
 
-                  {/* 🚀 DATA DE CRIAÇÃO DO ANÚNCIO (NOVIDADE) */}
                   <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-3">
                      <Calendar size={12} />
                      <span>
@@ -189,11 +204,10 @@ export default function MeusAnunciosPage() {
                   </div>
                   
                   <div className="flex items-end justify-between mt-2">
-                    <p className="text-2xl font-black text-primary">
+                    <p className={`text-2xl font-black ${ad.status === 'vendido' ? 'text-gray-400' : 'text-primary'}`}>
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                     </p>
                     
-                    {/* Contador de Visualizações Individual */}
                     <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                        <Eye size={16} className="text-emerald-500" />
                        <span className="text-sm font-bold">{ad.visualizacoes || 0}</span>
@@ -201,28 +215,33 @@ export default function MeusAnunciosPage() {
                   </div>
                 </div>
 
-                {/* Ações Corrigidas */}
+                {/* Ações */}
                 <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
                   
-                  {/* Se estiver expirado ou pendente, mostra o botão de Renovar no topo */}
+                  {/* Se estiver ativo, mostra a opção de Marcar como Vendido (ESTRELA DO SHOW) */}
+                  {ad.status === 'ativo' && (
+                     <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
+                        <CheckCircle size={16}/> Já Vendi!
+                     </button>
+                  )}
+
                   {(ad.status === 'expirado' || ad.status === 'pendente') && (
                      <Link href={`/pagamento/${ad.id}`} className="flex-1 md:flex-none text-center bg-accent hover:bg-accent-dark text-white font-bold text-sm px-4 py-3 rounded-xl transition shadow-sm">
                        Renovar Plano
                      </Link>
                   )}
 
-                  <div className="flex gap-2 w-full">
-                    {/* Botão de Editar funcionando e apontando para a página correta */}
-                    <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-sm px-4 py-3 rounded-xl transition">
-                      <Edit size={16}/> Editar
-                    </Link>
-
-                    {/* Botão de Excluir */}
-                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 font-bold text-sm px-4 py-3 rounded-xl transition">
-                      <Trash2 size={16}/> Excluir
+                  <div className="flex gap-2 w-full mt-1">
+                    {ad.status !== 'vendido' && (
+                      <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs px-3 py-2.5 rounded-xl transition">
+                        <Edit size={14}/> Editar
+                      </Link>
+                    )}
+                    
+                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 font-bold text-xs px-3 py-2.5 rounded-xl transition">
+                      <Trash2 size={14}/> Excluir
                     </button>
                   </div>
-
                 </div>
 
               </div>
