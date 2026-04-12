@@ -37,7 +37,6 @@ export default function AdminPage() {
   const [planosVendidos, setPlanosVendidos] = useState({ diario: 0, semanal: 0, quinzenal: 0, mensal: 0 })
   const [filtroPlano, setFiltroPlano] = useState('todos')
 
-  // 🚀 ESTADOS DO NOVO SISTEMA DE RESPOSTA A FEEDBACKS
   const [replyingTo, setReplyingTo] = useState<any>(null)
   const [replyMessage, setReplyMessage] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
@@ -86,7 +85,8 @@ export default function AdminPage() {
             listaAds.push({ id: doc.id, ...data })
         }
 
-        if (data.planoId && data.planoId > 0 && data.status === 'ativo') {
+        // 🚀 CORREÇÃO DA RECEITA: Agora conta se o plano foi pago e o anúncio está ativo, vendido ou expirado!
+        if (data.planoId && data.planoId > 0 && (data.status === 'ativo' || data.status === 'vendido' || data.status === 'expirado')) {
            contagemPagos++
            if (data.planoId === 1) { totalMovimentado += 10.00; pDiario++ } 
            else if (data.planoId === 2 || data.planoId === 7) { totalMovimentado += 65.00; pSemanal++ } 
@@ -114,7 +114,6 @@ export default function AdminPage() {
       const snapshotFeedbacks = await getDocs(collection(db, 'feedbacks'))
       const listaFeedbacks: any[] = []
       snapshotFeedbacks.forEach(doc => listaFeedbacks.push({ id: doc.id, ...doc.data() }))
-      // Ordena feedbacks (os não respondidos primeiro, e mais recentes)
       listaFeedbacks.sort((a, b) => {
          if (a.respondido === b.respondido) return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
          return a.respondido ? 1 : -1;
@@ -198,7 +197,6 @@ export default function AdminPage() {
     } catch (error) {}
   }
 
-  // 🚀 NOVA FUNÇÃO: ENVIAR E-MAIL DE RESPOSTA DO FEEDBACK
   const handleSendReply = async () => {
     if (!replyMessage.trim() || !replyingTo) return;
     setSendingReply(true);
@@ -208,22 +206,22 @@ export default function AdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          emailDestino: replyingTo.email, // O e-mail de quem enviou o feedback
+          emailDestino: replyingTo.email, 
           mensagemOriginal: replyingTo.mensagem,
           resposta: replyMessage,
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        // Marca o feedback como respondido no banco de dados para você não se perder
         await updateDoc(doc(db, 'feedbacks', replyingTo.id), { respondido: true });
-        
         setFeedbacks(feedbacks.map(fb => fb.id === replyingTo.id ? { ...fb, respondido: true } : fb));
         alert("E-mail enviado com sucesso ao usuário! 🚀");
         setReplyingTo(null);
         setReplyMessage('');
       } else {
-        alert("Falha ao enviar e-mail. Verifique se o usuário preencheu o e-mail no feedback.");
+        alert(`Falha ao enviar e-mail: ${data.error}`);
       }
     } catch (error) {
       alert("Erro ao processar o envio.");
@@ -249,7 +247,6 @@ export default function AdminPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 relative">
       
-      {/* 🚀 MODAL DE RESPOSTA (Flutua na tela quando você clica em Responder) */}
       {replyingTo && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative animate-in fade-in zoom-in duration-200">
@@ -464,7 +461,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 🚀 CAIXA DE LEITURA DOS FEEDBACKS COM BOTÃO DE RESPONDER */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
             <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
@@ -502,7 +498,6 @@ export default function AdminPage() {
                       {fb.criadoEm?.toDate ? fb.criadoEm.toDate().toLocaleDateString('pt-BR') : 'Recente'}
                     </td>
                     <td className="p-4 text-center flex justify-center gap-1">
-                      {/* BOTÃO RESPONDER */}
                       <button 
                         onClick={() => setReplyingTo(fb)} 
                         title="Responder por E-mail"

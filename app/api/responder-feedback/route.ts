@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// Usa a mesma chave Resend que já instalamos antes!
-const resend = new Resend(process.env.RESEND_API_KEY || 'SUA_CHAVE_RESEND');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_Qro52Lm2_3P1YqJwtiztV8XMYVw25Vi4D');
 
 export async function POST(request: Request) {
   try {
@@ -12,9 +11,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'E-mail de destino obrigatório' }, { status: 400 });
     }
 
-    await resend.emails.send({
-      from: 'Desapego Piauí <contato@desapegopiaui.com.br>', 
+    // 🚀 ENVIO SEGURO:
+    // "from" usa o onboarding@resend.dev que o Resend permite gratuitamente
+    // "reply_to" faz com que qualquer resposta do cliente caia no seu Hotmail!
+    const { data, error } = await resend.emails.send({
+      from: 'Desapego Piauí <onboarding@resend.dev>', 
       to: [emailDestino],
+      reply_to: 'santos.junior12@hotmail.com',
       subject: 'Resposta ao seu Feedback - Equipe Desapego Piauí',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
@@ -38,11 +41,17 @@ export async function POST(request: Request) {
 
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            Equipe de Suporte - Desapego Piauí
+            Equipe de Suporte - Desapego Piauí<br>
+            Se desejar, pode responder diretamente a este e-mail.
           </p>
         </div>
       `
     });
+
+    if (error) {
+       console.error("Erro do Resend:", error);
+       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
