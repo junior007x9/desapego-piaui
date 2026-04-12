@@ -6,7 +6,6 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle, Sparkles } from 'lucide-react'
 
-// PLANOS (Inclui o Grátis oculto para validação do ID 0)
 const PLANOS = [
   { id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, fotos: 10, desc: 'Teste de 24 horas' },
   { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 10, desc: '1 dia de destaque' },
@@ -45,11 +44,11 @@ export default function PagamentoPage() {
         const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
         setPlano(planoEscolhido)
 
-        // SE O PLANO FOR O BRINDE, APROVA AUTOMATICAMENTE E PULA O PIX
+        // SE O PLANO FOR O BRINDE, APROVA AUTOMATICAMENTE
         if (planoEscolhido.valor === 0) {
            const dias = planoEscolhido.dias || 1;
            const dataExp = new Date();
-           dataExp.setDate(dataExp.getDate() + dias); // Válido por exatamente 24 horas (1 dia)
+           dataExp.setDate(dataExp.getDate() + dias); 
            
            await updateDoc(adDocRef, {
              status: 'ativo',
@@ -66,6 +65,7 @@ export default function PagamentoPage() {
            return;
         }
 
+        // Busca o email do comprador para o PIX
         let emailComprador = 'comprador@desapegopiaui.com.br';
         if (anuncio.vendedorId) {
             const userDoc = await getDoc(doc(db, 'users', anuncio.vendedorId));
@@ -74,6 +74,7 @@ export default function PagamentoPage() {
             }
         }
 
+        // Aciona a API para gerar o QR Code
         await gerarPix(anuncio, planoEscolhido, emailComprador)
       } catch (error) {
         console.error(error);
@@ -84,31 +85,20 @@ export default function PagamentoPage() {
     loadData()
   }, [params.id, router])
 
+  // 🚀 O "ROBÔ" QUE FICA OLHANDO O BANCO A CADA 3 SEGUNDOS
   useEffect(() => {
     if (!paymentData?.id || pagamentoAprovado) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/pix/status?id=${paymentData.id}&t=${Date.now()}`);
+        const res = await fetch(`/api/pix/status?id=${paymentData.id}&anuncioId=${params.id}&dias=${plano?.dias || 1}`);
         const data = await res.json();
         
         if (data.status === 'approved') {
           setPagamentoAprovado(true);
           clearInterval(interval);
 
-          try {
-            const adRef = doc(db, 'anuncios', params.id as string);
-            const dias = plano?.dias || 1;
-            const dataExp = new Date();
-            dataExp.setDate(dataExp.getDate() + dias);
-            
-            await updateDoc(adRef, {
-              status: 'ativo',
-              expiraEm: dataExp.toISOString(),
-              pagoEm: new Date().toISOString()
-            });
-          } catch(e) { console.error("Erro backup client-side:", e) }
-
+          // Redireciona o cliente para ver o anúncio no ar!
           setTimeout(() => {
             router.push(`/anuncio/${params.id}`);
           }, 3000); 
@@ -116,7 +106,7 @@ export default function PagamentoPage() {
       } catch (error) {
         console.error("Erro ao verificar pagamento:", error);
       }
-    }, 5000);
+    }, 3000); // 3 em 3 segundos
 
     return () => clearInterval(interval);
   }, [paymentData?.id, pagamentoAprovado, params.id, router, plano?.dias]);
@@ -128,7 +118,7 @@ export default function PagamentoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: planoDb.valor,
-          description: `DesapegoPI: ${anuncio.titulo} (${planoDb.nome})`,
+          description: `VIP ${planoDb.nome} - Desapego Piauí`,
           payerEmail: email,
           adId: anuncio.id
         })
@@ -157,7 +147,6 @@ export default function PagamentoPage() {
     }
   }
 
-  // TELA DE SUCESSO
   if (pagamentoAprovado) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4 text-center">
@@ -169,27 +158,23 @@ export default function PagamentoPage() {
         <h1 className="text-3xl md:text-4xl font-black text-green-700 mb-3 tracking-tight">
           {plano?.valor === 0 ? 'Plano Grátis Ativado!' : 'Pagamento Aprovado!'}
         </h1>
-        <p className="text-green-600 font-medium text-lg">O seu anúncio já está online. Redirecionando para ver o resultado...</p>
+        <p className="text-green-600 font-medium text-lg">O seu anúncio já está online. Redirecionando...</p>
       </div>
     )
   }
 
-  // TELA DE CARREGAMENTO
   if (loading && !paymentData && !erroPagamento) {
     return (
       <div className="min-h-screen flex items-center justify-center text-primary bg-gray-50 flex-col gap-4">
         <Loader2 className="animate-spin" size={48}/>
-        <p className="font-bold text-lg animate-pulse">Preparando seu anúncio...</p>
+        <p className="font-bold text-lg animate-pulse">Gerando PIX com Segurança...</p>
       </div>
     )
   }
 
-  // TELA DE PAGAMENTO (QR CODE)
   return (
     <div className="bg-gray-50 min-h-screen py-8 md:py-10 px-4 pb-24 md:pb-10">
       <div className="max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 relative">
-        
-        {/* CABEÇALHO ROXO ESCURO */}
         <div className="bg-primary p-8 text-center text-white relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <h1 className="text-2xl font-black mb-2 relative z-10 tracking-tight">Pagamento via PIX</h1>
@@ -211,7 +196,7 @@ export default function PagamentoPage() {
             <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl text-center flex flex-col items-center">
                <AlertTriangle size={48} className="mb-4 text-red-500" strokeWidth={2.5} />
                <h3 className="font-black text-xl mb-2">Erro ao gerar PIX</h3>
-               <p className="text-sm font-medium">Verifique se o seu Token do Mercado Pago está correto.</p>
+               <p className="text-sm font-medium">Verifique as configurações do Mercado Pago.</p>
             </div>
           ) : (
             <>
@@ -244,13 +229,13 @@ export default function PagamentoPage() {
 
               <div className="flex items-center justify-center gap-3 text-sm text-primary bg-primary/5 border border-primary/20 font-bold p-4 rounded-2xl shadow-sm">
                 <Loader2 className="animate-spin text-primary shrink-0" size={20} />
-                Aguardando a confirmação...
+                Aguardando a confirmação do banco...
               </div>
             </>
           )}
           
           <button onClick={() => router.back()} className="w-full text-gray-400 font-bold text-sm hover:text-primary transition-colors flex items-center justify-center gap-1.5 mt-8 pb-2">
-             <ArrowLeft size={16} strokeWidth={2.5} /> Voltar para o início
+             <ArrowLeft size={16} strokeWidth={2.5} /> Cancelar compra
           </button>
         </div>
       </div>

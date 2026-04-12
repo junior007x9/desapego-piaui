@@ -4,8 +4,18 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore'
-import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp, MessageSquarePlus } from 'lucide-react'
+import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Calendar, BarChart3, Crown, Filter } from 'lucide-react'
 import Link from 'next/link'
+
+// Helper para dar nome e cor aos planos na tabela
+const getInfoPlano = (planoId: number) => {
+  if (!planoId || planoId === 0) return { nome: 'Grátis', cor: 'bg-gray-100 text-gray-600 border-gray-200' }
+  if (planoId === 1) return { nome: 'Diário (1 Dia)', cor: 'bg-blue-50 text-blue-700 border-blue-200' }
+  if (planoId === 2 || planoId === 7) return { nome: 'Semanal (7 Dias)', cor: 'bg-green-50 text-green-700 border-green-200' }
+  if (planoId === 3 || planoId === 15) return { nome: 'Quinzenal (15 Dias)', cor: 'bg-purple-50 text-purple-700 border-purple-200' }
+  if (planoId === 4 || planoId === 30) return { nome: 'Mensal (30 Dias)', cor: 'bg-amber-50 text-amber-700 border-amber-200' }
+  return { nome: 'VIP Extra', cor: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -19,10 +29,15 @@ export default function AdminPage() {
 
   const [ads, setAds] = useState<any[]>([])
   const [denuncias, setDenuncias] = useState<any[]>([])
-  const [feedbacks, setFeedbacks] = useState<any[]>([]) // ESTADO DOS FEEDBACKS
+  const [feedbacks, setFeedbacks] = useState<any[]>([])
   
   const [adsPagos, setAdsPagos] = useState(0)
   const [receitaTotal, setReceitaTotal] = useState(0)
+  
+  const [planosVendidos, setPlanosVendidos] = useState({ diario: 0, semanal: 0, quinzenal: 0, mensal: 0 })
+  
+  // Filtro da Tabela
+  const [filtroPlano, setFiltroPlano] = useState('todos')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -56,6 +71,7 @@ export default function AdminPage() {
     try {
       let contagemPagos = 0
       let totalMovimentado = 0
+      let pDiario = 0, pSemanal = 0, pQuinzenal = 0, pMensal = 0
 
       // 1. BUSCAR ANÚNCIOS
       const snapshotAds = await getDocs(collection(db, 'anuncios'))
@@ -67,10 +83,19 @@ export default function AdminPage() {
 
         if (data.planoId && data.planoId > 0) {
            contagemPagos++
-           if (data.planoId === 1) totalMovimentado += 10.00
-           else if (data.planoId === 2 || data.planoId === 7) totalMovimentado += 65.00
-           else if (data.planoId === 3 || data.planoId === 15) totalMovimentado += 140.00
-           else if (data.planoId === 4 || data.planoId === 30) totalMovimentado += 280.00
+           if (data.planoId === 1) {
+               totalMovimentado += 10.00
+               pDiario++
+           } else if (data.planoId === 2 || data.planoId === 7) {
+               totalMovimentado += 65.00
+               pSemanal++
+           } else if (data.planoId === 3 || data.planoId === 15) {
+               totalMovimentado += 140.00
+               pQuinzenal++
+           } else if (data.planoId === 4 || data.planoId === 30) {
+               totalMovimentado += 280.00
+               pMensal++
+           }
         }
       })
       
@@ -78,6 +103,7 @@ export default function AdminPage() {
       setAds(listaAds)
       setAdsPagos(contagemPagos)
       setReceitaTotal(totalMovimentado)
+      setPlanosVendidos({ diario: pDiario, semanal: pSemanal, quinzenal: pQuinzenal, mensal: pMensal })
 
       // 2. BUSCAR DENÚNCIAS
       const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
@@ -91,7 +117,7 @@ export default function AdminPage() {
       listaDenuncias.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
       setDenuncias(listaDenuncias)
 
-      // 3. BUSCAR FEEDBACKS PARA LER NO PAINEL
+      // 3. BUSCAR FEEDBACKS
       const snapshotFeedbacks = await getDocs(collection(db, 'feedbacks'))
       const listaFeedbacks: any[] = []
       snapshotFeedbacks.forEach(doc => listaFeedbacks.push({ id: doc.id, ...doc.data() }))
@@ -155,6 +181,17 @@ export default function AdminPage() {
       alert("Erro ao ignorar denúncia.")
     }
   }
+
+  // Lógica do Filtro da Tabela
+  const adsFiltrados = ads.filter(ad => {
+    if (filtroPlano === 'todos') return true;
+    if (filtroPlano === 'gratis') return !ad.planoId || ad.planoId === 0;
+    if (filtroPlano === '1') return ad.planoId === 1;
+    if (filtroPlano === '2') return ad.planoId === 2 || ad.planoId === 7;
+    if (filtroPlano === '3') return ad.planoId === 3 || ad.planoId === 15;
+    if (filtroPlano === '4') return ad.planoId === 4 || ad.planoId === 30;
+    return true;
+  });
 
   if (loadingAuth) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-primary" size={40} /></div>
 
@@ -251,6 +288,33 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* DETALHAMENTO DE PLANOS VENDIDOS */}
+        <div className="mb-10">
+          <h2 className="text-lg font-black text-gray-800 mb-4 px-2">Desempenho dos Planos VIP</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm flex flex-col items-center text-center">
+                <div className="bg-blue-50 p-3 rounded-full text-blue-600 mb-3"><Calendar size={24}/></div>
+                <span className="text-xs text-gray-500 font-bold uppercase mb-1">Diário (R$ 10)</span>
+                <span className="text-2xl font-black text-gray-900">{planosVendidos.diario}</span>
+             </div>
+             <div className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm flex flex-col items-center text-center">
+                <div className="bg-green-50 p-3 rounded-full text-green-600 mb-3"><TrendingUp size={24}/></div>
+                <span className="text-xs text-gray-500 font-bold uppercase mb-1">Semanal (R$ 65)</span>
+                <span className="text-2xl font-black text-gray-900">{planosVendidos.semanal}</span>
+             </div>
+             <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm flex flex-col items-center text-center">
+                <div className="bg-purple-50 p-3 rounded-full text-purple-600 mb-3"><BarChart3 size={24}/></div>
+                <span className="text-xs text-gray-500 font-bold uppercase mb-1">Quinzenal (R$ 140)</span>
+                <span className="text-2xl font-black text-gray-900">{planosVendidos.quinzenal}</span>
+             </div>
+             <div className="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm flex flex-col items-center text-center">
+                <div className="bg-amber-50 p-3 rounded-full text-amber-600 mb-3"><Crown size={24}/></div>
+                <span className="text-xs text-gray-500 font-bold uppercase mb-1">Mensal (R$ 280)</span>
+                <span className="text-2xl font-black text-gray-900">{planosVendidos.mensal}</span>
+             </div>
+          </div>
+        </div>
+
         {/* DENÚNCIAS */}
         {denuncias.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border-2 border-red-100 overflow-hidden mb-10">
@@ -286,11 +350,22 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ANÚNCIOS */}
+        {/* ANÚNCIOS (COM FILTROS, TAGS DE PLANOS E DATA) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
-          <div className="p-6 border-b border-gray-100 bg-gray-50">
-            <h2 className="text-xl font-black text-gray-800">Todos os Anúncios ({ads.length})</h2>
+          <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-xl font-black text-gray-800 whitespace-nowrap">Anúncios ({adsFiltrados.length})</h2>
+            
+            {/* BARRA DE FILTROS */}
+            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+              <button onClick={() => setFiltroPlano('todos')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === 'todos' ? 'bg-primary text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>Todos</button>
+              <button onClick={() => setFiltroPlano('gratis')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === 'gratis' ? 'bg-gray-600 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>Grátis</button>
+              <button onClick={() => setFiltroPlano('1')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '1' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}>Diário</button>
+              <button onClick={() => setFiltroPlano('2')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '2' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-green-600 border border-green-200 hover:bg-green-50'}`}>Semanal</button>
+              <button onClick={() => setFiltroPlano('3')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '3' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-50'}`}>Quinzenal</button>
+              <button onClick={() => setFiltroPlano('4')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '4' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-amber-600 border border-amber-200 hover:bg-amber-50'}`}>Mensal</button>
+            </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-white text-gray-500 text-sm border-b border-gray-100">
@@ -298,18 +373,41 @@ export default function AdminPage() {
                   <th className="p-4 font-bold">Título</th>
                   <th className="p-4 font-bold">Plano</th>
                   <th className="p-4 font-bold">Preço</th>
+                  {/* 🚀 NOVA COLUNA: DATA */}
+                  <th className="p-4 font-bold">Data de Ativação</th>
                   <th className="p-4 font-bold text-center">Excluir</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {ads.map(ad => (
-                  <tr key={ad.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 font-bold text-gray-800">{ad.titulo}</td>
-                    <td className="p-4">{ad.planoId > 0 ? <span className="bg-emerald-100 text-emerald-700 text-xs font-black px-2 py-1 rounded-md">Pago</span> : <span className="text-gray-400 text-xs">Grátis</span>}</td>
-                    <td className="p-4 font-black text-primary">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}</td>
-                    <td className="p-4 text-center"><button onClick={() => handleDeleteAd(ad.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td>
+                {adsFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-gray-500 font-medium">Nenhum anúncio encontrado neste filtro.</td>
                   </tr>
-                ))}
+                ) : (
+                  adsFiltrados.map(ad => {
+                    const infoPlano = getInfoPlano(ad.planoId)
+                    return (
+                      <tr key={ad.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="p-4">
+                           <Link href={`/anuncio/${ad.id}`} target="_blank" className="font-bold text-gray-800 hover:text-primary transition-colors line-clamp-1">{ad.titulo}</Link>
+                        </td>
+                        <td className="p-4">
+                          <span className={`text-[10px] sm:text-xs font-black px-3 py-1.5 rounded-lg border ${infoPlano.cor} uppercase tracking-wider whitespace-nowrap`}>
+                            {infoPlano.nome}
+                          </span>
+                        </td>
+                        <td className="p-4 font-black text-gray-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}</td>
+                        {/* 🚀 NOVA CÉLULA: EXIBIÇÃO DA DATA */}
+                        <td className="p-4 text-sm font-medium text-gray-500 whitespace-nowrap">
+                          {ad.criadoEm?.toDate ? ad.criadoEm.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '--'}
+                        </td>
+                        <td className="p-4 text-center">
+                          <button onClick={() => handleDeleteAd(ad.id)} className="text-gray-400 hover:bg-red-50 hover:text-red-500 p-2 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>

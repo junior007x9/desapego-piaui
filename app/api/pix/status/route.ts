@@ -1,61 +1,61 @@
-export const dynamic = 'force-dynamic';
-
 import { NextResponse } from 'next/server';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import admin from 'firebase-admin';
 
-const DIAS_POR_PLANO: Record<number, number> = {
-  5: 1, 1: 1, 2: 7, 3: 15, 4: 30
-};
+// Inicializa o Firebase Admin com a sua chave mestre (A mesma que configuramos antes)
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 export async function GET(request: Request) {
-  const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
   const { searchParams } = new URL(request.url);
   const paymentId = searchParams.get('id');
+  const anuncioId = searchParams.get('anuncioId');
+  const dias = parseInt(searchParams.get('dias') || '1');
 
-  if (!paymentId || !MP_ACCESS_TOKEN) {
-    return NextResponse.json({ error: 'Faltam dados' }, { status: 400 });
+  if (!paymentId || !anuncioId) {
+    return NextResponse.json({ error: 'Faltam parâmetros' }, { status: 400 });
   }
 
   try {
-    const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
-    const payment = new Payment(client);
-    const paymentInfo = await payment.get({ id: Number(paymentId) });
+    // 1. Pergunta diretamente ao Mercado Pago se este PIX foi pago
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
+      }
+    });
 
-    if (paymentInfo.status === 'approved') {
-      // MÁGICA DE PROTEÇÃO: Isolamos a gravação num Try/Catch!
-      // Se a base de dados bloquear o servidor por falta de login, ele ignora o erro e continua!
-      try {
-        const adId = paymentInfo.external_reference;
-        if (adId) {
-          const adRef = doc(db, 'anuncios', adId.toString());
-          const adSnap = await getDoc(adRef);
-          if (adSnap.exists()) {
-            const adData = adSnap.data();
-            if (adData.status === 'pendente') {
-              const planoId = adData.planoId || 2;
-              const dias = DIAS_POR_PLANO[planoId] || 30;
-              const dataExp = new Date();
-              dataExp.setDate(dataExp.getDate() + dias);
+    const data = await response.json();
 
-              await updateDoc(adRef, {
-                status: 'ativo',
-                expiraEm: dataExp.toISOString(),
-                pagoEm: new Date().toISOString()
-              });
-            }
-          }
-        }
-      } catch (firebaseError) {
-        console.warn("Base de dados bloqueou o servidor (sem stress, a tela vai assumir):", firebaseError);
+    // 2. Se o Mercado Pago disser que foi Aprovado
+    if (data.status === 'approved') {
+      
+      const db = admin.firestore();
+      const adRef = db.collection('anuncios').doc(anuncioId);
+      const adDoc = await adRef.get();
+
+      // 3. O SERVIDOR ativa o anúncio de forma segura!
+      if (adDoc.exists && adDoc.data()?.status !== 'ativo') {
+        const dataExp = new Date();
+        dataExp.setDate(dataExp.getDate() + dias);
+
+        await adRef.update({
+          status: 'ativo',
+          expiraEm: dataExp.toISOString(),
+          pagoEm: new Date().toISOString()
+        });
+        console.log(`✅ Anúncio ${anuncioId} ativado pelo servidor!`);
       }
     }
 
-    // A RESPOSTA MAIS IMPORTANTE: Agora ele avisa a tela SIM OU SIM, sem crashar!
-    return NextResponse.json({ status: paymentInfo.status });
+    return NextResponse.json({ status: data.status });
   } catch (error) {
-    console.error("Erro ao comunicar com Mercado Pago:", error);
-    return NextResponse.json({ error: 'Erro no servidor' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
