@@ -25,6 +25,11 @@ const PLANOS_BASE = [
   { id: 4, nome: 'Mensal', dias: 30, valor: 280, desc: '30 dias de destaque' }
 ]
 
+// 🚀 FUNÇÃO PARA REMOVER ACENTOS E NORMALIZAR TEXTOS
+const removerAcentos = (texto: string) => {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
 // COMPRESSOR MÁGICO DE IMAGENS EM ALTA DEFINIÇÃO
 const comprimirImagem = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -183,8 +188,14 @@ export default function AnunciarPage() {
     e.preventDefault()
     if (isFormIncompleto) return
 
-    const textoParaVerificar = `${titulo.toLowerCase()} ${descricao.toLowerCase()}`;
-    const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => textoParaVerificar.includes(palavra));
+    // 🚀 NOVA LÓGICA DE VALIDAÇÃO COM REGEX E REMOÇÃO DE ACENTOS
+    const textoParaVerificar = removerAcentos(`${titulo} ${descricao}`);
+    const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => {
+      const palavraLimpa = removerAcentos(palavra);
+      // \b garante que apenas a palavra exata seja verificada
+      const regex = new RegExp(`\\b${palavraLimpa}\\b`, 'gi');
+      return regex.test(textoParaVerificar);
+    });
 
     if (temPalavraProibida) {
       alert("⚠️ BLOQUEADO: Seu anúncio contém palavras proibidas que violam nossos Termos de Segurança e Uso. Por favor, altere o título e a descrição.");
