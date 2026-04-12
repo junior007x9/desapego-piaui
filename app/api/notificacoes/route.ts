@@ -5,8 +5,8 @@ import admin from 'firebase-admin';
 // Inicializa a Resend
 const resend = new Resend(process.env.RESEND_API_KEY || 'SUA_CHAVE_RESEND');
 
-// Inicializa o Firebase Admin SDK (A Chave Mestra para Push)
-if (!admin.apps.length) {
+// 🚀 Trava de Segurança: Só inicializa se a chave existir (evita erro no Build da Vercel)
+if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
@@ -24,6 +24,11 @@ export async function POST(request: Request) {
 
     if (!destinatarioId) {
       return NextResponse.json({ error: 'Falta o ID do destinatário' }, { status: 400 });
+    }
+
+    // Como bloqueamos a inicialização no build, precisamos garantir que ela existe aqui na vida real
+    if (!admin.apps.length) {
+       return NextResponse.json({ error: 'Servidor Firebase não inicializado. Verifique as chaves na Vercel.' }, { status: 500 });
     }
 
     // 1. Vai no Banco de Dados buscar os dados do Vendedor (Destinatário)

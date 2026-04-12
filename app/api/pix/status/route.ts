@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// Inicializa o Firebase Admin com a sua chave mestre (A mesma que configuramos antes)
-if (!admin.apps.length) {
+// 🚀 Trava de Segurança: Só inicializa se a chave existir (evita erro no Build da Vercel)
+if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
@@ -20,6 +20,11 @@ export async function GET(request: Request) {
 
   if (!paymentId || !anuncioId) {
     return NextResponse.json({ error: 'Faltam parâmetros' }, { status: 400 });
+  }
+
+  // Como bloqueamos a inicialização no build, precisamos garantir que ela existe aqui na vida real
+  if (!admin.apps.length) {
+     return NextResponse.json({ error: 'Servidor Firebase não inicializado. Verifique as chaves na Vercel.' }, { status: 500 });
   }
 
   try {
@@ -56,6 +61,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ status: data.status });
   } catch (error) {
+    console.error('Erro na API de status do PIX:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
