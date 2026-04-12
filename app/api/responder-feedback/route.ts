@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_Qro52Lm2_3P1YqJwtiztV8XMYVw25Vi4D');
+const resend = new Resend(process.env.RESEND_API_KEY || 'SUA_CHAVE_RESEND');
 
 export async function POST(request: Request) {
   try {
@@ -12,12 +12,11 @@ export async function POST(request: Request) {
     }
 
     // 🚀 ENVIO SEGURO:
-    // "from" usa o onboarding@resend.dev que o Resend permite gratuitamente
-    // "reply_to" faz com que qualquer resposta do cliente caia no seu Hotmail!
+    // Corrigido para "replyTo" (com T maiúsculo) para o TypeScript aprovar!
     const { data, error } = await resend.emails.send({
       from: 'Desapego Piauí <onboarding@resend.dev>', 
       to: [emailDestino],
-      reply_to: 'santos.junior12@hotmail.com',
+      replyTo: 'santos.junior12@hotmail.com',
       subject: 'Resposta ao seu Feedback - Equipe Desapego Piauí',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
