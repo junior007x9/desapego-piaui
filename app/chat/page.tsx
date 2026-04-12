@@ -8,6 +8,7 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp,
 import { getMessaging, getToken } from 'firebase/messaging'
 import { Send, ArrowLeft, Loader2, MessageCircle, ShoppingBag, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast' // 🚀 IMPORTAÇÃO DO AVISO NA TELA
 
 function ChatConteudo() {
   const searchParams = useSearchParams()
@@ -22,6 +23,7 @@ function ChatConteudo() {
   const [isSending, setIsSending] = useState(false)
   
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const isFirstLoad = useRef(true) // 🚀 EVITA APITAR NAS MENSAGENS ANTIGAS AO ABRIR A PÁGINA
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -42,7 +44,7 @@ function ChatConteudo() {
     return () => unsubscribe()
   }, [router])
 
-  // 🚀 MÁGICA 1: PEDIR PERMISSÃO PARA NOTIFICAÇÕES (PUSH) COM A SUA CHAVE
+  // PEDIR PERMISSÃO PARA NOTIFICAÇÕES (PUSH)
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && user) {
       try {
@@ -64,6 +66,7 @@ function ChatConteudo() {
     }
   }, [user]);
 
+  // CARREGAR CHATS E DISPARAR O AVISO NA TELA (TOAST)
   useEffect(() => {
     if (!user) return
 
@@ -74,6 +77,21 @@ function ChatConteudo() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const listaChats: any[] = []
+
+      // 🚀 AQUI ACONTECE A MÁGICA DO AVISO NA TELA
+      if (!isFirstLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'modified') {
+            const chatData = change.doc.data();
+            // Se a última mensagem não for minha e estiver como não lida, apita!
+            if (chatData.ultimoRemetenteId && chatData.ultimoRemetenteId !== user.uid && chatData.lido === false) {
+              toast.success(`Nova mensagem: ${chatData.anuncioTitulo}`);
+            }
+          }
+        });
+      }
+      isFirstLoad.current = false;
+
       snapshot.forEach((doc) => {
         listaChats.push({ id: doc.id, ...doc.data() })
       })
@@ -170,7 +188,7 @@ function ChatConteudo() {
         atualizadoEm: serverTimestamp()
       })
 
-      // 🚀 MÁGICA 2: DISPARAR NOTIFICAÇÕES (E-MAIL E PUSH)
+      // DISPARAR NOTIFICAÇÕES (E-MAIL E PUSH) VIA BACKEND
       const destinatarioId = activeChatDetails?.participantes.find((id: string) => id !== user.uid);
       
       fetch('/api/notificacoes', {
