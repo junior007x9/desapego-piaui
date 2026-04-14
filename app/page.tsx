@@ -230,11 +230,15 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => (
-              <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group bg-white rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col shadow-sm relative ${ad.planoId > 0 ? 'border-primary/30 shadow-[0_4px_20px_rgba(76,29,149,0.05)]' : 'border-gray-100'}`}>
+              <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
+                ad.planoId > 0 
+                  ? 'border-2 border-amber-400 bg-gradient-to-b from-amber-50/60 to-white shadow-[0_4px_15px_rgba(251,191,36,0.25)] hover:-translate-y-1' 
+                  : 'bg-white border-gray-100 shadow-sm'
+              }`}>
                 
                 {ad.planoId > 0 && (
-                  <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
-                    <Sparkles size={10}/> Patrocinado
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
+                    <Sparkles size={12}/> Destaque VIP
                   </div>
                 )}
 
@@ -252,7 +256,7 @@ export default function Home() {
                   </span>
                   <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
                   
-                  <p className="text-lg md:text-xl font-black text-primary mt-auto">
+                  <p className={`text-lg md:text-xl font-black mt-auto ${ad.planoId > 0 ? 'text-amber-600' : 'text-primary'}`}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                   </p>
                   
