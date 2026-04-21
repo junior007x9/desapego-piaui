@@ -79,13 +79,14 @@ export default function AdminPage() {
       snapshotAds.forEach(doc => {
         const data = doc.data()
         
-        if (data.status === 'em_analise') {
+        // CORREÇÃO: Puxa anúncios em análise e os que ficaram pendentes pelo gateway
+        if (data.status === 'em_analise' || data.status === 'pendente') {
             listaPendentes.push({ id: doc.id, ...data })
         } else {
             listaAds.push({ id: doc.id, ...data })
         }
 
-        // 🚀 CORREÇÃO DA RECEITA: Agora conta se o plano foi pago e o anúncio está ativo, vendido ou expirado!
+        // CORREÇÃO DA RECEITA: Agora conta se o plano foi pago e o anúncio está ativo, vendido ou expirado
         if (data.planoId && data.planoId > 0 && (data.status === 'ativo' || data.status === 'vendido' || data.status === 'expirado')) {
            contagemPagos++
            if (data.planoId === 1) { totalMovimentado += 10.00; pDiario++ } 
