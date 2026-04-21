@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore'
+// 🚀 CORREÇÃO 1: Adicionado o addDoc na importação do firestore
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle } from 'lucide-react'
@@ -76,21 +77,55 @@ export default function MeusAnunciosPage() {
     if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações dele no Google. Recomendamos usar o botão 'Marcar como Vendido'. Deseja excluir mesmo assim?")) return;
     
     try {
+      // Procura qual é o anúncio para podermos salvar o nome dele no log
+      const adToLog = ads.find(a => a.id === id);
+      
       await deleteDoc(doc(db, 'anuncios', id))
       setAds(ads.filter(ad => ad.id !== id))
+      
+      // 🚀 CORREÇÃO 2: Gravar o log da exclusão no sistema
+      if (user) {
+         try {
+            await addDoc(collection(db, 'logs'), {
+               usuarioId: user.uid,
+               acao: 'EXCLUIU',
+               tituloAnuncio: adToLog?.titulo || "Anúncio Removido",
+               criadoEm: new Date()
+            });
+         } catch (logError) {
+            console.error("Erro ao salvar log de exclusão", logError)
+         }
+      }
+      
     } catch (error) {
       alert("Ocorreu um erro ao excluir o anúncio.")
     }
   }
 
-  // 🚀 NOVA FUNÇÃO: MARCAR COMO VENDIDO (SOFT DELETE)
   const handleMarkAsSold = async (id: string) => {
     if (!confirm("Tem certeza que deseja marcar este anúncio como VENDIDO? Ele sairá das buscas, mas a página continuará a existir para quem tiver o link.")) return;
     
     try {
+      const adToLog = ads.find(a => a.id === id);
+      
       await updateDoc(doc(db, 'anuncios', id), { status: 'vendido' })
       setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido' } : ad))
       alert("Parabéns pela venda! 🎉")
+      
+      // 🚀 CORREÇÃO 3: Gravar o log indicando que marcou como vendido
+      if (user) {
+         try {
+            await addDoc(collection(db, 'logs'), {
+               usuarioId: user.uid,
+               acao: 'EDITOU', // Usamos "EDITOU" para manter o padrão de cores do painel admin
+               tituloAnuncio: adToLog?.titulo ? `${adToLog.titulo} (Vendido)` : "Anúncio Marcado como Vendido",
+               criadoEm: new Date()
+            });
+         } catch (logError) {
+            console.error("Erro ao salvar log de edição", logError)
+         }
+      }
+      
     } catch (error) {
       console.error("Erro ao vender:", error)
       alert("Ocorreu um erro ao atualizar o anúncio.")
@@ -153,7 +188,7 @@ export default function MeusAnunciosPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {ads.map((ad) => (
+             {ads.map((ad) => (
               <div key={ad.id} className="bg-white p-4 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative overflow-hidden">
                 
                 {/* Imagem */}
@@ -199,13 +234,13 @@ export default function MeusAnunciosPage() {
                   <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-3">
                      <Calendar size={12} />
                      <span>
-                        {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds * 1000).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
+                        {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds ? ad.criadoEm.seconds * 1000 : ad.criadoEm).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
                      </span>
                   </div>
                   
                   <div className="flex items-end justify-between mt-2">
                     <p className={`text-2xl font-black ${ad.status === 'vendido' ? 'text-gray-400' : 'text-primary'}`}>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}
                     </p>
                     
                     <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
@@ -218,7 +253,7 @@ export default function MeusAnunciosPage() {
                 {/* Ações */}
                 <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
                   
-                  {/* Se estiver ativo, mostra a opção de Marcar como Vendido (ESTRELA DO SHOW) */}
+                  {/* Se estiver ativo, mostra a opção de Marcar como Vendido */}
                   {ad.status === 'ativo' && (
                      <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
                         <CheckCircle size={16}/> Já Vendi!

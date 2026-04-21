@@ -71,13 +71,16 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
+          
+          // CONVERSÃO SEGURA PARA NÚMERO
+          const plano = Number(data.planoId) || 0;
 
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora) isExpired = true;
           } else if (data.criadoEm) {
             const dataCriacao = new Date(data.criadoEm.seconds * 1000);
-            const diasDuracao = data.planoId === 1 ? 1 : data.planoId === 2 ? 7 : data.planoId === 3 ? 15 : data.planoId === 4 ? 30 : 1;
+            const diasDuracao = plano === 1 ? 1 : plano === 2 ? 7 : plano === 3 ? 15 : plano === 4 ? 30 : 1;
             dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
             if (dataCriacao < agora) isExpired = true;
           }
@@ -88,18 +91,20 @@ export default function Home() {
           }
 
           if (statusFinal === 'ativo') {
-            const adFinal = { id: document.id, ...data }
+            const adFinal = { id: document.id, ...data, planoId: plano }
             listGeral.push(adFinal)
             
-            if (data.planoId && data.planoId > 0) {
+            if (plano > 0) {
               listVIP.push(adFinal)
             }
           }
         }
         
         listGeral.sort((a, b) => {
-          if ((b.planoId || 0) !== (a.planoId || 0)) {
-            return (b.planoId || 0) - (a.planoId || 0);
+          const planoA = Number(a.planoId) || 0;
+          const planoB = Number(b.planoId) || 0;
+          if (planoB !== planoA) {
+            return planoB - planoA;
           }
           return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
         })
@@ -139,7 +144,6 @@ export default function Home() {
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           
-          {/* 🚀 CONTADOR FOI MOVIDO PARA CÁ: BEM DISCRETO NO TOPO DO BANNER */}
           <ContadorEstatisticas />
 
           <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
@@ -229,47 +233,50 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-            {ads.map((ad) => (
-              <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-                ad.planoId > 0 
-                  ? 'border-2 border-amber-400 bg-gradient-to-b from-amber-50/60 to-white shadow-[0_4px_15px_rgba(251,191,36,0.25)] hover:-translate-y-1' 
-                  : 'bg-white border-gray-100 shadow-sm'
-              }`}>
-                
-                {ad.planoId > 0 && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
-                    <Sparkles size={12}/> Destaque VIP
-                  </div>
-                )}
+            {ads.map((ad) => {
+              const plano = Number(ad.planoId) || 0;
+              return (
+                <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
+                  plano > 0 
+                    ? 'border-2 border-amber-400 bg-gradient-to-b from-amber-50/60 to-white shadow-[0_4px_15px_rgba(251,191,36,0.25)] hover:-translate-y-1' 
+                    : 'bg-white border-gray-100 shadow-sm'
+                }`}>
+                  
+                  {plano > 0 && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
+                      <Sparkles size={12}/> Destaque VIP
+                    </div>
+                  )}
 
-                <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
-                   {ad.imagemUrl ? (
-                      <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                   ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
-                   )}
-                </div>
-                
-                <div className="p-3 md:p-4 flex flex-col flex-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
-                    {ad.categoria}
-                  </span>
-                  <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
-                  
-                  <p className={`text-lg md:text-xl font-black mt-auto ${ad.planoId > 0 ? 'text-amber-600' : 'text-primary'}`}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                  </p>
-                  
-                  <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                    <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
-                    <span className="flex items-center gap-0.5 truncate max-w-[60%]">
-                       <MapPin size={10} className="text-accent shrink-0"/> 
-                       <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
-                    </span>
+                  <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
+                     {ad.imagemUrl ? (
+                        <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                     ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+                     )}
                   </div>
-                </div>
-              </Link>
-            ))}
+                  
+                  <div className="p-3 md:p-4 flex flex-col flex-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
+                      {ad.categoria}
+                    </span>
+                    <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
+                    
+                    <p className={`text-lg md:text-xl font-black mt-auto ${plano > 0 ? 'text-amber-600' : 'text-primary'}`}>
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+                    </p>
+                    
+                    <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
+                      <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
+                      <span className="flex items-center gap-0.5 truncate max-w-[60%]">
+                         <MapPin size={10} className="text-accent shrink-0"/> 
+                         <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

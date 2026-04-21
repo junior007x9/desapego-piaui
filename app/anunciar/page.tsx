@@ -148,7 +148,6 @@ export default function AnunciarPage() {
     }
   }
 
-  // 🚀 ADICIONADA A VALIDAÇÃO DO NOVO CAMPO DE LOCALIZAÇÃO
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || planoId === null;
 
   const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
@@ -188,11 +187,9 @@ export default function AnunciarPage() {
     e.preventDefault()
     if (isFormIncompleto) return
 
-    // 🚀 NOVA LÓGICA DE VALIDAÇÃO COM REGEX E REMOÇÃO DE ACENTOS
     const textoParaVerificar = removerAcentos(`${titulo} ${descricao}`);
     const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => {
       const palavraLimpa = removerAcentos(palavra);
-      // \b garante que apenas a palavra exata seja verificada
       const regex = new RegExp(`\\b${palavraLimpa}\\b`, 'gi');
       return regex.test(textoParaVerificar);
     });
@@ -205,7 +202,6 @@ export default function AnunciarPage() {
     setLoading(true)
     try {
       
-      // 🚀 CONVERSÃO DO PREÇO COM MÁSCARA PARA O BANCO DE DADOS
       let precoNumerico = 0
       if (preco) {
         const precoLimpo = preco.toString().replace(/\./g, '').replace(',', '.')
@@ -266,7 +262,7 @@ export default function AnunciarPage() {
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
-        preco: precoNumerico, // 🚀 SALVA O NÚMERO LIMPO NO BANCO
+        preco: precoNumerico,
         categoria,
         localizacao,
         fotos: urls,
@@ -278,6 +274,20 @@ export default function AnunciarPage() {
         criadoEm: serverTimestamp(),
         expiraEm: dataExpiracaoISO
       })
+
+      // 🚀 NOVO: Gravar log indicando a CRIAÇÃO do anúncio
+      if (user) {
+         try {
+            await addDoc(collection(db, 'logs'), {
+               usuarioId: user.uid,
+               acao: 'CRIOU',
+               tituloAnuncio: titulo,
+               criadoEm: new Date()
+            });
+         } catch (logError) {
+            console.error("Erro ao salvar log de criação do anúncio", logError);
+         }
+      }
 
       if (statusFinal === 'ativo') {
         fetch('/api/email', {
@@ -389,7 +399,6 @@ export default function AnunciarPage() {
             <input required type="text" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: Teresina - Dirceu" />
           </div>
 
-          {/* 🚀 NOVO CAMPO DE PREÇO COM MÁSCARA */}
           <div>
             <label className="block text-primary font-bold mb-2">Preço (R$)*</label>
             <div className="relative">
