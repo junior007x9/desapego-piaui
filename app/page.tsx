@@ -61,8 +61,8 @@ export default function Home() {
   useEffect(() => {
     async function fetchRecentAds() {
       try {
-        // Aumentei o limite para garantir que puxa bastante anúncios recentes e vips
-        const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(50))
+        // 🚀 AUMENTADO PARA 200: Garante que os VIPs antigos mas recém-pagos sejam encontrados
+        const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(200))
         const snap = await getDocs(q)
         const listGeral: any[] = []
         const listVIP: any[] = []
@@ -93,28 +93,43 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            // 🚀 TODOS OS ANÚNCIOS VÃO PARA A LISTA GERAL (Incluindo VIPs)
             listGeral.push(adFinal)
             
-            // 🚀 APENAS OS VIPS VÃO PARA O CARROSSEL DO TOPO
-            if (plano > 0) {
+            // 🚀 SE FOR VIP (Plano 1 a 30, ignorando o 99 que é o reset do grátis), vai para o Carrossel
+            if (plano > 0 && plano !== 99) {
               listVIP.push(adFinal)
             }
           }
         }
         
-        // Ordena a lista geral: VIPs primeiro (por plano mais caro), depois por data mais recente
+        // 🚀 ORDENAÇÃO INFALÍVEL: Joga todos os VIPs para o TOPO da página
         listGeral.sort((a, b) => {
           const planoA = Number(a.planoId) || 0;
           const planoB = Number(b.planoId) || 0;
-          if (planoB !== planoA) {
-            return planoB - planoA;
+          const isVipA = (planoA > 0 && planoA !== 99) ? 1 : 0;
+          const isVipB = (planoB > 0 && planoB !== 99) ? 1 : 0;
+          
+          // Se um for VIP e o outro não, o VIP vence e sobe
+          if (isVipB !== isVipA) {
+            return isVipB - isVipA; 
           }
-          return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
+          
+          // Se empatar (os dois são vips ou os dois são grátis), ordena pela data de APROVAÇÃO (pagoEm) ou CRIAÇÃO
+          const timeA = a.pagoEm ? new Date(a.pagoEm).getTime() : (a.criadoEm?.seconds * 1000 || 0);
+          const timeB = b.pagoEm ? new Date(b.pagoEm).getTime() : (b.criadoEm?.seconds * 1000 || 0);
+          return timeB - timeA;
         })
         
-        setVipAds(listVIP.slice(0, 10)) // Mostra até 10 VIPs no carrossel do topo
-        setAds(listGeral.slice(0, 24)) // Mostra até 24 anúncios (VIPs + Grátis misturados) nos recentes
+        // Ordena os VIPs do carrossel pela data em que foram ativados (para os recém-aprovados ficarem primeiro)
+        listVIP.sort((a, b) => {
+          const timeA = a.pagoEm ? new Date(a.pagoEm).getTime() : (a.criadoEm?.seconds * 1000 || 0);
+          const timeB = b.pagoEm ? new Date(b.pagoEm).getTime() : (b.criadoEm?.seconds * 1000 || 0);
+          return timeB - timeA;
+        });
+        
+        // 🚀 Mostramos até 15 VIPs no topo e 40 anúncios no total em baixo!
+        setVipAds(listVIP.slice(0, 15)) 
+        setAds(listGeral.slice(0, 40)) 
       } catch (error) {
         console.error("Erro ao buscar anúncios recentes:", error)
       } finally {
@@ -186,7 +201,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🌟 CARROSSEL DE VIPS NO TOPO */}
+        {/* CARROSSEL VIP NO TOPO */}
         {!loading && vipAds.length > 0 && (
           <div className="mb-12 mt-6">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight mb-4 px-2">
@@ -217,7 +232,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* 📰 LISTA GERAL DE ANÚNCIOS RECENTES (INCLUI VIPS) */}
         <div className="flex items-center justify-between mb-6 px-2 mt-6">
            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
               Anúncios Recentes
@@ -227,6 +241,7 @@ export default function Home() {
            </Link>
         </div>
 
+        {/* LISTA GERAL DE ANÚNCIOS (COM OS VIPS FORÇADOS NO TOPO) */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
@@ -241,16 +256,19 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => {
               const plano = Number(ad.planoId) || 0;
+              // Tratamento para garantir que o plano 99 (reset grátis) não pareça VIP
+              const isVip = plano > 0 && plano !== 99;
+
               return (
                 <Link href={`/anuncio/${ad.id}`} key={`recent-${ad.id}`} className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-                  plano > 0 
+                  isVip 
                     ? 'border-2 border-amber-400 bg-gradient-to-b from-amber-50/60 to-white shadow-[0_4px_15px_rgba(251,191,36,0.25)] hover:-translate-y-1' 
                     : 'bg-white border-gray-100 shadow-sm'
                 }`}>
                   
-                  {plano > 0 && (
+                  {isVip && (
                     <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
-                      <Sparkles size={12}/> Destaque VIP
+                      <Sparkles size={12}/> VIP
                     </div>
                   )}
 
@@ -268,7 +286,7 @@ export default function Home() {
                     </span>
                     <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
                     
-                    <p className={`text-lg md:text-xl font-black mt-auto ${plano > 0 ? 'text-amber-600' : 'text-primary'}`}>
+                    <p className={`text-lg md:text-xl font-black mt-auto ${isVip ? 'text-amber-600' : 'text-primary'}`}>
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                     </p>
                     
