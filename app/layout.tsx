@@ -99,7 +99,7 @@ export default function RootLayout({
           id="adsbygoogle-init"
           strategy="afterInteractive"
           crossOrigin="anonymous"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6421974780587285"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5151678673256465"
         />
       </head>
 
