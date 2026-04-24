@@ -67,6 +67,9 @@ export default function RootLayout({
         {/* GOOGLE SITE VERIFICATION (Aprovação do Search Console) */}
         <meta name="google-site-verification" content="MpSBIeObHIeNjSIanheXLRqWVLvCtzPsu2Qtv2Ydo8E" />
 
+        {/* 👇 METATAG PARA VERIFICAÇÃO DO ADSENSE 👇 */}
+        <meta name="google-adsense-account" content="ca-pub-5151678673256465" />
+
         {/* GOOGLE ANALYTICS 4 */}
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -94,7 +97,7 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* GOOGLE ADSENSE (Monetização) */}
+        {/* GOOGLE ADSENSE SCRIPT (Monetização) */}
         <Script
           id="adsbygoogle-init"
           strategy="afterInteractive"
