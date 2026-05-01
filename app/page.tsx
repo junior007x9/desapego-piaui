@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles } from 'lucide-react'
 import ContadorEstatisticas from '@/components/ContadorEstatisticas'
+import AdBanner from '@/components/AdBanner' // 🚀 IMPORTAÇÃO DO BANNER DO ADSENSE
 
 const CATEGORIAS_OLX = [
   { nome: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, slug: 'Imóveis', cor: "bg-blue-100 text-blue-600" },
@@ -199,6 +200,11 @@ export default function Home() {
               </Link>
             ))}
           </div>
+        </div>
+
+        {/* 🚀 BANNER ADSENSE MANUAL */}
+        <div className="my-6">
+          <AdBanner dataAdSlot="8830353493" />
         </div>
 
         {/* CARROSSEL VIP NO TOPO */}
