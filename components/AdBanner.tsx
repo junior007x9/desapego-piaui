@@ -10,11 +10,9 @@ type AdBannerProps = {
 
 export default function AdBanner({ 
   dataAdSlot, 
-  dataAdFormat = "auto", 
-  dataFullWidthResponsive = true 
+  dataAdFormat = "horizontal", // 🚀 MUDANÇA 1: Força o formato fino (horizontal) em vez de quadrado automático
+  dataFullWidthResponsive = false // 🚀 MUDANÇA 2: Impede o Google de alargar a altura livremente
 }: AdBannerProps) {
-  // O useRef garante que o script do AdSense seja chamado apenas UMA VEZ
-  // Isso resolve o problema de anúncios em branco no Next.js (React Strict Mode)
   const isLoaded = useRef(false);
 
   useEffect(() => {
@@ -30,11 +28,11 @@ export default function AdBanner({
   }, []);
 
   return (
-    // Adicionado min-h-[90px] e fundo sutil para evitar o "vão" na tela inicial
-    <div className="flex justify-center w-full overflow-hidden bg-gray-50/50 min-h-[90px] rounded-lg">
+    // 🚀 MUDANÇA 3: max-h-[100px] é a trava de segurança. O buraco nunca vai passar de 100 pixels!
+    <div className="flex justify-center w-full overflow-hidden bg-transparent min-h-[90px] max-h-[100px]">
       <ins
         className="adsbygoogle"
-        style={{ display: "block", width: "100%" }}
+        style={{ display: "inline-block", width: "100%", height: "90px" }} // Força a altura padrão de banner
         data-ad-client="ca-pub-5151678673256465"
         data-ad-slot={dataAdSlot}
         data-ad-format={dataAdFormat}
