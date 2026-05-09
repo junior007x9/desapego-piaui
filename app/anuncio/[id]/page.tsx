@@ -89,6 +89,7 @@ export default function DetalhesAnuncio() {
     } catch (error) { console.error(error) }
   }
 
+  // 🚀 NOVA FUNÇÃO DE WHATSAPP MELHORADA
   const handleWhatsAppClick = () => {
     if (!user) {
       alert("🔒 Segurança: Para ver o número do vendedor e evitar fraudes, faça login na sua conta.");
@@ -96,7 +97,20 @@ export default function DetalhesAnuncio() {
       return;
     }
     if (vendedor?.telefone) {
-      window.open(`https://wa.me/55${vendedor.telefone}?text=Olá! Tenho interesse no anúncio "${ad.titulo}" que vi no Desapego Piauí.`, '_blank');
+      // 1. Formata o preço para ficar bonito (R$ 0,00)
+      const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco);
+      
+      // 2. Pega o link exato da página que o usuário está agora
+      const linkAnuncio = window.location.href;
+
+      // 3. Monta a mensagem com Emojis, Negrito (*) e quebras de linha (\n)
+      const mensagem = `Olá! 👋 Vim do site *Desapego Piauí* 🚀\n\nTenho interesse no seu anúncio:\n📦 *${ad.titulo}*\n💰 *${precoFormatado}*\n\n🔗 Link do anúncio:\n${linkAnuncio}\n\nAinda está disponível?`;
+
+      // 4. Codifica o texto para o formato de link da web
+      const textoCodificado = encodeURIComponent(mensagem);
+
+      // 5. Abre o WhatsApp com a mensagem pronta
+      window.open(`https://wa.me/55${vendedor.telefone}?text=${textoCodificado}`, '_blank');
     } else {
       alert("Este vendedor ainda não cadastrou um número de WhatsApp.");
     }
