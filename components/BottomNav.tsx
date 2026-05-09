@@ -34,34 +34,48 @@ export default function BottomNav() {
 
   return (
     <>
+      {/* ESPAÇO FANTASMA PARA A BARRA NÃO COBRIR CONTEÚDO */}
       <div className="h-16 md:hidden"></div>
 
+      {/* BARRA DE NAVEGAÇÃO INFERIOR CENTRALIZADA */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-40 pb-safe">
-        <div className="flex justify-around items-center h-16">
+        <div className="flex justify-around items-center h-16 relative">
+          
+          {/* 1. INÍCIO */}
           <Link href="/" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <Home size={24} strokeWidth={pathname === '/' ? 2.5 : 2} className={pathname === '/' ? 'scale-110 transition-transform' : ''} />
+            <Home size={22} strokeWidth={pathname === '/' ? 2.5 : 2} />
             <span className="text-[10px] font-bold mt-1">Início</span>
           </Link>
 
+          {/* 2. BUSCAR */}
           <Link href="/todos-anuncios" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/todos-anuncios' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <Search size={24} strokeWidth={pathname === '/todos-anuncios' ? 2.5 : 2} />
+            <Search size={22} strokeWidth={pathname === '/todos-anuncios' ? 2.5 : 2} />
             <span className="text-[10px] font-bold mt-1">Buscar</span>
           </Link>
 
-          <Link href="/anunciar" onClick={closeMenu} className="flex flex-col items-center justify-center w-full h-full -mt-5">
-            <div className="bg-accent text-white p-3 rounded-full shadow-lg border-4 border-gray-50 transform hover:scale-105 transition-transform">
-              <PlusCircle size={28} strokeWidth={2.5} />
+          {/* 3. ANUNCIAR (CENTRALIZADO E DESTAQUE) */}
+          <Link href="/anunciar" onClick={closeMenu} className="flex flex-col items-center justify-center w-full h-full -mt-8 relative z-50">
+            <div className="bg-accent text-white p-4 rounded-full shadow-[0_4px_20px_rgba(245,158,11,0.4)] border-4 border-white transform active:scale-95 transition-transform">
+              <PlusCircle size={30} strokeWidth={2.5} />
             </div>
-            <span className="text-[10px] font-bold mt-1 text-accent">Anunciar</span>
+            <span className="text-[10px] font-black mt-1 text-accent uppercase tracking-tighter">Anunciar</span>
           </Link>
 
+          {/* 4. FAVORITOS (REPOSIÇÃO PARA EQUILÍBRIO) */}
+          <Link href="/favoritos" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/favoritos' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+            <Heart size={22} strokeWidth={pathname === '/favoritos' ? 2.5 : 2} className={pathname === '/favoritos' ? 'fill-primary' : ''} />
+            <span className="text-[10px] font-bold mt-1">Favoritos</span>
+          </Link>
+
+          {/* 5. MENU */}
           <button onClick={() => setIsMenuOpen(true)} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${isMenuOpen ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <Menu size={24} strokeWidth={isMenuOpen ? 2.5 : 2} className={isMenuOpen ? 'scale-110 transition-transform' : ''} />
+            <Menu size={22} strokeWidth={isMenuOpen ? 2.5 : 2} />
             <span className="text-[10px] font-bold mt-1">Menu</span>
           </button>
         </div>
       </nav>
 
+      {/* OVERLAY E GAVETA DO MENU (MANTIDOS IGUAIS) */}
       {isMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300"
@@ -103,14 +117,6 @@ export default function BottomNav() {
                       <h3 className="font-bold text-gray-900 text-base">Meus Anúncios</h3>
                       <p className="text-xs text-gray-500 font-medium">Gerenciar vendas</p>
                     </div>
-                  </div>
-                  <ChevronRight size={20} className="text-gray-400" />
-                </Link>
-
-                <Link href="/favoritos" onClick={closeMenu} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition group">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-red-50 text-red-500 p-3 rounded-full group-hover:scale-110 transition-transform"><Heart size={24} /></div>
-                    <h3 className="font-bold text-gray-900 text-base">Favoritos</h3>
                   </div>
                   <ChevronRight size={20} className="text-gray-400" />
                 </Link>
