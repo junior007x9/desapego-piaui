@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign, Store } from 'lucide-react'
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
 
@@ -17,12 +17,13 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
-// PLANOS PAGOS PADRÃO
+// 🚀 NOVOS PLANOS: Inclui o Plano Básico "Eterno" e os Destaques VIP
 const PLANOS_BASE = [
-  { id: 1, nome: 'Diário', dias: 1, valor: 10, desc: '1 dia de destaque' },
-  { id: 2, nome: 'Semanal', dias: 7, valor: 65, desc: '7 dias de destaque' },
-  { id: 3, nome: 'Quinzenal', dias: 15, valor: 140, desc: '15 dias de destaque' },
-  { id: 4, nome: 'Mensal', dias: 30, valor: 280, desc: '30 dias de destaque' }
+  { id: 99, nome: 'Básico (Grátis)', dias: 3650, valor: 0, desc: 'No ar até você vender (Sem destaque VIP)' }, // 3650 dias = 10 anos (praticamente eterno)
+  { id: 1, nome: 'VIP Diário', dias: 1, valor: 10, desc: '1 dia no topo da página' },
+  { id: 2, nome: 'VIP Semanal', dias: 7, valor: 65, desc: '7 dias no topo da página' },
+  { id: 3, nome: 'VIP Quinzenal', dias: 15, valor: 140, desc: '15 dias no topo da página' },
+  { id: 4, nome: 'VIP Mensal', dias: 30, valor: 280, desc: '30 dias no topo da página' }
 ]
 
 // 🚀 FUNÇÃO PARA REMOVER ACENTOS E NORMALIZAR TEXTOS
@@ -150,8 +151,10 @@ export default function AnunciarPage() {
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || planoId === null;
 
-  const PLANO_GRATIS = { id: 0, nome: 'Boas-Vindas (Grátis)', dias: 1, valor: 0, desc: '1 dia grátis (Válido 1x por aparelho/conta)' };
-  const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_GRATIS, ...PLANOS_BASE];
+  const PLANO_PRESENTE = { id: 0, nome: 'Boas-Vindas (VIP)', dias: 1, valor: 0, desc: '1 dia VIP Grátis (Válido 1x)' };
+  
+  // Se já usou o presente VIP, mostra o Básico + Pagos. Se não usou, mostra Presente + Básico + Pagos.
+  const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_PRESENTE, ...PLANOS_BASE];
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -242,14 +245,17 @@ export default function AnunciarPage() {
 
       let statusFinal = 'pendente';
       
+      // Validação de planos grátis (0 = VIP Boas Vindas, 99 = Básico Eterno)
       if (planoId === 0) {
         if (jaUsouGratis) {
-          alert("Acesso negado: Você já usou o plano grátis neste dispositivo ou conta.");
+          alert("Acesso negado: Você já usou o plano VIP grátis neste dispositivo ou conta.");
           setLoading(false);
           return;
         }
         statusFinal = 'ativo'; 
         localStorage.setItem('jaUsouGratis_dev', 'true'); 
+      } else if (planoId === 99) {
+        statusFinal = 'ativo'; 
       }
 
       const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
@@ -275,7 +281,6 @@ export default function AnunciarPage() {
         expiraEm: dataExpiracaoISO
       })
 
-      // 🚀 NOVO: Gravar log indicando a CRIAÇÃO do anúncio
       if (user) {
          try {
             await addDoc(collection(db, 'logs'), {
@@ -305,7 +310,8 @@ export default function AnunciarPage() {
         }).catch(console.error);
       }
 
-      if (planoId === 0) {
+      // Se for grátis (0 ou 99), vai para os anúncios. Se for VIP pago (1, 2, 3, 4), vai pro pagamento PIX
+      if (planoId === 0 || planoId === 99) {
          router.push('/meus-anuncios');
       } else {
          router.push(`/pagamento/${docRef.id}`);
@@ -434,28 +440,37 @@ export default function AnunciarPage() {
           <div className="pt-6 border-t border-gray-100">
              <label className="block text-primary font-black text-xl mb-4">Escolha um Plano para destacar*</label>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               {planosDisponiveis.map((p) => (
-                 <div 
-                    key={p.id}
-                    onClick={() => setPlanoId(p.id)}
-                    className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? 'border-primary bg-primary/5 shadow-md scale-[1.02]' : 'border-gray-100 hover:border-primary/30 bg-gray-50'}`}
-                 >
-                    {p.valor === 0 && (
-                      <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
-                        <Gift size={12}/> Presente
-                      </div>
-                    )}
+               {planosDisponiveis.map((p) => {
+                 const isGratis = p.valor === 0;
+                 return (
+                   <div 
+                      key={p.id}
+                      onClick={() => setPlanoId(p.id)}
+                      className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-gray-50'}`}
+                   >
+                      {p.id === 0 && (
+                        <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                          <Gift size={12}/> Presente VIP
+                        </div>
+                      )}
+                      
+                      {p.id === 99 && (
+                        <div className="absolute top-0 right-0 bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
+                          <Store size={12}/> Padrão
+                        </div>
+                      )}
 
-                    <div className="flex justify-between items-start mb-2">
-                       <h3 className={`font-bold ${p.valor === 0 ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
-                       {planoId === p.id && <CheckCircle className={p.valor === 0 ? 'text-green-600' : 'text-primary'} size={20}/>}
-                    </div>
-                    <p className={`text-2xl font-black mb-1 ${p.valor === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                      {p.valor === 0 ? 'Grátis' : `R$ ${p.valor.toFixed(2).replace('.', ',')}`}
-                    </p>
-                    <p className="text-sm text-gray-500 font-medium">{p.desc}</p>
-                 </div>
-               ))}
+                      <div className="flex justify-between items-start mb-2">
+                         <h3 className={`font-bold ${isGratis ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
+                         {planoId === p.id && <CheckCircle className={isGratis ? 'text-green-600' : 'text-amber-500'} size={20}/>}
+                      </div>
+                      <p className={`text-2xl font-black mb-1 ${isGratis ? 'text-green-600' : 'text-gray-900'}`}>
+                        {isGratis ? 'Grátis' : `R$ ${p.valor.toFixed(2).replace('.', ',')}`}
+                      </p>
+                      <p className={`text-sm font-medium ${isGratis ? 'text-green-600/80' : 'text-gray-500'}`}>{p.desc}</p>
+                   </div>
+                 )
+               })}
              </div>
           </div>
 

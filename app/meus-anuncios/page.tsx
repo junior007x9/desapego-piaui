@@ -2,11 +2,30 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-// 🚀 CORREÇÃO 1: Adicionado o addDoc na importação do firestore
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore'
+// 🚀 CORREÇÃO: Adicionado o serverTimestamp para gravar a hora exata da venda
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle } from 'lucide-react'
+
+// 🚀 NOVA FUNÇÃO: Calcula a diferença de dias entre a criação e a venda
+function calcularDiasVenda(criadoEm: any, vendidoEm: any) {
+  if (!criadoEm) return "Vendido!";
+  
+  // Se o anúncio foi vendido antes de implementarmos essa função, ele não terá 'vendidoEm'.
+  // Nesse caso, retornamos apenas "Vendido".
+  if (!vendidoEm) return "Vendido com sucesso!";
+
+  const dataCriacao = criadoEm.seconds ? new Date(criadoEm.seconds * 1000) : new Date(criadoEm);
+  const dataVenda = vendidoEm.seconds ? new Date(vendidoEm.seconds * 1000) : new Date(vendidoEm);
+
+  const diffTime = Math.abs(dataVenda.getTime() - dataCriacao.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Vendido no mesmo dia!";
+  if (diffDays === 1) return "Vendido em 1 dia no site";
+  return `Vendido em ${diffDays} dias no site`;
+}
 
 export default function MeusAnunciosPage() {
   const [ads, setAds] = useState<any[]>([])
@@ -77,13 +96,11 @@ export default function MeusAnunciosPage() {
     if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações dele no Google. Recomendamos usar o botão 'Marcar como Vendido'. Deseja excluir mesmo assim?")) return;
     
     try {
-      // Procura qual é o anúncio para podermos salvar o nome dele no log
       const adToLog = ads.find(a => a.id === id);
       
       await deleteDoc(doc(db, 'anuncios', id))
       setAds(ads.filter(ad => ad.id !== id))
       
-      // 🚀 CORREÇÃO 2: Gravar o log da exclusão no sistema
       if (user) {
          try {
             await addDoc(collection(db, 'logs'), {
@@ -107,17 +124,23 @@ export default function MeusAnunciosPage() {
     
     try {
       const adToLog = ads.find(a => a.id === id);
+      const agora = new Date(); // Salva o momento atual para o estado local
       
-      await updateDoc(doc(db, 'anuncios', id), { status: 'vendido' })
-      setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido' } : ad))
+      // 🚀 ATUALIZAÇÃO BANDO DE DADOS: Agora gravamos a data da venda (vendidoEm)
+      await updateDoc(doc(db, 'anuncios', id), { 
+        status: 'vendido',
+        vendidoEm: serverTimestamp() 
+      })
+      
+      // Atualiza a tela instantaneamente
+      setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido', vendidoEm: agora } : ad))
       alert("Parabéns pela venda! 🎉")
       
-      // 🚀 CORREÇÃO 3: Gravar o log indicando que marcou como vendido
       if (user) {
          try {
             await addDoc(collection(db, 'logs'), {
                usuarioId: user.uid,
-               acao: 'EDITOU', // Usamos "EDITOU" para manter o padrão de cores do painel admin
+               acao: 'EDITOU', 
                tituloAnuncio: adToLog?.titulo ? `${adToLog.titulo} (Vendido)` : "Anúncio Marcado como Vendido",
                criadoEm: new Date()
             });
@@ -231,11 +254,21 @@ export default function MeusAnunciosPage() {
                     <h3 className={`text-lg font-bold leading-tight mb-1 transition-colors line-clamp-2 ${ad.status === 'vendido' ? 'text-gray-500 line-through' : 'text-gray-900 hover:text-primary'}`}>{ad.titulo}</h3>
                   </Link>
 
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-3">
-                     <Calendar size={12} />
-                     <span>
-                        {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds ? ad.criadoEm.seconds * 1000 : ad.criadoEm).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
-                     </span>
+                  <div className="flex flex-col gap-1 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+                       <Calendar size={12} />
+                       <span>
+                          {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds ? ad.criadoEm.seconds * 1000 : ad.criadoEm).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
+                       </span>
+                    </div>
+                    
+                    {/* 🚀 AQUI ESTÁ A EXIBIÇÃO DE QUANTOS DIAS DEMOROU PRA VENDER */}
+                    {ad.status === 'vendido' && (
+                       <div className="flex items-center gap-1.5 text-[11px] text-green-600 font-black uppercase tracking-wider bg-green-50 w-fit px-2 py-1 rounded-md">
+                          <CheckCircle size={12} />
+                          <span>{calcularDiasVenda(ad.criadoEm, ad.vendidoEm)}</span>
+                       </div>
+                    )}
                   </div>
                   
                   <div className="flex items-end justify-between mt-2">
@@ -253,7 +286,6 @@ export default function MeusAnunciosPage() {
                 {/* Ações */}
                 <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
                   
-                  {/* Se estiver ativo, mostra a opção de Marcar como Vendido */}
                   {ad.status === 'ativo' && (
                      <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
                         <CheckCircle size={16}/> Já Vendi!

@@ -25,6 +25,8 @@ export default function Footer() {
             <h3 className="text-white font-bold mb-4 border-l-4 border-primary pl-3">Navegação</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/" className="hover:text-accent transition">Início</Link></li>
+              {/* 🚀 NOVO LINK ADICIONADO AQUI: SOBRE NÓS */}
+              <li><Link href="/sobre" className="hover:text-accent transition">Sobre Nós</Link></li>
               <li><Link href="/todos-anuncios" className="hover:text-accent transition">Anúncios</Link></li>
               <li><Link href="/login" className="hover:text-accent transition">Entrar / Cadastrar</Link></li>
             </ul>
