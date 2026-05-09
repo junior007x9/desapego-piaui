@@ -4,17 +4,25 @@ import { db } from '@/lib/firebase'
 import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, Watch, Zap, Sparkles } from 'lucide-react'
+import { 
+  Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, 
+  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight 
+} from 'lucide-react'
 import ContadorEstatisticas from '@/components/ContadorEstatisticas'
-import AdBanner from '@/components/AdBanner' // 🚀 IMPORTAÇÃO DO BANNER DO ADSENSE
+import AdBanner from '@/components/AdBanner'
 
-const CATEGORIAS_OLX = [
-  { nome: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, slug: 'Imóveis', cor: "bg-blue-100 text-blue-600" },
-  { nome: 'Veículos', icon: <Car size={28} strokeWidth={2.5} />, slug: 'Veículos', cor: "bg-orange-100 text-orange-600" },
-  { nome: 'Celulares', icon: <Smartphone size={28} strokeWidth={2.5} />, slug: 'Eletrônicos', cor: "bg-purple-100 text-purple-600" },
-  { nome: 'Casa', icon: <Zap size={28} strokeWidth={2.5} />, slug: 'Para Casa', cor: "bg-amber-100 text-amber-600" },
-  { nome: 'Moda', icon: <Watch size={28} strokeWidth={2.5} />, slug: 'Moda e Beleza', cor: "bg-pink-100 text-pink-600" },
-  { nome: 'Outros', icon: <ShoppingBag size={28} strokeWidth={2.5} />, slug: 'Outros', cor: "bg-gray-100 text-gray-600" },
+// 🚀 CATEGORIAS ATUALIZADAS COM DESCRIÇÕES DINÂMICAS E CORES
+const CATEGORIAS_HOME = [
+  { nome: 'Imóveis', slug: 'Imóveis', icon: <HomeIcon size={28} strokeWidth={2.5} />, cor: "bg-blue-100 text-blue-600", desc: "Casas, apartamentos, terrenos e fazendas para vender ou alugar." },
+  { nome: 'Veículos', slug: 'Veículos', icon: <Car size={28} strokeWidth={2.5} />, cor: "bg-orange-100 text-orange-600", desc: "Carros, motos, caminhões e peças automotivas em todo o Piauí." },
+  { nome: 'Celulares', slug: 'Eletrônicos', icon: <Smartphone size={28} strokeWidth={2.5} />, cor: "bg-purple-100 text-purple-600", desc: "iPhones, Androids, tablets e acessórios de última geração." },
+  { nome: 'Casa', slug: 'Para Casa', icon: <Zap size={28} strokeWidth={2.5} />, cor: "bg-amber-100 text-amber-600", desc: "Móveis, eletrodomésticos e tudo para reformar ou decorar seu lar." },
+  { nome: 'Moda', slug: 'Moda e Beleza', icon: <Shirt size={28} strokeWidth={2.5} />, cor: "bg-pink-100 text-pink-600", desc: "Roupas, calçados, relógios e perfumes para todos os estilos." },
+  { nome: 'Serviços', slug: 'Serviços', icon: <Wrench size={28} strokeWidth={2.5} />, cor: "bg-indigo-100 text-indigo-600", desc: "Fretes, pedreiros, técnicos e profissionais autônomos locais." },
+  { nome: 'Bebês', slug: 'Bebês e Crianças', icon: <Baby size={28} strokeWidth={2.5} />, cor: "bg-rose-100 text-rose-600", desc: "Carrinhos, berços e roupinhas para o conforto do seu pequeno." },
+  { nome: 'Esportes', slug: 'Esportes', icon: <Bike size={28} strokeWidth={2.5} />, cor: "bg-teal-100 text-teal-600", desc: "Bicicletas, artigos de academia, pesca e lazer ao ar livre." },
+  { nome: 'Empregos', slug: 'Vagas de Emprego', icon: <Briefcase size={28} strokeWidth={2.5} />, cor: "bg-cyan-100 text-cyan-600", desc: "Oportunidades de trabalho e bicos em diversas áreas na região." },
+  { nome: 'Outros', slug: 'Outros', icon: <ShoppingBag size={28} strokeWidth={2.5} />, cor: "bg-gray-100 text-gray-600", desc: "Instrumentos musicais, agro, máquinas e itens diversos." },
 ]
 
 function formatTimeAgo(timestampSeconds: number) {
@@ -37,6 +45,7 @@ export default function Home() {
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
+  const [activeCat, setActiveCat] = useState<any>(null) // 🚀 Estado para controlar a categoria selecionada
   const router = useRouter()
 
   useEffect(() => {
@@ -62,7 +71,6 @@ export default function Home() {
   useEffect(() => {
     async function fetchRecentAds() {
       try {
-        // 🚀 AUMENTADO PARA 200: Garante que os VIPs antigos mas recém-pagos sejam encontrados
         const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(200))
         const snap = await getDocs(q)
         const listGeral: any[] = []
@@ -93,46 +101,37 @@ export default function Home() {
 
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
-            
             listGeral.push(adFinal)
             
-            // 🚀 SE FOR VIP (Plano 1 a 30, ignorando o 99 que é o reset do grátis), vai para o Carrossel
             if (plano > 0 && plano !== 99) {
               listVIP.push(adFinal)
             }
           }
         }
         
-        // 🚀 ORDENAÇÃO INFALÍVEL: Joga todos os VIPs para o TOPO da página
         listGeral.sort((a, b) => {
           const planoA = Number(a.planoId) || 0;
           const planoB = Number(b.planoId) || 0;
           const isVipA = (planoA > 0 && planoA !== 99) ? 1 : 0;
           const isVipB = (planoB > 0 && planoB !== 99) ? 1 : 0;
           
-          // Se um for VIP e o outro não, o VIP vence e sobe
-          if (isVipB !== isVipA) {
-            return isVipB - isVipA; 
-          }
+          if (isVipB !== isVipA) return isVipB - isVipA; 
           
-          // Se empatar (os dois são vips ou os dois são grátis), ordena pela data de APROVAÇÃO (pagoEm) ou CRIAÇÃO
           const timeA = a.pagoEm ? new Date(a.pagoEm).getTime() : (a.criadoEm?.seconds * 1000 || 0);
           const timeB = b.pagoEm ? new Date(b.pagoEm).getTime() : (b.criadoEm?.seconds * 1000 || 0);
           return timeB - timeA;
         })
         
-        // Ordena os VIPs do carrossel pela data em que foram ativados (para os recém-aprovados ficarem primeiro)
         listVIP.sort((a, b) => {
           const timeA = a.pagoEm ? new Date(a.pagoEm).getTime() : (a.criadoEm?.seconds * 1000 || 0);
           const timeB = b.pagoEm ? new Date(b.pagoEm).getTime() : (b.criadoEm?.seconds * 1000 || 0);
           return timeB - timeA;
         });
         
-        // 🚀 Mostramos até 15 VIPs no topo e 40 anúncios no total em baixo!
         setVipAds(listVIP.slice(0, 15)) 
         setAds(listGeral.slice(0, 40)) 
       } catch (error) {
-        console.error("Erro ao buscar anúncios recentes:", error)
+        console.error("Erro ao buscar anúncios:", error)
       } finally {
         setLoading(false)
       }
@@ -189,20 +188,43 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-20">
         
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-6 overflow-x-auto scrollbar-hide">
-          <div className="flex md:grid md:grid-cols-6 gap-4 min-w-max md:min-w-0 px-2 justify-between">
-            {CATEGORIAS_OLX.map(cat => (
-              <Link href={`/todos-anuncios?categoria=${cat.slug}`} key={cat.nome} className="flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-auto">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${cat.cor} group-hover:scale-110 transition-transform shadow-sm`}>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-6">
+          <div className="flex overflow-x-auto md:grid md:grid-cols-5 lg:grid-cols-10 gap-4 pb-2 scrollbar-hide">
+            {CATEGORIAS_HOME.map(cat => (
+              <div 
+                key={cat.nome} 
+                onMouseEnter={() => setActiveCat(cat)}
+                onClick={() => setActiveCat(cat)}
+                className="flex flex-col items-center gap-2 group cursor-pointer shrink-0 w-20 md:w-auto"
+              >
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center ${cat.cor} group-hover:scale-110 transition-transform shadow-sm`}>
                   {cat.icon}
                 </div>
-                <span className="text-xs font-bold text-gray-700 text-center">{cat.nome}</span>
-              </Link>
+                <span className="text-[10px] md:text-xs font-black text-gray-700 text-center uppercase tracking-tighter">{cat.nome}</span>
+              </div>
             ))}
           </div>
+
+          {/* 🚀 CARD DINÂMICO QUE APARECE AO PASSAR O MOUSE/CLICAR */}
+          {activeCat && (
+            <div className={`mt-6 p-4 rounded-2xl border flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300 ${activeCat.cor} bg-opacity-10 border-current border-dashed`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl bg-white shadow-sm ${activeCat.cor}`}>
+                   {activeCat.icon}
+                </div>
+                <div>
+                  <h4 className="font-black uppercase text-sm md:text-base">{activeCat.nome}</h4>
+                  <p className="text-gray-600 text-xs md:text-sm font-bold leading-tight mt-0.5">{activeCat.desc}</p>
+                </div>
+              </div>
+              <Link href={`/todos-anuncios?categoria=${activeCat.slug}`} className="bg-white p-3 rounded-full shadow-sm hover:scale-110 transition-transform hidden md:flex">
+                <ChevronRight size={20} />
+              </Link>
+            </div>
+          )}
         </div>
 
-        {/* 🚀 BANNER ADSENSE MANUAL CORRIGIDO: centralizado e com margens reduzidas */}
+        {/* 🚀 BANNER ADSENSE CENTRALIZADO */}
         <div className="mt-2 mb-6 w-full max-w-4xl mx-auto">
           <AdBanner dataAdSlot="8830353493" />
         </div>
@@ -247,7 +269,7 @@ export default function Home() {
            </Link>
         </div>
 
-        {/* LISTA GERAL DE ANÚNCIOS (COM OS VIPS FORÇADOS NO TOPO) */}
+        {/* LISTA GERAL DE ANÚNCIOS */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
@@ -262,7 +284,6 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {ads.map((ad) => {
               const plano = Number(ad.planoId) || 0;
-              // Tratamento para garantir que o plano 99 (reset grátis) não pareça VIP
               const isVip = plano > 0 && plano !== 99;
 
               return (
