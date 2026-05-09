@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type AdBannerProps = {
   dataAdSlot: string;
@@ -13,18 +13,25 @@ export default function AdBanner({
   dataAdFormat = "auto", 
   dataFullWidthResponsive = true 
 }: AdBannerProps) {
-  
+  // O useRef garante que o script do AdSense seja chamado apenas UMA VEZ
+  // Isso resolve o problema de anúncios em branco no Next.js (React Strict Mode)
+  const isLoaded = useRef(false);
+
   useEffect(() => {
-    try {
-      // @ts-expect-error
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (err) {
-      console.error("Erro ao carregar o anúncio do AdSense:", err);
+    if (!isLoaded.current) {
+      try {
+        // @ts-expect-error
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        isLoaded.current = true;
+      } catch (err) {
+        console.error("Erro ao carregar o anúncio do AdSense:", err);
+      }
     }
   }, []);
 
   return (
-    <div className="my-4 flex justify-center w-full overflow-hidden">
+    // Adicionado min-h-[90px] e fundo sutil para evitar o "vão" na tela inicial
+    <div className="flex justify-center w-full overflow-hidden bg-gray-50/50 min-h-[90px] rounded-lg">
       <ins
         className="adsbygoogle"
         style={{ display: "block", width: "100%" }}

@@ -2,45 +2,19 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Search, PlusCircle, MessageCircle, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle } from 'lucide-react'
-import { auth, db } from '@/lib/firebase' // Adicionado db
+import { Home, Search, PlusCircle, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle } from 'lucide-react'
+import { auth } from '@/lib/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { collection, query, where, onSnapshot } from 'firebase/firestore' // Importado funções do Firestore
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [unreadCount, setUnreadCount] = useState(0) // Estado da bolinha vermelha
 
-  // Verifica usuário e escuta as mensagens não lidas
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
-
-      if (currentUser) {
-        // Escuta os chats do usuário
-        const q = query(
-          collection(db, 'chats'),
-          where('participantes', 'array-contains', currentUser.uid)
-        )
-
-        const unsubscribeChats = onSnapshot(q, (snapshot) => {
-          let naoLidas = 0
-          snapshot.forEach((doc) => {
-            const data = doc.data()
-            if (data.lido === false && data.ultimoRemetenteId && data.ultimoRemetenteId !== currentUser.uid) {
-              naoLidas++
-            }
-          })
-          setUnreadCount(naoLidas)
-        })
-
-        return () => unsubscribeChats()
-      } else {
-        setUnreadCount(0)
-      }
     })
     return () => unsubscribeAuth()
   }, [])
@@ -60,10 +34,8 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* ESPAÇO FANTASMA PARA A BARRA NÃO COBRIR CONTEÚDO */}
       <div className="h-16 md:hidden"></div>
 
-      {/* BARRA DE NAVEGAÇÃO INFERIOR PRINCIPAL */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-40 pb-safe">
         <div className="flex justify-around items-center h-16">
           <Link href="/" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname === '/' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -83,20 +55,6 @@ export default function BottomNav() {
             <span className="text-[10px] font-bold mt-1 text-accent">Anunciar</span>
           </Link>
 
-          {/* BOTÃO DO CHAT COM A BOLINHA VERMELHA NA BARRA INFERIOR */}
-          <Link href="/chat" onClick={closeMenu} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${pathname.includes('/chat') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <div className="relative">
-              <MessageCircle size={24} strokeWidth={pathname.includes('/chat') ? 2.5 : 2} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-bold mt-1">Chat</span>
-          </Link>
-
-          {/* BOTÃO MÁGICO DO MENU */}
           <button onClick={() => setIsMenuOpen(true)} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${isMenuOpen ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
             <Menu size={24} strokeWidth={isMenuOpen ? 2.5 : 2} className={isMenuOpen ? 'scale-110 transition-transform' : ''} />
             <span className="text-[10px] font-bold mt-1">Menu</span>
@@ -104,7 +62,6 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* OVERLAY ESCURO (Fundo desfocado) */}
       {isMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden transition-opacity duration-300"
@@ -112,7 +69,6 @@ export default function BottomNav() {
         ></div>
       )}
 
-      {/* GAVETA DO MENU (BOTTOM SHEET) */}
       <div className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[2rem] z-50 md:hidden transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-y-0 shadow-[0_-20px_40px_rgba(0,0,0,0.2)]' : 'translate-y-full'}`}>
         <div className="w-full flex justify-center pt-3 pb-1" onClick={closeMenu}>
           <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>

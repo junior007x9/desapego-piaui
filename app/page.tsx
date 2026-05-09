@@ -202,8 +202,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🚀 BANNER ADSENSE MANUAL */}
-        <div className="my-6">
+        {/* 🚀 BANNER ADSENSE MANUAL CORRIGIDO: centralizado e com margens reduzidas */}
+        <div className="mt-2 mb-6 w-full max-w-4xl mx-auto">
           <AdBanner dataAdSlot="8830353493" />
         </div>
 
