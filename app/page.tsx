@@ -45,7 +45,7 @@ export default function Home() {
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
-  const [activeCat, setActiveCat] = useState<any>(null) // 🚀 Estado para controlar a categoria selecionada
+  const [activeCat, setActiveCat] = useState<any>(null) 
   const router = useRouter()
 
   useEffect(() => {
@@ -224,10 +224,12 @@ export default function Home() {
           )}
         </div>
 
-        {/* 🚀 BANNER ADSENSE CENTRALIZADO */}
-        <div className="mt-2 mb-6 w-full max-w-4xl mx-auto">
+        {/* 🚀 BANNER ADSENSE COMENTADO TEMPORARIAMENTE PARA APROVAÇÃO */}
+        {/* Descomente a linha abaixo apenas após o Google aprovar a conta AdSense */}
+        {/* <div className="mt-2 mb-6 w-full max-w-4xl mx-auto">
           <AdBanner dataAdSlot="8830353493" />
-        </div>
+        </div> 
+        */}
 
         {/* CARROSSEL VIP NO TOPO */}
         {!loading && vipAds.length > 0 && (
@@ -330,6 +332,61 @@ export default function Home() {
             })}
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* 🚀 SECÇÃO DE CONTEÚDO DE ALTO VALOR E SEO (ESSENCIAL PARA APROVAÇÃO DO ADSENSE) */}
+        {/* ========================================================================= */}
+        <section className="mt-16 bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
+            <div>
+              <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
+                Classificados Online Gratuitos no Piauí
+              </h2>
+              <p className="mb-4">
+                O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se possui itens em casa que já não utiliza, como um telemóvel antigo, roupas, móveis ou até mesmo um veículo, a nossa plataforma oferece o espaço ideal para anunciar gratuitamente e fechar negócio de forma direta, sem intermediários e sem taxas ou comissões.
+              </p>
+              <p>
+                Atendemos todas as principais regiões do estado do Piauí, incluindo a capital Teresina, além de Parnaíba, Picos, Floriano, Piripiri e Campo Maior. O comércio de proximidade fortalece a economia local e gera muito mais confiança entre quem vende e quem compra.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
+                Como Comprar e Vender com Segurança?
+              </h3>
+              <p className="mb-4">
+                Para garantir uma excelente experiência no nosso marketplace, recomendamos sempre que os utilizadores realizem as suas negociações em locais públicos e movimentados, como praças, centros comerciais ou postos de atendimento. Evite fazer depósitos ou pagamentos antecipados sem antes verificar o estado real do produto em mãos.
+              </p>
+              <p>
+                Navegue pelas nossas diversas categorias, que cobrem desde o mercado imobiliário e automóvel até à eletrónica de última geração, ofertas de emprego, serviços autónomos e artigos de moda e beleza. Encontre tudo o que precisa bem perto de si!
+              </p>
+            </div>
+          </div>
+
+          {/* FAQ - Perguntas Frequentes para o robô do Google ler texto legível */}
+          <div className="mt-8 pt-8 border-t border-gray-100">
+            <h3 className="text-lg font-black text-gray-900 uppercase mb-4">Perguntas Frequentes — Desapego Piauí</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">1. Quanto custa anunciar no Desapego Piauí?</h4>
+                <p>Anunciar na nossa plataforma é 100% gratuito. Pode publicar os seus produtos ou serviços sem pagar qualquer comissão sobre as vendas efetuadas.</p>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque VIP?</h4>
+                <p>Disponibilizamos planos de destaque opcionais para vendedores que desejam acelerar as suas vendas, posicionando os seus anúncios no carrossel de destaques da página inicial para obter maior visibilidade.</p>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">3. O site realiza entregas de artigos?</h4>
+                <p>Não. O Desapego Piauí funciona exclusivamente como uma ponte de contacto. Toda a logística de entrega e a forma de pagamento são combinadas diretamente entre o comprador e o vendedor através do WhatsApp.</p>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">4. Quais os produtos proibidos na plataforma?</h4>
+                <p>De acordo com os nossos termos de uso, é estritamente proibido anunciar medicamentos, substâncias ilícitas, armas de fogo, produtos falsificados ou quaisquer itens que infrinjam a legislação vigente.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   )
