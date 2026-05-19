@@ -205,7 +205,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* 🚀 CARD DINÂMICO QUE APARECE AO PASSAR O MOUSE/CLICAR */}
           {activeCat && (
             <div className={`mt-6 p-4 rounded-2xl border flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300 ${activeCat.cor} bg-opacity-10 border-current border-dashed`}>
               <div className="flex items-center gap-4">
@@ -334,16 +333,16 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* 🚀 SECÇÃO DE CONTEÚDO DE ALTO VALOR E SEO (ESSENCIAL PARA APROVAÇÃO DO ADSENSE) */}
+        {/* 🚀 SEÇÃO DE CONTEÚDO DE ALTO VALOR E SEO (ESSENCIAL PARA APROVAÇÃO DO ADSENSE) */}
         {/* ========================================================================= */}
         <section className="mt-16 bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
             <div>
               <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
-                Classificados Online Gratuitos no Piauí
+                Classificados Online com Planos de Destaque no Piauí
               </h2>
               <p className="mb-4">
-                O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se possui itens em casa que já não utiliza, como um telemóvel antigo, roupas, móveis ou até mesmo um veículo, a nossa plataforma oferece o espaço ideal para anunciar gratuitamente e fechar negócio de forma direta, sem intermediários e sem taxas ou comissões.
+                O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se você possui itens em casa que não utiliza mais, como um celular antigo, roupas, móveis ou até mesmo um veículo, a nossa plataforma oferece o espaço ideal para criar anúncios e fechar negócios de forma direta, sem intermediários e sem taxas de comissão sobre a venda efetuada.
               </p>
               <p>
                 Atendemos todas as principais regiões do estado do Piauí, incluindo a capital Teresina, além de Parnaíba, Picos, Floriano, Piripiri e Campo Maior. O comércio de proximidade fortalece a economia local e gera muito mais confiança entre quem vende e quem compra.
@@ -355,32 +354,32 @@ export default function Home() {
                 Como Comprar e Vender com Segurança?
               </h3>
               <p className="mb-4">
-                Para garantir uma excelente experiência no nosso marketplace, recomendamos sempre que os utilizadores realizem as suas negociações em locais públicos e movimentados, como praças, centros comerciais ou postos de atendimento. Evite fazer depósitos ou pagamentos antecipados sem antes verificar o estado real do produto em mãos.
+                Para garantir uma excelente experiência no nosso marketplace, recomendamos sempre que os usuários realizem as suas negociações em locais públicos e movimentados, como praças, shopping centers ou postos de atendimento. Evite fazer depósitos ou pagamentos antecipados sem antes verificar o estado real do produto em mãos.
               </p>
               <p>
-                Navegue pelas nossas diversas categorias, que cobrem desde o mercado imobiliário e automóvel até à eletrónica de última geração, ofertas de emprego, serviços autónomos e artigos de moda e beleza. Encontre tudo o que precisa bem perto de si!
+                Navegue pelas nossas diversas categorias, que cobrem desde o mercado imobiliário e automotivo até eletrônicos de última geração, ofertas de vagas de emprego, serviços autônomos e artigos de moda e beleza. Encontre tudo o que precisa pertinho de você!
               </p>
             </div>
           </div>
 
-          {/* FAQ - Perguntas Frequentes para o robô do Google ler texto legível */}
+          {/* FAQ Ajustado com as regras de planos e as promoções vigentes */}
           <div className="mt-8 pt-8 border-t border-gray-100">
             <h3 className="text-lg font-black text-gray-900 uppercase mb-4">Perguntas Frequentes — Desapego Piauí</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
               <div>
-                <h4 className="font-bold text-gray-800 mb-1">1. Quanto custa anunciar no Desapego Piauí?</h4>
-                <p>Anunciar na nossa plataforma é 100% gratuito. Pode publicar os seus produtos ou serviços sem pagar qualquer comissão sobre as vendas efetuadas.</p>
+                <h4 className="font-bold text-gray-800 mb-1">1. Quanto custa anunciar e quais são os planos?</h4>
+                <p>O Desapego Piauí trabalha com planos flexíveis para destacar os seus anúncios. Atualmente, estamos com uma promoção incrível: o <strong>Plano Diário é 100% gratuito e fica ativo até você vender o seu produto</strong>, e o <strong>Plano VIP (Destaque) está totalmente gratuito por 24 horas</strong>! Além disso, nunca cobramos nenhuma taxa de comissão pelas suas vendas.</p>
               </div>
               <div>
-                <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque VIP?</h4>
-                <p>Disponibilizamos planos de destaque opcionais para vendedores que desejam acelerar as suas vendas, posicionando os seus anúncios no carrossel de destaques da página inicial para obter maior visibilidade.</p>
+                <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque VIP na plataforma?</h4>
+                <p>Os planos de visibilidade servem para acelerar os seus negócios, posicionando os seus produtos no carrossel de destaques principais da página inicial. Aproveite a nossa promoção atual para experimentar o destaque VIP de graça durante as primeiras 24 horas.</p>
               </div>
               <div>
-                <h4 className="font-bold text-gray-800 mb-1">3. O site realiza entregas de artigos?</h4>
-                <p>Não. O Desapego Piauí funciona exclusivamente como uma ponte de contacto. Toda a logística de entrega e a forma de pagamento são combinadas diretamente entre o comprador e o vendedor através do WhatsApp.</p>
+                <h4 className="font-bold text-gray-800 mb-1">3. O site realiza entregas de mercadorias?</h4>
+                <p>Não. O Desapego Piauí funciona exclusivamente como uma ponte de contato direto. Toda a logística de entrega e a forma de pagamento são combinadas diretamente entre o comprador e o vendedor através do WhatsApp.</p>
               </div>
               <div>
-                <h4 className="font-bold text-gray-800 mb-1">4. Quais os produtos proibidos na plataforma?</h4>
+                <h4 className="font-bold text-gray-800 mb-1">4. Quais produtos são proibidos na plataforma?</h4>
                 <p>De acordo com os nossos termos de uso, é estritamente proibido anunciar medicamentos, substâncias ilícitas, armas de fogo, produtos falsificados ou quaisquer itens que infrinjam a legislação vigente.</p>
               </div>
             </div>
