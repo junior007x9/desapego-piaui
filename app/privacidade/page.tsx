@@ -1,60 +1,77 @@
 import Link from 'next/link'
-import { ChevronLeft, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ShieldCheck, Lock, Eye, Database } from 'lucide-react'
 
 export const metadata = {
   title: 'Política de Privacidade | Desapego Piauí',
-  description: 'Saiba como o Desapego Piauí protege seus dados pessoais de acordo com a LGPD.',
+  description: 'Saiba como o Desapego Piauí protege seus dados pessoais em conformidade estrita com a LGPD.',
 }
 
 export default function PrivacidadePage() {
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container mx-auto px-4 max-w-3xl">
+    <div className="bg-gray-50 min-h-screen py-10 font-sans">
+      <div className="container mx-auto px-4 max-w-4xl">
         
-        <Link href="/" className="inline-flex items-center gap-2 text-primary font-bold hover:underline mb-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-primary font-bold hover:underline mb-6 transition-colors">
           <ChevronLeft size={20} /> Voltar para o início
         </Link>
 
         <div className="bg-white p-8 md:p-12 rounded-[2rem] shadow-sm border border-gray-100">
-          <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
-            <ShieldCheck size={32} />
+          <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-8 shadow-sm">
+            <ShieldCheck size={32} strokeWidth={2.5} />
           </div>
           
-          <h1 className="text-3xl font-black text-gray-900 mb-8 tracking-tight">Política de Privacidade</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-8 tracking-tight">Política de Privacidade (LGPD)</h1>
           
-          <div className="space-y-6 text-gray-600 leading-relaxed">
-            <p>No <strong>Desapego Piauí</strong>, a sua privacidade é uma prioridade. Esta política explica como coletamos, usamos e protegemos as suas informações pessoais em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
+          <div className="space-y-8 text-gray-600 leading-relaxed font-medium">
+            <p>No <strong>Desapego Piauí</strong>, a sua privacidade é uma prioridade absoluta. Este documento explica de forma transparente como coletamos, utilizamos, armazenamos e protegemos as suas informações pessoais, em estrita conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong> do Brasil.</p>
 
-            <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">1. Dados que Coletamos</h2>
-            <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Dados de Cadastro:</strong> Nome, endereço de e-mail e foto de perfil (quando fornecida via login social ou inserida manualmente).</li>
-              <li><strong>Dados de Contato:</strong> Número de telefone/WhatsApp (quando inserido voluntariamente pelo usuário para receber contatos de compradores).</li>
-              <li><strong>Dados de Navegação:</strong> Informações sobre como você usa a plataforma, endereços IP e cookies para melhorar a experiência do usuário.</li>
-            </ul>
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Database className="text-primary" size={20} /> 1. Dados que Coletamos
+              </h2>
+              <p>Para fornecer nossos serviços de classificados, coletamos os seguintes dados:</p>
+              <ul className="list-disc pl-6 space-y-2 mt-2">
+                <li><strong>Dados de Cadastro:</strong> Nome, endereço de e-mail e foto de perfil (coletados via Google ou fornecidos manualmente).</li>
+                <li><strong>Dados de Contato Profissional/Venda:</strong> Número de telefone/WhatsApp.</li>
+                <li><strong>Dados de Navegação:</strong> Informações técnicas como IP, tipo de navegador, localização aproximada (cidade) para filtros, e cookies para manter sua sessão ativa.</li>
+              </ul>
+            </section>
 
-            <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">2. Como Usamos Seus Dados</h2>
-            <p>Utilizamos os seus dados exclusivamente para o funcionamento da plataforma, com os seguintes propósitos:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>Permitir a criação e o gerenciamento de seus anúncios.</li>
-              <li>Facilitar a comunicação entre compradores e vendedores (exibindo seu número de contato ou através do nosso Chat Interno).</li>
-              <li>Prevenir fraudes, perfis falsos e garantir a segurança da comunidade.</li>
-              <li>Processar pagamentos de planos VIP (Destaque).</li>
-            </ul>
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Eye className="text-accent" size={20} /> 2. Exibição Pública do WhatsApp (Sem Chat Interno)
+              </h2>
+              <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
+                <p><strong>Atenção:</strong> O Desapego Piauí optou por <strong>não possuir um chat interno</strong> para garantir que você tenha conversas mais rápidas e diretas.</p>
+                <p className="mt-2">Ao criar um anúncio na nossa plataforma, o número de telefone/WhatsApp fornecido por você <strong>ficará visível publicamente</strong> para qualquer pessoa que acessar o seu anúncio. A base legal para esta exibição é o seu <strong>Consentimento</strong> e a <strong>Execução de Contrato</strong> (permitir que o comprador lhe encontre). Ao cadastrar o seu número, você concorda expressamente com esta exibição pública.</p>
+              </div>
+            </section>
 
-            <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">3. Compartilhamento de Dados</h2>
-            <p>O Desapego Piauí <strong>não vende nem aluga</strong> seus dados pessoais para terceiros. As suas informações de contato (como o WhatsApp) só ficam visíveis publicamente caso você decida incluí-las no seu perfil de vendedor para facilitar as vendas.</p>
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Lock className="text-gray-800" size={20} /> 3. Como Protegemos e Compartilhamos Seus Dados
+              </h2>
+              <p>O Desapego Piauí <strong>não vende, não aluga e não repassa</strong> seus dados pessoais para empresas de marketing de terceiros.</p>
+              <p className="mt-2">Seus dados são armazenados em servidores seguros utilizando infraestrutura de ponta (Google Cloud / Firebase), com criptografia em trânsito e em repouso. Compartilhamos dados apenas em casos de ordem judicial ou solicitações de autoridades competentes para a investigação de fraudes e crimes cibernéticos.</p>
+            </section>
 
-            <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">4. Segurança</h2>
-            <p>Armazenamos seus dados em servidores seguros (Google Cloud / Firebase) que utilizam criptografia avançada. Apesar de adotarmos as melhores práticas de segurança, lembramos que nenhum sistema na internet é 100% invulnerável.</p>
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4">4. Retenção de Dados</h2>
+              <p>Manteremos seus dados pessoais apenas pelo tempo necessário para cumprir as finalidades descritas nesta política. Caso você exclua sua conta, seus dados pessoais e anúncios serão removidos permanentemente dos nossos bancos de dados ativos, exceto se houver obrigação legal de retenção por prazos estipulados no Marco Civil da Internet (Lei nº 12.965/2014).</p>
+            </section>
 
-            <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">5. Seus Direitos (LGPD)</h2>
-            <p>Você tem o direito de solicitar a qualquer momento:</p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>A visualização dos dados que temos sobre você.</li>
-              <li>A correção de dados incompletos ou inexatos.</li>
-              <li>A exclusão permanente da sua conta e dos seus dados do nosso banco de dados.</li>
-            </ul>
-            <p>Para exercer seus direitos ou tirar dúvidas sobre esta política, entre em contato através de: <strong>contato@desapegopiaui.com.br</strong></p>
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4">5. Seus Direitos (Art. 18 da LGPD)</h2>
+              <p>Como titular dos dados, você tem o direito garantido por lei de solicitar a qualquer momento:</p>
+              <ul className="list-disc pl-6 space-y-2 mt-2">
+                <li>Confirmação e acesso aos dados que possuímos sobre você.</li>
+                <li>Correção de dados incompletos, inexatos ou desatualizados (diretamente no seu painel de perfil).</li>
+                <li>Revogação do consentimento e a <strong>exclusão total</strong> da sua conta e dos seus dados pessoais.</li>
+              </ul>
+              <p className="mt-4 bg-gray-100 p-4 rounded-xl text-sm border border-gray-200">
+                Para exercer seus direitos, solicitar a exclusão de dados ou tirar dúvidas sobre privacidade, entre em contato com nosso Encarregado de Dados (DPO) através do e-mail: <strong>privacidade@desapegopiaui.com.br</strong>
+              </p>
+            </section>
           </div>
         </div>
       </div>
