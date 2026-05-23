@@ -1,16 +1,21 @@
 import { Metadata } from 'next'
 
+// Tipagem correta para evitar o uso de 'any' e prevenir erros no build (Next.js 13/14/15)
+type Props = {
+  params: Promise<{ id: string }> | { id: string };
+}
+
 // Esta função corre no Servidor antes da página carregar, desenhando o "Cartão" de SEO
-export async function generateMetadata({ params }: any): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    // Agora o Next.js exige o 'await' antes de ler o params
+    // Compatibilidade com Next.js 15 (onde params passou a ser uma Promise)
     const resolvedParams = await params;
-    const id = resolvedParams?.id;
+    const id = resolvedParams.id;
     
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     
     if (!projectId || !id) {
-      return { title: 'Anúncio | DesapegoPI' }
+      return { title: 'Anúncio | Desapego Piauí' }
     }
 
     // Buscamos os dados direto da API do Google (Firestore) para ser ultra-rápido no servidor
@@ -23,7 +28,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       const data = await res.json();
       
       // O Firestore REST API guarda os dados dentro de "fields" e indica o tipo
-      const titulo = data.fields?.titulo?.stringValue || 'Anúncio no DesapegoPI';
+      const titulo = data.fields?.titulo?.stringValue || 'Anúncio no Desapego Piauí';
       const descricao = data.fields?.descricao?.stringValue || 'Confira este produto excelente no nosso marketplace.';
       
       // EXTRAINDO E FORMATANDO O PREÇO PARA O SEO
@@ -31,13 +36,13 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(precoRaw));
       
       // Monta o título matador para o WhatsApp e Google
-      const tituloSEO = `${titulo} por ${precoFormatado} | DesapegoPI`;
+      const tituloSEO = `${titulo} por ${precoFormatado} | Desapego Piauí`;
       const descSEO = descricao.substring(0, 150) + (descricao.length > 150 ? '...' : '');
       
-      // Tenta pegar a imagem principal ou a primeira foto da galeria
+      // Tenta pegar a imagem principal, a primeira foto da galeria, ou usa a LOGO PADRÃO
       const imagem = data.fields?.imagemUrl?.stringValue || 
                      data.fields?.fotos?.arrayValue?.values?.[0]?.stringValue || 
-                     '';
+                     'https://i.imgur.com/vHqB0aA.png'; // Evita que o WhatsApp fique sem foto
 
       return {
         title: tituloSEO,
@@ -45,15 +50,15 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         openGraph: {
           title: tituloSEO,
           description: descSEO,
-          siteName: 'DesapegoPI',
-          images: imagem ? [{ url: imagem, width: 800, height: 600 }] : [],
+          siteName: 'Desapego Piauí',
+          images: [{ url: imagem, width: 800, height: 600, alt: titulo }],
           type: 'website',
         },
         twitter: {
           card: 'summary_large_image',
           title: tituloSEO,
           description: descSEO,
-          images: imagem ? [imagem] : [],
+          images: [imagem],
         },
       }
     }
@@ -63,7 +68,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
 
   // Fallback caso o anúncio não exista ou dê erro
   return {
-    title: 'Anúncio | DesapegoPI',
+    title: 'Anúncio | Desapego Piauí',
     description: 'Compre e venda de tudo no Piauí de forma rápida e segura.'
   }
 }

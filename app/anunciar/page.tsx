@@ -62,7 +62,8 @@ const comprimirImagem = (file: File): Promise<File> => {
         let width = img.width;
         let height = img.height;
         
-        const max_size = 1600;
+        // 🚀 OTIMIZAÇÃO: Tamanho máximo de 1080px (Ideal para telemóveis e ecrãs)
+        const max_size = 1080;
 
         if (width > height) {
           if (width > max_size) {
@@ -80,17 +81,18 @@ const comprimirImagem = (file: File): Promise<File> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
+        // 🚀 OTIMIZAÇÃO: Converte para WEBP com 80% de qualidade (Poupança extrema de armazenamento)
         canvas.toBlob((blob) => {
           if (blob) {
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-              type: 'image/jpeg',
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+              type: 'image/webp',
               lastModified: Date.now(),
             });
             resolve(newFile);
           } else {
             resolve(file); 
           }
-        }, 'image/jpeg', 0.9);
+        }, 'image/webp', 0.8);
       };
       img.onerror = (error) => reject(error);
     };
@@ -107,6 +109,9 @@ export default function AnunciarPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [planoId, setPlanoId] = useState<number | null>(null)
+  
+  // 🚀 HONEYPOT: Campo invisível para apanhar bots
+  const [botTrap, setBotTrap] = useState('')
   
   const [loading, setLoading] = useState(false)
   const [comprimindo, setComprimindo] = useState(false)
@@ -205,6 +210,13 @@ export default function AnunciarPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 🚀 PROTEÇÃO ANTI-BOT (Honeypot) - Se o campo estiver preenchido, é um bot
+    if (botTrap !== '') {
+      console.warn("Bloqueado por suspeita de bot.");
+      return; 
+    }
+
     if (isFormIncompleto) return
 
     const textoParaVerificar = removerAcentos(`${titulo} ${descricao}`);
@@ -371,8 +383,11 @@ export default function AnunciarPage() {
       <div className="container mx-auto px-4 max-w-2xl">
         <h1 className="text-3xl font-black text-primary mb-8 uppercase italic tracking-tight">O que você está anunciando?</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-gray-100">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-gray-100 relative">
           
+          {/* 🚀 HONEYPOT: Campo invisível para enganar os robôs de spam */}
+          <input type="text" name="website" value={botTrap} onChange={(e) => setBotTrap(e.target.value)} style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
           <div>
             <div className="flex justify-between items-end mb-4">
                <label className="block text-primary font-bold flex items-center gap-2">
