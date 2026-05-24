@@ -1,31 +1,40 @@
 'use client'
-import { useState } from 'react'
-import { MessageSquarePlus, X, Loader2, Send } from 'lucide-react'
-import { db } from '@/lib/firebase'
+import { useState, useEffect } from 'react'
+import { db, auth } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { usePathname } from 'next/navigation' // <-- Importamos para saber em que página estamos
+import { onAuthStateChanged } from 'firebase/auth'
+import { MessageSquare, X, Send, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function FeedbackButton() {
-  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [tipo, setTipo] = useState('Sugestão')
   const [mensagem, setMensagem] = useState('')
-  const [enviando, setEnviando] = useState(false)
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
   const [sucesso, setSucesso] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
-  // SE ESTIVERMOS NO PAINEL ADMIN, O BOTÃO NÃO APARECE!
-  if (pathname === '/admin') return null;
+  // Ao carregar, verifica se o utilizador está logado e puxa o e-mail dele
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      if (currentUser?.email) {
+        setEmail(currentUser.email)
+      }
+    })
+    return () => unsubscribe()
+  }, [])
 
-  const handleEnviar = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!mensagem.trim()) return
+    if (!mensagem.trim() || !email.trim()) return
 
-    setEnviando(true)
+    setLoading(true)
     try {
       await addDoc(collection(db, 'feedbacks'), {
-        tipo,
         mensagem,
-        lido: false,
+        email: email.trim(), // Agora o e-mail é obrigatório e vai ser sempre salvo!
+        usuarioId: user?.uid || 'visitante',
+        status: 'pendente',
         criadoEm: serverTimestamp()
       })
       setSucesso(true)
@@ -33,13 +42,12 @@ export default function FeedbackButton() {
         setIsOpen(false)
         setSucesso(false)
         setMensagem('')
-        setTipo('Sugestão')
       }, 3000)
     } catch (error) {
       console.error(error)
       alert("Erro ao enviar feedback.")
     } finally {
-      setEnviando(false)
+      setLoading(false)
     }
   }
 
@@ -47,61 +55,68 @@ export default function FeedbackButton() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 bg-primary hover:bg-primary-dark text-white p-3 md:p-4 rounded-full shadow-2xl z-40 transition-transform hover:scale-110 flex items-center justify-center group"
-        title="Deixe seu Feedback"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 bg-primary text-white p-3 md:p-4 rounded-full shadow-lg hover:bg-primary-dark transition-transform hover:scale-105 z-50 flex items-center justify-center"
       >
-        <MessageSquarePlus size={24} />
-        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[100px] transition-all duration-300 ease-in-out font-bold group-hover:ml-2">Feedback</span>
+        <MessageSquare size={24} />
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 p-2 rounded-full transition">
+        <div className="fixed inset-0 bg-black/50 z-[99999] flex items-end md:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-xl relative animate-in fade-in slide-in-from-bottom-10">
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 p-2 rounded-full"
+            >
               <X size={20} />
             </button>
-            
-            <div className="mb-6 text-center">
-              <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
-                <MessageSquarePlus size={32} />
-              </div>
-              <h2 className="text-2xl font-black text-gray-900">Seu Feedback</h2>
-              <p className="text-gray-500 text-sm mt-1">Ajude-nos a melhorar a plataforma!</p>
-            </div>
 
             {sucesso ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Send size={32} />
+                  <CheckCircle2 size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Muito obrigado!</h3>
-                <p className="text-gray-500 mt-2">Sua opinião foi enviada para nossa equipe e vai nos ajudar muito.</p>
+                <h3 className="text-xl font-black text-gray-900 mb-2">Muito Obrigado!</h3>
+                <p className="text-gray-600 font-medium">A sua sugestão foi enviada para a nossa equipa e responderemos em breve.</p>
               </div>
             ) : (
-              <form onSubmit={handleEnviar} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Qual o tipo de feedback?</label>
-                  <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full p-3 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium">
-                    <option value="Sugestão">💡 Sugestão de Melhoria</option>
-                    <option value="Elogio">❤️ Elogio</option>
-                    <option value="Erro">🐛 Reportar um Erro/Bug</option>
-                    <option value="Outro">Outro</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Sua mensagem</label>
-                  <textarea 
-                    required 
-                    value={mensagem} 
-                    onChange={e => setMensagem(e.target.value)} 
-                    placeholder="Escreva o que você achou do site ou o que podemos melhorar..."
-                    className="w-full p-3 border border-gray-200 bg-gray-50 rounded-xl focus:ring-2 focus:ring-primary outline-none transition min-h-[120px] resize-none"
-                  />
-                </div>
-                <button type="submit" disabled={enviando || !mensagem.trim()} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2">
-                  {enviando ? <Loader2 className="animate-spin" /> : 'Enviar Feedback Seguramente'}
-                </button>
-              </form>
+              <>
+                <h3 className="text-xl font-black text-gray-900 mb-2">Deixe a sua opinião</h3>
+                <p className="text-sm text-gray-600 mb-6 font-medium">Encontrou algum erro ou tem uma sugestão? Diga-nos!</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">O seu E-mail (Para podermos responder)*</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">A sua Mensagem*</label>
+                    <textarea 
+                      required
+                      rows={4}
+                      value={mensagem}
+                      onChange={(e) => setMensagem(e.target.value)}
+                      placeholder="Escreva a sua sugestão..."
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm resize-none font-medium"
+                    ></textarea>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={loading || !mensagem.trim() || !email.trim()}
+                    className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Enviar Feedback</>}
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </div>
