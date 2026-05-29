@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-// 🚀 Adicionado query e where para a função de resetar o bônus
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc, query, where } from 'firebase/firestore'
-// 🚀 Adicionado Gift e Power para os novos botões
 import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Calendar, BarChart3, Crown, Clock, Reply, Send, Users, Phone, Search, Activity, Gift, Power } from 'lucide-react'
 import Link from 'next/link'
 
@@ -105,7 +103,6 @@ export default function AdminPage() {
       
       snapshotAds.forEach(docSnap => {
         const data = docSnap.data()
-        // 🚀 CORREÇÃO: Garante que vinculamos ao ID correto do criador
         const idUsuarioDesteAnuncio = data.vendedorId || data.usuarioId;
         const anuncioFormatado = { id: docSnap.id, ...data, vendedorId: idUsuarioDesteAnuncio };
 
@@ -115,7 +112,6 @@ export default function AdminPage() {
             listaAds.push(anuncioFormatado)
         }
 
-        // RECUPERAÇÃO INTELIGENTE DE USUÁRIOS
         if (idUsuarioDesteAnuncio && !mapUsuarios.has(idUsuarioDesteAnuncio)) {
            mapUsuarios.set(idUsuarioDesteAnuncio, {
               id: idUsuarioDesteAnuncio,
@@ -182,7 +178,6 @@ export default function AdminPage() {
     }
   }
 
-  // 🚀 NOVA FUNÇÃO: ZERAR LIMITE DO PLANO GRÁTIS
   const handleZerarGratis = async (vendedorId: string) => {
     if (!confirm("Isto vai liberar o Bônus de 1 Dia Grátis para este utilizador poder usar novamente. Deseja confirmar?")) return;
     try {
@@ -190,7 +185,6 @@ export default function AdminPage() {
       const q = query(collection(db, 'anuncios'), where('vendedorId', '==', vendedorId), where('planoId', '==', 0));
       const snap = await getDocs(q);
       
-      // Muda o planoId de 0 para 99 (para que o sistema não o reconheça mais como o "plano gratis único" gasto)
       const promessas = snap.docs.map(docSnap => updateDoc(doc(db, 'anuncios', docSnap.id), { planoId: 99 }));
       await Promise.all(promessas);
 
@@ -202,7 +196,6 @@ export default function AdminPage() {
     }
   }
 
-  // 🚀 NOVA FUNÇÃO: FORÇAR ATIVAÇÃO / RENOVAR PLANO
   const handleForcarAtivacao = async (ad: any, dias: number, novoPlanoId: number) => {
     if (!confirm(`Tem a certeza que deseja ativar/renovar este anúncio por ${dias} dias no VIP? Ele ficará público imediatamente.`)) return;
     try {
@@ -335,7 +328,7 @@ export default function AdminPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 relative">
       
-      {/* MODAL DE FEEDBACK */}
+      {/* 🚀 MODAL DE FEEDBACK CORRIGIDO */}
       {replyingTo && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative animate-in fade-in zoom-in duration-200">
@@ -345,20 +338,55 @@ export default function AdminPage() {
                <span className="absolute -top-3 left-4 bg-gray-200 text-gray-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">Mensagem Original</span>
                "{replyingTo.mensagem}"
             </div>
-            <textarea
-              value={replyMessage}
-              onChange={e => setReplyMessage(e.target.value)}
-              rows={6}
-              className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 mb-6 text-gray-800 resize-none font-medium"
-              placeholder="Olá! Muito obrigado pelo seu feedback. Gostaríamos de informar que..."
-            />
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => { setReplyingTo(null); setReplyMessage(''); }} className="px-6 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">Cancelar</button>
-              <button onClick={handleSendReply} disabled={!replyMessage.trim() || sendingReply || !replyingTo.email} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-blue-300 flex items-center gap-2">
-                {sendingReply ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Enviar por E-mail
-              </button>
-            </div>
-            {!replyingTo.email && <p className="text-red-500 text-xs font-bold text-center mt-4">Não é possível responder: este usuário não forneceu o e-mail.</p>}
+
+            {/* Verifica se tem email. Se não tiver, mostra o botão para apagar. Se tiver, mostra a textarea normal. */}
+            {(!replyingTo.email || replyingTo.email === 'Não informado' || replyingTo.email === '') ? (
+              <div className="flex flex-col gap-3 mt-4">
+                <p className="text-red-500 text-sm font-bold bg-red-50 p-4 rounded-xl border border-red-100">
+                  Não é possível responder por e-mail, pois o utilizador não forneceu um contacto. Deseja limpar este feedback da sua lista?
+                </p>
+                <div className="flex justify-end gap-3 mt-2">
+                  <button 
+                    onClick={() => { setReplyingTo(null); setReplyMessage(''); }} 
+                    className="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if(!confirm('Tem certeza que deseja apagar este feedback antigo?')) return;
+                      try {
+                        await deleteDoc(doc(db, 'feedbacks', replyingTo.id));
+                        setFeedbacks(feedbacks.filter(f => f.id !== replyingTo.id));
+                        setReplyingTo(null);
+                      } catch(err) {
+                        console.error(err);
+                      }
+                    }} 
+                    className="px-6 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 flex items-center gap-2 shadow-md transition-transform active:scale-95"
+                  >
+                    <Trash2 size={18}/> Apagar Feedback
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={replyMessage}
+                  onChange={e => setReplyMessage(e.target.value)}
+                  rows={6}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 mb-6 text-gray-800 resize-none font-medium"
+                  placeholder="Olá! Muito obrigado pelo seu feedback. Gostaríamos de informar que..."
+                />
+                <div className="flex gap-3 justify-end">
+                  <button onClick={() => { setReplyingTo(null); setReplyMessage(''); }} className="px-6 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition">Cancelar</button>
+                  <button onClick={handleSendReply} disabled={!replyMessage.trim() || sendingReply} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-blue-300 flex items-center gap-2">
+                    {sendingReply ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Enviar por E-mail
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
@@ -763,9 +791,9 @@ export default function AdminPage() {
                         <Reply size={18} />
                       </button>
                       <button onClick={async () => {
-                           if(!confirm('Apagar esta mensagem de feedback?')) return;
-                           await deleteDoc(doc(db, 'feedbacks', fb.id));
-                           setFeedbacks(feedbacks.filter(f => f.id !== fb.id));
+                            if(!confirm('Apagar esta mensagem de feedback?')) return;
+                            await deleteDoc(doc(db, 'feedbacks', fb.id));
+                            setFeedbacks(feedbacks.filter(f => f.id !== fb.id));
                         }} 
                         title="Apagar" className="text-gray-400 hover:bg-red-100 hover:text-red-500 p-2 rounded-lg transition-colors" >
                         <Trash2 size={18} />

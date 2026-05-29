@@ -1,20 +1,17 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-// 🚀 LISTA DE ÍCONES ATUALIZADA COM OS NOVOS DE CATEGORIA E PLANOS
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User } from 'lucide-react'
 
-// 🚀 CATEGORIAS ATUALIZADAS (Mais opções)
 const CATEGORIAS = [
   "Imóveis", "Veículos", "Eletrônicos", "Para Casa", 
   "Moda e Beleza", "Serviços", "Bebês e Crianças", 
   "Esportes", "Vagas de Emprego", "Outros"
 ]
 
-// 🚀 DESCRIÇÕES E VISUAIS DINÂMICOS PARA CATEGORIAS
 const DESCRICOES_CATEGORIAS = {
   "Imóveis": { texto: "Casas, apartamentos, terrenos, fazendas, aluguéis e pontos comerciais.", icon: Home, cor: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
   "Veículos": { texto: "Carros, motos, caminhões, barcos, peças automotivas e acessórios.", icon: Car, cor: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
@@ -28,7 +25,6 @@ const DESCRICOES_CATEGORIAS = {
   "Outros": { texto: "Itens colecionáveis, instrumentos musicais, agro, máquinas e mais.", icon: ShoppingBag, cor: "text-gray-600", bg: "bg-gray-50", border: "border-gray-200" }
 }
 
-// 🚀 LISTA NEGRA MANTIDA INTACTA
 const PALAVRAS_PROIBIDAS = [
   'arma', 'revólver', 'pistola', 'munição', 'droga', 'maconha', 'cocaína', 
   'hack', 'clonado', 'falsificado', 'réplica perfeita', 'nota falsa',
@@ -37,7 +33,6 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
-// 🚀 PLANOS DE NEGÓCIO ATUAIS (MANTIDOS DA SUA VERSÃO PRINCIPAL)
 const PLANOS_BASE = [
   { id: 99, nome: 'Básico (Grátis)', dias: 3650, valor: 0, desc: 'No ar até você vender (Sem destaque VIP)' },
   { id: 1, nome: 'VIP Diário', dias: 1, valor: 10, desc: '1 dia no topo da página' },
@@ -48,6 +43,15 @@ const PLANOS_BASE = [
 
 const removerAcentos = (texto: string) => {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
+// 🚀 MÁSCARA AUTOMÁTICA DE WHATSAPP
+const mascaraTelefone = (v: string) => {
+  v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
+  if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
+  v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses no DDD
+  v = v.replace(/(\d)(\d{4})$/, "$1-$2");    // Coloca o traço
+  return v;
 };
 
 const comprimirImagem = (file: File): Promise<File> => {
@@ -61,27 +65,18 @@ const comprimirImagem = (file: File): Promise<File> => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        
-        // 🚀 OTIMIZAÇÃO: Tamanho máximo de 1080px (Ideal para telemóveis e ecrãs)
         const max_size = 1080;
 
         if (width > height) {
-          if (width > max_size) {
-            height *= max_size / width;
-            width = max_size;
-          }
+          if (width > max_size) { height *= max_size / width; width = max_size; }
         } else {
-          if (height > max_size) {
-            width *= max_size / height;
-            height = max_size;
-          }
+          if (height > max_size) { width *= max_size / height; height = max_size; }
         }
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // 🚀 OTIMIZAÇÃO: Converte para WEBP com 80% de qualidade (Poupança extrema de armazenamento)
         canvas.toBlob((blob) => {
           if (blob) {
             const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
@@ -105,14 +100,16 @@ export default function AnunciarPage() {
   const [descricao, setDescricao] = useState('')
   const [preco, setPreco] = useState('')
   const [categoria, setCategoria] = useState('')
+  
+  // 🚀 NOVOS ESTADOS PARA PERFIL OBRIGATÓRIO
   const [localizacao, setLocalizacao] = useState('') 
+  const [telefone, setTelefone] = useState('')
+  const [nomeAutor, setNomeAutor] = useState('')
+
   const [fotos, setFotos] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [planoId, setPlanoId] = useState<number | null>(null)
-  
-  // 🚀 HONEYPOT: Campo invisível para apanhar bots
   const [botTrap, setBotTrap] = useState('')
-  
   const [loading, setLoading] = useState(false)
   const [comprimindo, setComprimindo] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -133,6 +130,20 @@ export default function AnunciarPage() {
           return; 
         } else {
           setEmailVerificado(true)
+
+          // 🚀 BUSCA DADOS DO PERFIL (Se veio do Google e não tem telefone, ficará em branco obrigando a preencher)
+          try {
+             const userDocRef = doc(db, 'usuarios', u.uid);
+             const userDocSnap = await getDoc(userDocRef);
+             if (userDocSnap.exists()) {
+                const uData = userDocSnap.data();
+                if (uData.telefone) setTelefone(uData.telefone);
+                if (uData.nome) setNomeAutor(uData.nome);
+                else setNomeAutor(u.displayName || u.email?.split('@')[0] || '');
+             } else {
+                setNomeAutor(u.displayName || u.email?.split('@')[0] || '');
+             }
+          } catch(e) { console.error("Erro ao buscar perfil", e); }
           
           const localJaUsou = localStorage.getItem('jaUsouGratis_dev')
           if (localJaUsou) {
@@ -172,30 +183,26 @@ export default function AnunciarPage() {
     }
   }
 
-  const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || planoId === null;
+  // 🚀 ATUALIZADO: Agora telefone e nome também são rigorosamente obrigatórios
+  const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || !telefone.trim() || !nomeAutor.trim() || planoId === null;
 
   const PLANO_PRESENTE = { id: 0, nome: 'Boas-Vindas (VIP)', dias: 1, valor: 0, desc: '1 dia VIP Grátis (Válido 1x)' };
-  
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_PRESENTE, ...PLANOS_BASE];
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
-      
       if (fotos.length + selectedFiles.length > 10) {
         alert("Você pode adicionar no máximo 10 fotos por anúncio.")
         return
       }
-
       setComprimindo(true)
       try {
         const compressedFiles = await Promise.all(selectedFiles.map(file => comprimirImagem(file)))
-        
         setFotos(prev => [...prev, ...compressedFiles])
         const selectedPreviews = compressedFiles.map(file => URL.createObjectURL(file))
         setPreviews(prev => [...prev, ...selectedPreviews])
       } catch (error) {
-        console.error("Erro ao comprimir imagem", error)
         alert("Erro ao processar uma das imagens. Tente com outra foto.")
       } finally {
         setComprimindo(false)
@@ -211,13 +218,16 @@ export default function AnunciarPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // 🚀 PROTEÇÃO ANTI-BOT (Honeypot) - Se o campo estiver preenchido, é um bot
     if (botTrap !== '') {
-      console.warn("Bloqueado por suspeita de bot.");
-      return; 
+      console.warn("Bloqueado por suspeita de bot."); return; 
     }
-
     if (isFormIncompleto) return
+
+    // 🚀 VALIDAÇÃO DO WHATSAPP (Impede de colocar números falsos muito pequenos)
+    if (telefone.replace(/\D/g, '').length < 10) {
+      alert("⚠️ Por favor, insira um número de WhatsApp válido com DDD.");
+      return;
+    }
 
     const textoParaVerificar = removerAcentos(`${titulo} ${descricao}`);
     const temPalavraProibida = PALAVRAS_PROIBIDAS.some(palavra => {
@@ -227,13 +237,12 @@ export default function AnunciarPage() {
     });
 
     if (temPalavraProibida) {
-      alert("⚠️ BLOQUEADO: Seu anúncio contém palavras proibidas que violam nossos Termos de Segurança e Uso. Por favor, altere o título e a descrição.");
+      alert("⚠️ BLOQUEADO: Seu anúncio contém palavras proibidas. Por favor, altere o título e a descrição.");
       return;
     }
 
     setLoading(true)
     try {
-      
       let precoNumerico = 0
       if (preco) {
         const precoLimpo = preco.toString().replace(/\./g, '').replace(',', '.')
@@ -242,43 +251,41 @@ export default function AnunciarPage() {
 
       if (isNaN(precoNumerico) || precoNumerico <= 0) {
         alert("Por favor, insira um preço válido maior que zero.");
-        setLoading(false);
-        return;
+        setLoading(false); return;
       }
 
+      // 🚀 SALVA OS DADOS DO USUÁRIO GLOBALMENTE (Perfil completo pra sempre)
+      try {
+        await setDoc(doc(db, 'usuarios', user.uid), {
+           nome: nomeAutor,
+           telefone: telefone,
+           email: user.email,
+           atualizadoEm: serverTimestamp()
+        }, { merge: true });
+      } catch(e) { console.error("Erro ao salvar perfil do usuário", e); }
+
       const urls: string[] = []
-      
       if (fotos.length > 0) {
         const idToken = await user.getIdToken();
-
         for (const foto of fotos) {
           const formData = new FormData()
           formData.append('image', foto)
-
           const response = await fetch('/api/upload', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${idToken}` },
             body: formData,
           })
-
           const data = await response.json()
-          
-          if (data.success) {
-            urls.push(data.url || data.data.url) 
-          } else {
-            console.error("Erro no upload seguro:", data)
-            alert("Erro ao enviar foto: " + (data.error || "Tente novamente."));
-          }
+          if (data.success) { urls.push(data.url || data.data.url) } 
+          else { alert("Erro ao enviar foto: " + (data.error || "Tente novamente.")); }
         }
       }
 
       let statusFinal = 'pendente';
-      
       if (planoId === 0) {
         if (jaUsouGratis) {
           alert("Acesso negado: Você já usou o plano VIP grátis neste dispositivo ou conta.");
-          setLoading(false);
-          return;
+          setLoading(false); return;
         }
         statusFinal = 'ativo'; 
         localStorage.setItem('jaUsouGratis_dev', 'true'); 
@@ -288,17 +295,18 @@ export default function AnunciarPage() {
 
       const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
       const diasDuracao = planoEscolhido ? planoEscolhido.dias : 1;
-      
       const dataCalculada = new Date();
       dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
-      const dataExpiracaoISO = dataCalculada.toISOString();
 
+      // 🚀 GUARDA NO ANÚNCIO (Assim quem clicar no anúncio consegue ver o WhatsApp e o Nome)
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
         preco: precoNumerico,
         categoria,
         localizacao,
+        telefone: telefone,   // Guardado no anúncio
+        autorNome: nomeAutor, // Guardado no anúncio
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
@@ -306,43 +314,27 @@ export default function AnunciarPage() {
         planoId: planoId,
         visualizacoes: 0,
         criadoEm: serverTimestamp(),
-        expiraEm: dataExpiracaoISO
+        expiraEm: dataCalculada.toISOString()
       })
 
       if (user) {
          try {
             await addDoc(collection(db, 'logs'), {
-               usuarioId: user.uid,
-               acao: 'CRIOU',
-               tituloAnuncio: titulo,
-               criadoEm: new Date()
+               usuarioId: user.uid, acao: 'CRIOU', tituloAnuncio: titulo, criadoEm: new Date()
             });
-         } catch (logError) {
-            console.error("Erro ao salvar log de criação do anúncio", logError);
-         }
+         } catch (logError) {}
       }
 
       if (statusFinal === 'ativo') {
         fetch('/api/email', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_KEY}`
-          },
-          body: JSON.stringify({
-            tipo: 'anuncio_aprovado',
-            email: user.email,
-            nome: user.displayName || 'Vendedor',
-            produto: titulo
-          })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_SECRET_KEY}` },
+          body: JSON.stringify({ tipo: 'anuncio_aprovado', email: user.email, nome: nomeAutor || 'Vendedor', produto: titulo })
         }).catch(console.error);
       }
 
-      if (planoId === 0 || planoId === 99) {
-         router.push('/meus-anuncios');
-      } else {
-         router.push(`/pagamento/${docRef.id}`);
-      }
+      if (planoId === 0 || planoId === 99) { router.push('/meus-anuncios'); } 
+      else { router.push(`/pagamento/${docRef.id}`); }
       
     } catch (error) {
       console.error(error)
@@ -361,17 +353,13 @@ export default function AnunciarPage() {
           </div>
           <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">Verificação Necessária</h2>
           <p className="text-gray-600 font-medium mb-6 leading-relaxed">
-            Para manter a segurança do Desapego Piauí, você precisa confirmar o seu e-mail (<strong className="text-gray-900">{user.email}</strong>) antes de publicar um anúncio.
+            Para manter a segurança, confirme o seu e-mail (<strong className="text-gray-900">{user.email}</strong>).
           </p>
-          <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 text-sm text-orange-800 text-left mb-8">
-             <ShieldAlert className="shrink-0 text-orange-500" size={20} />
-             <p>Esta é uma medida de segurança para evitar perfis falsos e fraudes na plataforma.</p>
-          </div>
           <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md transition-all mb-4">
             Já confirmei, recarregar página
           </button>
           <button onClick={handleReenviarEmail} className="text-primary font-bold hover:underline text-sm">
-            Não recebeu? Reenviar e-mail de confirmação
+            Reenviar e-mail de confirmação
           </button>
         </div>
       </div>
@@ -385,7 +373,6 @@ export default function AnunciarPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-gray-100 relative">
           
-          {/* 🚀 HONEYPOT: Campo invisível para enganar os robôs de spam */}
           <input type="text" name="website" value={botTrap} onChange={(e) => setBotTrap(e.target.value)} style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
           <div>
@@ -404,7 +391,6 @@ export default function AnunciarPage() {
                   <button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md"><X size={14} strokeWidth={3}/></button>
                 </div>
               ))}
-              
               {fotos.length < 10 && (
                 <label className={`aspect-square border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center justify-center text-primary transition bg-gray-50 ${comprimindo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/5'}`}>
                   <Camera size={32} />
@@ -427,7 +413,6 @@ export default function AnunciarPage() {
               {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
 
-            {/* 🚀 NOVA LÓGICA DE DESCRIÇÃO DA CATEGORIA RENDERIZADA AQUI */}
             {categoria && DESCRICOES_CATEGORIAS[categoria as keyof typeof DESCRICOES_CATEGORIAS] && (
               <div className={`mt-3 p-4 rounded-xl border flex gap-3 items-start transition-all duration-300 ease-in-out ${DESCRICOES_CATEGORIAS[categoria as keyof typeof DESCRICOES_CATEGORIAS].bg} ${DESCRICOES_CATEGORIAS[categoria as keyof typeof DESCRICOES_CATEGORIAS].border}`}>
                  {(() => {
@@ -435,9 +420,7 @@ export default function AnunciarPage() {
                     const Icone = InfoCat.icon;
                     return (
                        <>
-                          <div className={`p-2 rounded-full bg-white shadow-sm shrink-0 ${InfoCat.cor}`}>
-                             <Icone size={20} />
-                          </div>
+                          <div className={`p-2 rounded-full bg-white shadow-sm shrink-0 ${InfoCat.cor}`}><Icone size={20} /></div>
                           <div>
                              <p className={`font-black text-sm uppercase tracking-wider mb-0.5 ${InfoCat.cor}`}>{categoria}</p>
                              <p className="text-gray-600 text-sm font-medium leading-snug">{InfoCat.texto}</p>
@@ -450,33 +433,14 @@ export default function AnunciarPage() {
           </div>
 
           <div>
-            <label className="block text-primary font-bold mb-2 flex items-center gap-2">
-              <MapPin size={18} /> Cidade / Bairro*
-            </label>
-            <input required type="text" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: Teresina - Dirceu" />
-          </div>
-
-          <div>
             <label className="block text-primary font-bold mb-2">Preço (R$)*</label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/50" size={20} />
-              <input 
-                type="text" 
-                inputMode="numeric"
-                placeholder="0,00"
-                required
-                value={preco}
+              <input type="text" inputMode="numeric" placeholder="0,00" required value={preco}
                 onChange={(e) => {
                   const valor = e.target.value.replace(/\D/g, '');
-                  if (!valor) {
-                    setPreco('');
-                    return;
-                  }
-                  const formatado = (Number(valor) / 100).toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  });
-                  setPreco(formatado);
+                  if (!valor) { setPreco(''); return; }
+                  setPreco((Number(valor) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                 }}
                 className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-transparent rounded-xl focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium text-gray-800"
               />
@@ -488,7 +452,45 @@ export default function AnunciarPage() {
             <textarea required rows={5} value={descricao} onChange={(e) => setDescricao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800 resize-none" placeholder="Detalhes sobre o estado do produto..."></textarea>
           </div>
 
-          {/* 🚀 LÓGICA ROBUSTA DOS PLANOS VIP E BÁSICO ETERNO MANTIDA DA VERSÃO PRINCIPAL */}
+          {/* ====================================================================================== */}
+          {/* 🚀 NOVA SEÇÃO OBRIGATÓRIA: DADOS DE CONTATO E LOCALIZAÇÃO (RESOLVE O PROBLEMA DO GOOGLE) */}
+          {/* ====================================================================================== */}
+          <div className="pt-6 border-t border-gray-100">
+             <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <User size={24} className="text-primary" /> Seus Dados e Localização
+             </h2>
+             <p className="text-sm text-gray-500 font-medium mb-4">Estes dados serão salvos no seu perfil e exibidos no anúncio para os compradores.</p>
+             
+             <div className="space-y-4">
+                <div>
+                  <label className="block text-primary font-bold mb-2">Como deseja ser chamado?*</label>
+                  <input required type="text" value={nomeAutor} onChange={(e) => setNomeAutor(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: João Silva" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-primary font-bold mb-2 flex items-center gap-2">
+                      <Phone size={18} /> Seu WhatsApp*
+                    </label>
+                    <input 
+                       required type="tel" maxLength={15}
+                       value={telefone} 
+                       onChange={(e) => setTelefone(mascaraTelefone(e.target.value))} 
+                       className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" 
+                       placeholder="(86) 99999-9999" 
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-primary font-bold mb-2 flex items-center gap-2">
+                      <MapPin size={18} /> Cidade / Bairro*
+                    </label>
+                    <input required type="text" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800" placeholder="Ex: Teresina - Dirceu" />
+                  </div>
+                </div>
+             </div>
+          </div>
+
           <div className="pt-6 border-t border-gray-100">
              <label className="block text-primary font-black text-xl mb-4">Escolha um Plano para destacar*</label>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -500,17 +502,8 @@ export default function AnunciarPage() {
                       onClick={() => setPlanoId(p.id)}
                       className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-gray-50'}`}
                    >
-                      {p.id === 0 && (
-                        <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
-                          <Gift size={12}/> Presente VIP
-                        </div>
-                      )}
-                      
-                      {p.id === 99 && (
-                        <div className="absolute top-0 right-0 bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1">
-                          <Store size={12}/> Padrão
-                        </div>
-                      )}
+                      {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> Presente VIP</div>)}
+                      {p.id === 99 && (<div className="absolute top-0 right-0 bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Store size={12}/> Padrão</div>)}
 
                       <div className="flex justify-between items-start mb-2">
                          <h3 className={`font-bold ${isGratis ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
@@ -538,7 +531,7 @@ export default function AnunciarPage() {
             
             {isFormIncompleto && (
               <p className="flex items-center gap-2 text-red-500 text-sm mt-4 font-bold justify-center">
-                <AlertCircle size={16} /> Preencha os campos e escolha um plano.
+                <AlertCircle size={16} /> Preencha todos os campos e escolha um plano.
               </p>
             )}
           </div>
