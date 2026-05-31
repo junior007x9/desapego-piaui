@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Bell } from 'lucide-react';
+import { MapPin, Bell, BookOpen } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
@@ -60,59 +60,69 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-14 md:h-16 items-center">
+        <div className="flex justify-between h-16 items-center">
           
+          {/* LOGO */}
           <div className="flex items-center gap-2 md:gap-4">
             <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-              <div className="rounded-full overflow-hidden border border-gray-100 shadow-sm w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-gray-50">
+              <div className="rounded-full overflow-hidden border border-gray-100 shadow-sm w-9 h-9 md:w-11 md:h-11 flex items-center justify-center bg-gray-50">
                 <Image 
                   src="/logo.jpeg" 
-                  alt="Logo" 
-                  width={40}
-                  height={40}
+                  alt="Logo Desapego Piauí" 
+                  width={44}
+                  height={44}
                   className="object-cover"
                   priority
                 />
               </div>
-              <span className="text-primary font-extrabold text-lg md:text-xl tracking-tighter group-hover:text-primary-dark transition">
+              <span className="text-primary font-black text-xl tracking-tighter group-hover:text-primary-dark transition-colors">
                 Desapego <span className="text-accent">Piauí</span>
               </span>
             </Link>
           </div>
 
+          {/* MENU DESKTOP */}
           <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center gap-1 text-gray-500 hover:text-primary cursor-pointer transition mr-2">
-              <MapPin size={18} />
-              <span className="text-sm font-medium">{locFull}</span>
+            <div className="flex items-center gap-1 text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full mr-2">
+              <MapPin size={16} className="text-accent" />
+              <span className="text-xs font-bold uppercase tracking-wider">{locFull}</span>
             </div>
 
-            <Link href="/favoritos" className="text-gray-600 hover:text-primary font-medium transition">Favoritos</Link>
+            {/* 🚀 LINK DO BLOG ADICIONADO AQUI */}
+            <Link href="/blog" className="flex items-center gap-1 text-gray-600 hover:text-primary font-bold text-sm transition-colors">
+              <BookOpen size={16} /> Dicas
+            </Link>
+
+            <Link href="/favoritos" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Favoritos</Link>
             
             {user ? (
-              <div className="flex items-center gap-4">
-                <Link href="/meus-anuncios" className="text-gray-600 hover:text-primary font-medium text-sm transition">Meus Anúncios</Link>
-                <Link href="/perfil" className="text-gray-600 hover:text-primary font-medium text-sm transition">Minha Conta</Link>
-                <button onClick={handleLogout} className="text-red-500 hover:text-red-600 font-bold text-sm transition">Sair</button>
+              <div className="flex items-center gap-5 border-l border-gray-200 pl-6 ml-2">
+                <Link href="/meus-anuncios" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Meus Anúncios</Link>
+                <Link href="/perfil" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Minha Conta</Link>
+                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">Sair</button>
               </div>
             ) : (
-              <Link href="/login" className="text-primary hover:text-primary-dark font-bold transition">Entrar</Link>
+              <div className="flex items-center gap-4 border-l border-gray-200 pl-6 ml-2">
+                <Link href="/login" className="text-primary hover:text-primary-dark font-black text-sm transition-colors">Entrar</Link>
+              </div>
             )}
 
             <Link 
               href={user ? "/anunciar" : "/login"} 
-              className="bg-accent hover:bg-accent-dark text-white px-6 py-2 rounded-full font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="bg-accent hover:bg-accent-dark text-white px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ml-2"
             >
-              Anunciar
+              + Anunciar Grátis
             </Link>
           </div>
 
+          {/* MENU MOBILE (Minimalista, o resto fica no BottomNav) */}
           <div className="flex md:hidden items-center gap-3">
-             <div className="flex items-center gap-1 text-gray-800 font-bold text-xs bg-gray-100 px-2 py-1.5 rounded-full">
-                <MapPin size={14} className="text-accent" />
-                <span className="truncate max-w-[100px]">{locShort}</span>
+             <div className="flex items-center gap-1 text-gray-800 font-black text-[10px] uppercase tracking-wider bg-gray-100 px-3 py-1.5 rounded-full">
+                <MapPin size={12} className="text-accent" />
+                <span className="truncate max-w-[90px]">{locShort}</span>
              </div>
-             <button className="text-gray-500 hover:text-primary transition">
-                <Bell size={20} />
+             <button className="text-gray-500 hover:text-primary transition-colors bg-gray-50 p-2 rounded-full">
+                <Bell size={18} />
              </button>
           </div>
 
