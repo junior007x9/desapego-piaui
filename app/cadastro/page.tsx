@@ -1,11 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { useRouter } from 'next/navigation'
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc, increment } from 'firebase/firestore'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Mail, Lock, User, Phone, CheckCircle, Shield, Eye, AlertCircle } from 'lucide-react'
+import { Loader2, Shield, Eye, AlertCircle, CheckCircle, Sparkles } from 'lucide-react'
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
 // BLACKLIST: BLOQUEIO DE E-MAILS DESCARTÁVEIS
@@ -55,6 +55,9 @@ const validarCNPJ = (cnpj: string) => {
 
 function CadastroForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get('ref') // 🚀 CAPTURA O CÓDIGO DE INDICAÇÃO
+
   const { executeRecaptcha } = useGoogleReCaptcha()
   const [loading, setLoading] = useState(false)
 
@@ -180,12 +183,45 @@ function CadastroForm() {
         return;
       }
 
+      // 1. Cria a conta no Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       const telLimpo = telefone.replace(/\D/g, '')
 
+      // 2. Envia Email de Verificação
       await sendEmailVerification(user);
 
+      // 🚀 3. LÓGICA DE INDICAÇÃO E GAMIFICAÇÃO
+      let referrerDocRef = null;
+      if (refCode) {
+        try {
+          // Procura quem é o dono desse código de indicação
+          const qRef = query(collection(db, 'usuarios'), where('codigoIndicacao', '==', refCode));
+          const snapRef = await getDocs(qRef);
+          if (!snapRef.empty) {
+            referrerDocRef = snapRef.docs[0];
+          }
+        } catch (e) {
+          console.error("Erro ao buscar indicação", e);
+        }
+      }
+
+      // Se foi indicado ganha 30, senão ganha os 10 padrão
+      const initialCoins = referrerDocRef ? 30 : 10; 
+      const codigoGerado = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // Paga as 50 moedas para quem indicou
+      if (referrerDocRef) {
+        try {
+          await updateDoc(doc(db, 'usuarios', referrerDocRef.id), {
+            moedas: increment(50)
+          });
+        } catch (e) {
+           console.error("Erro ao creditar bônus para o indicador", e);
+        }
+      }
+
+      // 4. Salva Dados Estruturais do Usuário
       await setDoc(doc(db, 'users', user.uid), {
         nome: apelido, 
         email: email,
@@ -204,10 +240,19 @@ function CadastroForm() {
         endereco: { cep: cep.replace(/\D/g, ''), rua, numero, bairro, cidade, estado }
       })
 
-      // 🚀 ATUALIZA O CONTADOR DE USUÁRIOS
+      // 🚀 5. Salva a Carteira e Perfil Secundário do Usuário
       await setDoc(doc(db, 'usuarios', user.uid), {
-        cadastradoEm: serverTimestamp()
-      }).catch(console.error);
+        nome: apelido,
+        email: email,
+        telefone: telLimpo,
+        cadastradoEm: serverTimestamp(),
+        moedas: initialCoins,
+        codigoIndicacao: codigoGerado,
+        diasSeguidos: 1,
+        creditosTopo: 0,
+        creditosTurbo: 0,
+        indicadoPor: referrerDocRef ? referrerDocRef.id : null // Rastreio de quem indicou
+      }, { merge: true }).catch(console.error);
 
       alert("🎉 Conta criada com sucesso!\n\n📧 Enviamos um link de confirmação para o seu e-mail.\n\n⚠️ IMPORTANTE: Não se esqueça de verificar também a sua pasta de SPAM ou Lixo Eletrônico!");
       router.push('/meus-anuncios')
@@ -234,6 +279,16 @@ function CadastroForm() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-2xl">
         <div className="bg-white py-8 px-4 shadow-sm sm:rounded-[2rem] sm:px-10 border border-gray-100">
           
+          {/* 🚀 BANNER DE INDICAÇÃO */}
+          {refCode && (
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900 p-5 rounded-2xl flex gap-3 text-sm mb-6 border border-amber-200 shadow-sm transform transition hover:scale-[1.02]">
+              <Sparkles className="shrink-0 mt-0.5 text-amber-500 animate-pulse" size={24} />
+              <p className="leading-relaxed">
+                <strong>Bônus Desbloqueado!</strong> Você foi convidado por um amigo. Finalize o seu cadastro agora e ganhe <strong>30 Moedas VIP</strong> de presente para destacar os seus anúncios de graça!
+              </p>
+            </div>
+          )}
+
           <div className="bg-blue-50 text-blue-800 p-4 rounded-xl flex gap-3 text-sm mb-8 border border-blue-100">
              <Shield className="shrink-0 mt-0.5 text-blue-500" size={20} />
              <p><strong>Segurança LGPD:</strong> Seus dados pessoais como CPF, nome completo e endereço exato são estritamente confidenciais e nunca serão exibidos publicamente.</p>
@@ -361,10 +416,13 @@ function CadastroForm() {
   )
 }
 
+// 🚀 O useSearchParams do Next.js precisa estar envelopado em um Suspense
 export default function CadastroPage() {
   return (
-    <GoogleReCaptchaProvider reCaptchaKey="6LdqR3osAAAAAPGrmZb8Nf0NtwEXmwa7EnCMhVLY">
-      <CadastroForm />
-    </GoogleReCaptchaProvider>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-primary" size={40} /></div>}>
+      <GoogleReCaptchaProvider reCaptchaKey="6LdqR3osAAAAAPGrmZb8Nf0NtwEXmwa7EnCMhVLY">
+        <CadastroForm />
+      </GoogleReCaptchaProvider>
+    </Suspense>
   )
 }

@@ -7,7 +7,8 @@ import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
 import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
-import { Toaster } from 'react-hot-toast' // 🚀 IMPORTAÇÃO DOS AVISOS (TOASTS)
+import { Toaster } from 'react-hot-toast' // IMPORTAÇÃO DOS AVISOS (TOASTS)
+import DailyCheckin from '@/components/DailyCheckin' // 🚀 IMPORTAÇÃO DO COMPONENTE FANTASMA
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -15,7 +16,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Desapego Piauí | Compra e Venda de Forma Rápida e Local',
   description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local. Anuncie imóveis, carros, celulares e muito mais!',
-  manifest: '/manifest.json', // 🚀 ATIVADOR DO PWA (Ícone na tela inicial)
+  manifest: '/manifest.json', // ATIVADOR DO PWA (Ícone na tela inicial)
   keywords: [
     "desapego piaui", 
     "olx piaui", 
@@ -52,7 +53,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Bloqueios de zoom removidos para o movimento de pinça nas fotos funcionar!
   themeColor: '#4c1d95', 
 }
 
@@ -108,7 +108,7 @@ export default function RootLayout({
 
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
         
-        {/* 🚀 ATIVADOR DO APLICATIVO (Service Worker) */}
+        {/* ATIVADOR DO APLICATIVO (Service Worker) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -137,6 +137,9 @@ export default function RootLayout({
         <CookieBanner />
         <FeedbackButton />
         
+        {/* 🚀 COMPONENTE FANTASMA PARA GAMIFICAÇÃO */}
+        <DailyCheckin />
+        
         {/* 🚀 O ALTO-FALANTE DE NOTIFICAÇÕES (Instalado em todas as páginas) */}
         <Toaster position="top-right" toastOptions={{
           duration: 4000,
@@ -146,6 +149,7 @@ export default function RootLayout({
             fontWeight: 'bold',
             borderRadius: '12px',
             padding: '16px',
+            zIndex: 9999, // Garante que a notificação apareça acima de tudo
           },
           success: {
             style: { background: '#10B981' }

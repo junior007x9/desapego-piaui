@@ -4,9 +4,9 @@ import { db } from '@/lib/firebase'
 import { collection, getDocs, query, where, doc, updateDoc, limit, startAfter, orderBy } from 'firebase/firestore'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2 } from 'lucide-react'
+import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2, Flame, Rocket, Heart } from 'lucide-react'
 
-const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Outros"]
+const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Serviços", "Bebês e Crianças", "Esportes", "Vagas de Emprego", "Outros"]
 
 function formatTimeAgo(timestampSeconds: number) {
   if (!timestampSeconds) return 'Data desconhecida';
@@ -33,7 +33,7 @@ function SearchContent() {
   const [ads, setAds] = useState<any[]>([])
   const [filteredAds, setFilteredAds] = useState<any[]>([])
   
-  // 🚀 ESTADOS DO INFINITE SCROLL
+  // ESTADOS DO INFINITE SCROLL
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [lastVisible, setLastVisible] = useState<any>(null)
@@ -47,7 +47,7 @@ function SearchContent() {
   
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
 
-  // 🚀 FUNÇÃO DE BUSCA PAGINADA
+  // FUNÇÃO DE BUSCA PAGINADA
   const fetchAds = async (isLoadMore = false) => {
     try {
       if (isLoadMore) setLoadingMore(true)
@@ -55,7 +55,7 @@ function SearchContent() {
 
       const agora = new Date()
       
-      // Carrega de 12 em 12, ordenando pelos mais recentes
+      // Carrega de 12 em 12, ordenando pelos mais recentes na base de dados
       let q = query(
         collection(db, 'anuncios'), 
         where('status', '==', 'ativo'),
@@ -63,7 +63,6 @@ function SearchContent() {
         limit(12)
       )
 
-      // Se for "Carregar Mais", começa a partir do último anúncio que vimos
       if (isLoadMore && lastVisible) {
         q = query(
           collection(db, 'anuncios'), 
@@ -80,7 +79,6 @@ function SearchContent() {
       if (snap.empty) {
         setHasMore(false)
       } else {
-        // Salva o último documento para a próxima página
         setLastVisible(snap.docs[snap.docs.length - 1])
 
         for (const document of snap.docs) {
@@ -88,14 +86,11 @@ function SearchContent() {
           let statusFinal = data.status
           let isExpired = false;
 
+          const plano = Number(data.planoId) || 0;
+
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora) isExpired = true;
-          } else if (data.criadoEm) {
-            const dataCriacao = new Date(data.criadoEm.seconds * 1000);
-            const diasDuracao = data.planoId === 1 ? 1 : data.planoId === 2 ? 7 : data.planoId === 3 ? 15 : data.planoId === 4 ? 30 : 1;
-            dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
-            if (dataCriacao < agora) isExpired = true;
           }
 
           if (isExpired && statusFinal === 'ativo') {
@@ -104,7 +99,7 @@ function SearchContent() {
           }
 
           if (statusFinal === 'ativo') {
-             list.push({ id: document.id, ...data })
+             list.push({ id: document.id, ...data, planoId: plano })
           }
         }
       }
@@ -118,9 +113,6 @@ function SearchContent() {
 
     } catch (error) {
       console.error("Erro ao buscar anúncios:", error)
-      // DICA DE FIREBASE: Se a tela ficar carregando infinitamente e der erro no console,
-      // é porque o Firebase vai pedir para você clicar num link no console para criar um "Índice Composto"
-      // para juntar o 'status' com o 'criadoEm'. É só clicar no link que ele gera e aguardar 2 minutos!
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -132,7 +124,7 @@ function SearchContent() {
     fetchAds()
   }, [])
 
-  // 🚀 OBSERVAR O SCROLL (O espião do final da tela)
+  // OBSERVAR O SCROLL (O espião do final da tela)
   const observer = useRef<IntersectionObserver | null>(null)
   const lastAdElementRef = useCallback((node: any) => {
     if (loading || loadingMore) return
@@ -148,7 +140,7 @@ function SearchContent() {
   }, [loading, loadingMore, hasMore, lastVisible])
 
 
-  // Organiza e filtra os anúncios que já foram carregados
+  // 🚀 ORGANIZAÇÃO INTELIGENTE (Herdada da Home)
   useEffect(() => {
     let result = [...ads]
 
@@ -171,10 +163,26 @@ function SearchContent() {
       result = result.filter(ad => ad.preco <= parseFloat(precoMax))
     }
 
+    // Calcula o "peso" de cada plano para ordenar corretamente
+    const getPesoPlano = (planoId: number) => {
+      if (planoId === 3) return 4; // Ouro é o rei
+      if (planoId === 2 || planoId === 0) return 3; // Turbo / Boas vindas
+      if (planoId === 1) return 2; // Sobe pro Topo
+      return 1; // Básico (99)
+    };
+
+    const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
+
     result.sort((a, b) => {
       if (ordenacao === 'recentes') {
-        if ((b.planoId || 0) !== (a.planoId || 0)) return (b.planoId || 0) - (a.planoId || 0);
-        return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0)
+        const pesoA = getPesoPlano(a.planoId);
+        const pesoB = getPesoPlano(b.planoId);
+        
+        // Se os planos são diferentes, o plano mais forte vence
+        if (pesoA !== pesoB) return pesoB - pesoA;
+        
+        // Se os planos são iguais, o pagamento (ou criação) mais recente vence
+        return getTempo(b) - getTempo(a);
       }
       if (ordenacao === 'menor_preco') return a.preco - b.preco
       if (ordenacao === 'maior_preco') return b.preco - a.preco
@@ -228,7 +236,7 @@ function SearchContent() {
       <div>
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Ordenar por</label>
         <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition font-medium text-gray-700">
-          <option value="recentes">Mais Relevantes / Recentes</option>
+          <option value="recentes">Mais Relevantes / VIPs</option>
           <option value="menor_preco">Menor Preço</option>
           <option value="maior_preco">Maior Preço</option>
         </select>
@@ -286,7 +294,7 @@ function SearchContent() {
           <div className="mb-6 flex justify-between items-end px-2 md:px-0">
             <div>
               <h2 className="text-xl md:text-2xl font-black text-gray-900">Resultados da busca</h2>
-              <p className="text-gray-500 font-medium text-sm mt-1">Navegando nos anúncios mais recentes</p>
+              <p className="text-gray-500 font-medium text-sm mt-1">Navegando nos anúncios mais relevantes</p>
             </div>
           </div>
 
@@ -305,26 +313,46 @@ function SearchContent() {
             <>
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                 {filteredAds.map((ad, index) => {
-                  // 🚀 SE FOR O ÚLTIMO ITEM DA LISTA, ATIVAMOS O ESPIÃO
                   const isLastElement = filteredAds.length === index + 1;
                   
+                  // Mapeamento visual das microtransações (Mesmo da Home)
+                  const isOuro = ad.planoId === 3;
+                  const isTurbo = ad.planoId === 2 || ad.planoId === 0;
+                  const isImpulsionado = ad.planoId === 1;
+
                   return (
                     <Link 
                       ref={isLastElement ? lastAdElementRef : null} 
                       href={`/anuncio/${ad.id}`} 
                       key={ad.id} 
                       className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-                        ad.planoId > 0 
-                          ? 'border-2 border-amber-400 bg-gradient-to-b from-amber-50/60 to-white shadow-[0_4px_15px_rgba(251,191,36,0.25)] hover:-translate-y-1' 
-                          : 'bg-white border-gray-100 shadow-sm'
+                         isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
+                         isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
+                         isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
+                         'bg-white border-gray-100 shadow-sm hover:-translate-y-1'
                       }`}
                     >
                       
-                      {ad.planoId > 0 && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-400 to-amber-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-10 flex items-center gap-1">
-                          <Sparkles size={12}/> Destaque VIP
-                        </div>
+                      {/* Selos de Destaque no Grid */}
+                      {isOuro && (
+                         <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                            <Sparkles size={10}/> Ouro
+                         </div>
                       )}
+                      {isTurbo && !isOuro && (
+                         <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                            <Flame size={10}/> Turbo
+                         </div>
+                      )}
+                      {isImpulsionado && (
+                         <div className="absolute top-2 left-2 z-10 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                            <Rocket size={10}/> No Topo
+                         </div>
+                      )}
+
+                      <div className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors">
+                        <Heart size={16} strokeWidth={2.5} />
+                      </div>
 
                       <div className="aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50">
                          {ad.imagemUrl ? (
@@ -340,12 +368,12 @@ function SearchContent() {
                         </span>
                         <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
                         
-                        <p className={`text-lg md:text-xl font-black mt-auto ${ad.planoId > 0 ? 'text-amber-600' : 'text-primary'}`}>
+                        <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600' : isTurbo ? 'text-blue-600' : 'text-gray-900'}`}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                         </p>
                         
                         <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-                          <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
+                          <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
                           <span className="flex items-center gap-0.5 truncate max-w-[60%]">
                              <MapPin size={10} className="text-accent shrink-0"/> 
                              <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
@@ -357,7 +385,6 @@ function SearchContent() {
                 })}
               </div>
 
-              {/* Loader para quando estiver descendo a tela */}
               {loadingMore && (
                 <div className="flex justify-center py-10">
                   <Loader2 className="animate-spin text-primary" size={32} />

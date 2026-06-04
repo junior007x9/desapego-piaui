@@ -17,16 +17,46 @@ export async function GET(request: Request) {
     const snap = await getDocs(q);
 
     let expirados = 0;
+    let rebaixados = 0; // Nova contagem para os VIPs que voltaram ao plano Básico
     const promessas: Promise<void>[] = [];
 
     snap.forEach((documento) => {
       const data = documento.data();
+      
       if (data.expiraEm) {
         const dataExpiracao = new Date(data.expiraEm);
-        // Se a data de validade já passou, prepara a alteração para 'expirado'
+        
+        // A data de validade do plano atual passou!
         if (dataExpiracao < agora) {
-          promessas.push(updateDoc(doc(db, 'anuncios', documento.id), { status: 'expirado' }));
-          expirados++;
+          const planoAtual = data.planoId;
+
+          // REGRA 1: Se já era o plano Básico (99) ou o Presente VIP (0), acabou o tempo de vida total. Tira do ar.
+          if (planoAtual === 99 || planoAtual === 0) {
+            promessas.push(updateDoc(doc(db, 'anuncios', documento.id), { status: 'expirado' }));
+            expirados++;
+          } 
+          // REGRA 2: Se for um plano Pago (Sobe pro Topo, Turbo ou Ouro), o VIP acaba, mas o anúncio NÃO SOME!
+          // Ele é "rebaixado" para o Básico e ganha sobrevida até completar 30 dias de site.
+          else {
+            const dataCriacao = data.criadoEm?.seconds ? new Date(data.criadoEm.seconds * 1000) : new Date();
+            
+            // Calcula qual seria a data máxima de vida desse anúncio (30 dias desde que foi postado)
+            const limiteFinal = new Date(dataCriacao);
+            limiteFinal.setDate(limiteFinal.getDate() + 30);
+
+            // Se por acaso já passou de 30 dias desde a criação, expira de vez
+            if (limiteFinal < agora) {
+               promessas.push(updateDoc(doc(db, 'anuncios', documento.id), { status: 'expirado' }));
+               expirados++;
+            } else {
+               // Rebaixa para básico e ajusta a data de expiração para o tempo que resta dos 30 dias
+               promessas.push(updateDoc(doc(db, 'anuncios', documento.id), { 
+                  planoId: 99, 
+                  expiraEm: limiteFinal.toISOString() 
+               }));
+               rebaixados++;
+            }
+          }
         }
       }
     });
@@ -36,7 +66,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Manutenção diária concluída! ${expirados} anúncios foram expirados com sucesso.` 
+      message: `Manutenção diária concluída! ${expirados} anúncios saíram do ar e ${rebaixados} anúncios VIPs perderam o destaque e voltaram ao plano básico.` 
     });
 
   } catch (error) {

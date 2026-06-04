@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, ShieldAlert, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket } from 'lucide-react'
 
 const CATEGORIAS = [
   "Imóveis", "Veículos", "Eletrônicos", "Para Casa", 
@@ -33,12 +33,12 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
+// 🚀 NOVOS PLANOS FOCADOS EM MICROTRANSAÇÕES E RESULTADOS IMEDIATOS
 const PLANOS_BASE = [
-  { id: 99, nome: 'Básico (Grátis)', dias: 3650, valor: 0, desc: 'No ar até você vender (Sem destaque VIP)' },
-  { id: 1, nome: 'VIP Diário', dias: 1, valor: 10, desc: '1 dia no topo da página' },
-  { id: 2, nome: 'VIP Semanal', dias: 7, valor: 65, desc: '7 dias no topo da página' },
-  { id: 3, nome: 'VIP Quinzenal', dias: 15, valor: 140, desc: '15 dias no topo da página' },
-  { id: 4, nome: 'VIP Mensal', dias: 30, valor: 280, desc: '30 dias no topo da página' }
+  { id: 99, nome: 'Básico (Grátis)', dias: 30, valor: 0, desc: 'Publicação simples por 30 dias (Sem destaque)' },
+  { id: 1, nome: 'Sobe pro Topo', dias: 1, valor: 2.99, desc: 'Seu anúncio vai para o 1º lugar agora' },
+  { id: 2, nome: 'Destaque Turbo', dias: 5, valor: 9.90, desc: '5 dias com borda e máxima visibilidade' },
+  { id: 3, nome: 'Ouro / Urgente', dias: 7, valor: 19.90, desc: '7 dias fixo no Carrossel Principal do site' }
 ]
 
 const removerAcentos = (texto: string) => {
@@ -101,7 +101,6 @@ export default function AnunciarPage() {
   const [preco, setPreco] = useState('')
   const [categoria, setCategoria] = useState('')
   
-  // 🚀 NOVOS ESTADOS PARA PERFIL OBRIGATÓRIO
   const [localizacao, setLocalizacao] = useState('') 
   const [telefone, setTelefone] = useState('')
   const [nomeAutor, setNomeAutor] = useState('')
@@ -131,7 +130,6 @@ export default function AnunciarPage() {
         } else {
           setEmailVerificado(true)
 
-          // 🚀 BUSCA DADOS DO PERFIL (Se veio do Google e não tem telefone, ficará em branco obrigando a preencher)
           try {
              const userDocRef = doc(db, 'usuarios', u.uid);
              const userDocSnap = await getDoc(userDocRef);
@@ -183,10 +181,10 @@ export default function AnunciarPage() {
     }
   }
 
-  // 🚀 ATUALIZADO: Agora telefone e nome também são rigorosamente obrigatórios
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || !telefone.trim() || !nomeAutor.trim() || planoId === null;
 
-  const PLANO_PRESENTE = { id: 0, nome: 'Boas-Vindas (VIP)', dias: 1, valor: 0, desc: '1 dia VIP Grátis (Válido 1x)' };
+  // 🚀 Presente para novos usuários: 5 dias de Destaque Turbo grátis
+  const PLANO_PRESENTE = { id: 0, nome: 'Boas-Vindas (Turbo)', dias: 5, valor: 0, desc: '5 dias Turbo VIP Grátis (Válido 1x)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_PRESENTE, ...PLANOS_BASE];
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,7 +221,6 @@ export default function AnunciarPage() {
     }
     if (isFormIncompleto) return
 
-    // 🚀 VALIDAÇÃO DO WHATSAPP (Impede de colocar números falsos muito pequenos)
     if (telefone.replace(/\D/g, '').length < 10) {
       alert("⚠️ Por favor, insira um número de WhatsApp válido com DDD.");
       return;
@@ -254,7 +251,6 @@ export default function AnunciarPage() {
         setLoading(false); return;
       }
 
-      // 🚀 SALVA OS DADOS DO USUÁRIO GLOBALMENTE (Perfil completo pra sempre)
       try {
         await setDoc(doc(db, 'usuarios', user.uid), {
            nome: nomeAutor,
@@ -298,15 +294,14 @@ export default function AnunciarPage() {
       const dataCalculada = new Date();
       dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
 
-      // 🚀 GUARDA NO ANÚNCIO (Assim quem clicar no anúncio consegue ver o WhatsApp e o Nome)
       const docRef = await addDoc(collection(db, 'anuncios'), {
         titulo,
         descricao,
         preco: precoNumerico,
         categoria,
         localizacao,
-        telefone: telefone,   // Guardado no anúncio
-        autorNome: nomeAutor, // Guardado no anúncio
+        telefone: telefone,
+        autorNome: nomeAutor,
         fotos: urls,
         imagemUrl: urls.length > 0 ? urls[0] : null,
         vendedorId: user.uid,
@@ -452,9 +447,6 @@ export default function AnunciarPage() {
             <textarea required rows={5} value={descricao} onChange={(e) => setDescricao(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-800 resize-none" placeholder="Detalhes sobre o estado do produto..."></textarea>
           </div>
 
-          {/* ====================================================================================== */}
-          {/* 🚀 NOVA SEÇÃO OBRIGATÓRIA: DADOS DE CONTATO E LOCALIZAÇÃO (RESOLVE O PROBLEMA DO GOOGLE) */}
-          {/* ====================================================================================== */}
           <div className="pt-6 border-t border-gray-100">
              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
                 <User size={24} className="text-primary" /> Seus Dados e Localização
@@ -504,6 +496,7 @@ export default function AnunciarPage() {
                    >
                       {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> Presente VIP</div>)}
                       {p.id === 99 && (<div className="absolute top-0 right-0 bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Store size={12}/> Padrão</div>)}
+                      {p.id === 1 && (<div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Rocket size={12}/> Imediato</div>)}
 
                       <div className="flex justify-between items-start mb-2">
                          <h3 className={`font-bold ${isGratis ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>

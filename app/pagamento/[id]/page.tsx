@@ -6,12 +6,12 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle, Sparkles } from 'lucide-react'
 
+// Novos Planos focados em Microtransações e Resultados
 const PLANOS = [
-  { id: 0, nome: '1º Anúncio (Grátis)', dias: 1, valor: 0, fotos: 10, desc: 'Teste de 24 horas' },
-  { id: 1, nome: 'Diário', dias: 1, valor: 10, fotos: 10, desc: '1 dia de destaque' },
-  { id: 2, nome: 'Semanal', dias: 7, valor: 65, fotos: 10, desc: '7 dias de destaque' },
-  { id: 3, nome: 'Quinzenal', dias: 15, valor: 140, fotos: 10, desc: '15 dias de destaque' },
-  { id: 4, nome: 'Mensal', dias: 30, valor: 280, fotos: 10, desc: '30 dias de destaque' }
+  { id: 0, nome: 'Básico (Grátis)', dias: 30, valor: 0, fotos: 3, desc: 'Publicação simples' },
+  { id: 1, nome: 'Sobe pro Topo', dias: 1, valor: 2.99, fotos: 6, desc: 'Impulsionamento imediato' },
+  { id: 2, nome: 'Destaque Turbo', dias: 5, valor: 9.90, fotos: 10, desc: '5 dias com borda e destaque' },
+  { id: 3, nome: 'Ouro / Urgente', dias: 7, valor: 19.90, fotos: 15, desc: '7 dias no Carrossel Principal' }
 ];
 
 export default function PagamentoPage() {
@@ -44,9 +44,9 @@ export default function PagamentoPage() {
         const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
         setPlano(planoEscolhido)
 
-        // SE O PLANO FOR O BRINDE, APROVA AUTOMATICAMENTE
+        // SE O PLANO FOR O BRINDE/GRÁTIS, APROVA AUTOMATICAMENTE
         if (planoEscolhido.valor === 0) {
-           const dias = planoEscolhido.dias || 1;
+           const dias = planoEscolhido.dias || 30;
            const dataExp = new Date();
            dataExp.setDate(dataExp.getDate() + dias); 
            
@@ -85,7 +85,7 @@ export default function PagamentoPage() {
     loadData()
   }, [params.id, router])
 
-  // 🚀 O "ROBÔ" QUE FICA OLHANDO O BANCO A CADA 3 SEGUNDOS
+  // O "ROBÔ" QUE FICA OLHANDO O BANCO A CADA 3 SEGUNDOS
   useEffect(() => {
     if (!paymentData?.id || pagamentoAprovado) return;
 
@@ -118,7 +118,7 @@ export default function PagamentoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: planoDb.valor,
-          description: `VIP ${planoDb.nome} - Desapego Piauí`,
+          description: `Plano ${planoDb.nome} - Desapego Piauí`,
           payerEmail: email,
           adId: anuncio.id
         })
@@ -172,6 +172,9 @@ export default function PagamentoPage() {
     )
   }
 
+  // Define o valor a ser exibido. Se a API retornou o valor com a taxa embutida, mostra ele. Se não, mostra o valor base do plano.
+  const valorExibicao = paymentData?.valor_cobrado || plano?.valor || 0;
+
   return (
     <div className="bg-gray-50 min-h-screen py-8 md:py-10 px-4 pb-24 md:pb-10">
       <div className="max-w-md mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 relative">
@@ -185,10 +188,13 @@ export default function PagamentoPage() {
           <div className="text-center">
             <p className="text-gray-500 mb-1 font-bold uppercase tracking-wider text-xs">Valor a pagar</p>
             <p className="text-4xl md:text-5xl font-black text-green-600 tracking-tighter">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plano?.valor || 0)}
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorExibicao)}
             </p>
+            {paymentData?.valor_cobrado && (
+               <p className="text-[10px] text-gray-400 mt-1">*Taxa de processamento inclusa</p>
+            )}
             <p className="text-xs text-primary font-black uppercase tracking-wider mt-3 bg-primary/10 inline-block px-4 py-1.5 rounded-full border border-primary/20">
-              Plano {plano?.nome}
+              {plano?.nome}
             </p>
           </div>
 

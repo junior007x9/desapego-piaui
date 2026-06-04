@@ -12,3 +12,39 @@ body {
   background: #F3F4F6;
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ========================================= */
+/* 🚀 EFEITOS PREMIUM DE INTERFACE E ANIMAÇÕES */
+/* ========================================= */
+
+html, body {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Esconder barra de rolagem mantendo a funcionalidade de arrastar (Swipe) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animação Flutuante Premium para o Botão "Anunciar" */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Efeito Vidro (Glassmorphism) para a Navbar e o Menu Mobile */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

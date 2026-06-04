@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, 
-  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart
+  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart, Rocket, Flame
 } from 'lucide-react'
 import ContadorEstatisticas from '@/components/ContadorEstatisticas'
 import AdBanner from '@/components/AdBanner'
 
-// 🚀 CATEGORIAS ATUALIZADAS (Cores mais modernas e ícones limpos)
+// CATEGORIAS ATUALIZADAS
 const CATEGORIAS_HOME = [
   { nome: 'Imóveis', slug: 'Imóveis', icon: <HomeIcon size={26} strokeWidth={2} />, cor: "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100" },
   { nome: 'Veículos', slug: 'Veículos', icon: <Car size={26} strokeWidth={2} />, cor: "bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100" },
@@ -70,11 +70,11 @@ export default function Home() {
   useEffect(() => {
     async function fetchRecentAds() {
       try {
-        // Busca até 300 para garantir filtro suficiente
         const q = query(collection(db, 'anuncios'), orderBy('criadoEm', 'desc'), limit(300))
         const snap = await getDocs(q)
+        
         const listGeral: any[] = []
-        const listVIP: any[] = []
+        const listCarrosselOuro: any[] = []
         const agora = new Date()
 
         for (const document of snap.docs) {
@@ -87,13 +87,9 @@ export default function Home() {
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
             if (dataExpiracao < agora) isExpired = true;
-          } else if (data.criadoEm) {
-            const dataCriacao = new Date(data.criadoEm.seconds * 1000);
-            const diasDuracao = plano === 1 ? 1 : plano === 2 ? 7 : plano === 3 ? 15 : plano === 4 ? 30 : 1;
-            dataCriacao.setDate(dataCriacao.getDate() + diasDuracao);
-            if (dataCriacao < agora) isExpired = true;
           }
 
+          // Fallback visual de expiração (O robô CRON também faz isso no backend)
           if (isExpired && statusFinal === 'ativo') {
              statusFinal = 'expirado';
              updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
@@ -103,20 +99,41 @@ export default function Home() {
             const adFinal = { id: document.id, ...data, planoId: plano }
             listGeral.push(adFinal)
             
-            if (plano > 0 && plano !== 99) {
-              listVIP.push(adFinal)
+            // Apenas o plano OURO (3) vai para o carrossel superior
+            if (plano === 3) {
+              listCarrosselOuro.push(adFinal)
             }
           }
         }
         
-        listVIP.sort((a, b) => {
-          const timeA = a.pagoEm ? new Date(a.pagoEm).getTime() : (a.criadoEm?.seconds * 1000 || 0);
-          const timeB = b.pagoEm ? new Date(b.pagoEm).getTime() : (b.criadoEm?.seconds * 1000 || 0);
-          return timeB - timeA;
-        });
+        // 🚀 ORDENAÇÃO INTELIGENTE (Pesos + Data)
+        const getPesoPlano = (planoId: number) => {
+          if (planoId === 3) return 4; // Ouro
+          if (planoId === 2 || planoId === 0) return 3; // Turbo / Boas vindas
+          if (planoId === 1) return 2; // Sobe pro Topo
+          return 1; // Básico (99)
+        };
+
+        const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
+
+        const ordenarPorRelevancia = (a: any, b: any) => {
+          const pesoA = getPesoPlano(a.planoId);
+          const pesoB = getPesoPlano(b.planoId);
+          
+          // 1º Prioridade: O plano mais alto vence
+          if (pesoA !== pesoB) return pesoB - pesoA;
+          
+          // 2º Prioridade: Quem pagou/criou mais recentemente fica acima
+          return getTempo(b) - getTempo(a);
+        };
+
+        // O Carrossel só tem Ouro, então ordenamos apenas pela data
+        listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         
-        setVipAds(listVIP.slice(0, 15)) 
-        // 🚀 EXIBE 80 ANÚNCIOS NA PÁGINA INICIAL PARA DAR VOLUME
+        // O Feed geral usa a ordenação por relevância completa
+        listGeral.sort(ordenarPorRelevancia);
+        
+        setVipAds(listCarrosselOuro.slice(0, 15)) 
         setAds(listGeral.slice(0, 80)) 
       } catch (error) {
         console.error("Erro ao buscar anúncios:", error)
@@ -146,7 +163,7 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 HERO SECTION MELHORADA */}
+      {/* HERO SECTION */}
       <div className="bg-gradient-to-br from-primary to-primary/90 pt-10 pb-28 px-4 rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -180,7 +197,7 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-4 -mt-14 relative z-20">
         
-        {/* 🚀 CATEGORIAS COMO BOTÕES DIRETOS */}
+        {/* CATEGORIAS COMO BOTÕES DIRETOS */}
         <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 mb-8">
           <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-3 md:gap-4">
             {CATEGORIAS_HOME.map(cat => (
@@ -200,22 +217,22 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🚀 BANNER ADSENSE COMENTADO TEMPORARIAMENTE PARA APROVAÇÃO */}
+        {/* BANNER ADSENSE COMENTADO TEMPORARIAMENTE PARA APROVAÇÃO */}
         {/* <div className="mt-2 mb-6 w-full max-w-4xl mx-auto">
           <AdBanner dataAdSlot="8830353493" />
         </div> */}
 
-        {/* CARROSSEL VIP NO TOPO */}
+        {/* CARROSSEL OURO NO TOPO (Apenas Plano Ouro = 3) */}
         {!loading && vipAds.length > 0 && (
           <div className="mb-12 mt-8">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4 px-2">
-              <Sparkles className="text-amber-500"/> Destaques VIP
+              <Sparkles className="text-amber-500"/> Super Destaques
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide px-2">
               {vipAds.map(ad => (
-                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[260px] bg-white rounded-2xl border border-amber-200 hover:border-amber-400 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(251,191,36,0.2)] transition-all overflow-hidden flex flex-col group relative">
-                  <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded-md shadow-md z-10 flex items-center gap-1">
-                    <Sparkles size={10}/> VIP
+                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[260px] bg-white rounded-2xl border border-amber-300 hover:border-amber-500 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(251,191,36,0.3)] transition-all overflow-hidden flex flex-col group relative">
+                  <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md shadow-md z-10 flex items-center gap-1">
+                    <Sparkles size={10}/> Ouro
                   </div>
                   <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative">
                      {ad.imagemUrl ? (
@@ -224,8 +241,8 @@ export default function Home() {
                         <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
                      )}
                   </div>
-                  <div className="p-4 flex flex-col flex-1 bg-gradient-to-b from-amber-50/30 to-white">
-                    <h3 className="text-sm text-gray-700 line-clamp-2 mb-2 font-medium group-hover:text-amber-600 transition-colors h-10">{ad.titulo}</h3>
+                  <div className="p-4 flex flex-col flex-1 bg-gradient-to-b from-amber-50/40 to-white">
+                    <h3 className="text-sm text-gray-800 line-clamp-2 mb-2 font-bold group-hover:text-amber-600 transition-colors h-10">{ad.titulo}</h3>
                     <p className="text-xl font-black text-amber-600 mt-auto">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                     </p>
@@ -242,7 +259,7 @@ export default function Home() {
            </h2>
         </div>
 
-        {/* LISTA GERAL DE ANÚNCIOS */}
+        {/* LISTA GERAL DE ANÚNCIOS (Feed Dinâmico) */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
@@ -258,16 +275,37 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
               {ads.map((ad) => {
                 const plano = Number(ad.planoId) || 0;
-                const isVip = plano > 0 && plano !== 99;
+                
+                // Mapeamento visual das microtransações
+                const isOuro = plano === 3;
+                const isTurbo = plano === 2 || plano === 0; 
+                const isImpulsionado = plano === 1;
 
                 return (
                   <Link href={`/anuncio/${ad.id}`} key={`recent-${ad.id}`} className={`group rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-                    isVip 
-                      ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' 
-                      : 'bg-white border-gray-100 hover:-translate-y-1'
+                    isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
+                    isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
+                    isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
+                    'bg-white border-gray-100 hover:-translate-y-1'
                   }`}>
                     
-                    {/* Botão de favorito estético */}
+                    {/* Selos de Destaque no Grid */}
+                    {isOuro && (
+                       <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                          <Sparkles size={10}/> Ouro
+                       </div>
+                    )}
+                    {isTurbo && !isOuro && (
+                       <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                          <Flame size={10}/> Turbo
+                       </div>
+                    )}
+                    {isImpulsionado && (
+                       <div className="absolute top-2 left-2 z-10 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                          <Rocket size={10}/> No Topo
+                       </div>
+                    )}
+
                     <div className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors">
                       <Heart size={16} strokeWidth={2.5} />
                     </div>
@@ -288,12 +326,12 @@ export default function Home() {
                         {ad.titulo}
                       </h3>
                       
-                      <p className={`text-lg md:text-xl font-black mt-auto ${isVip ? 'text-amber-600' : 'text-gray-900'}`}>
+                      <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600' : isTurbo ? 'text-blue-600' : 'text-gray-900'}`}>
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                       </p>
                       
                       <div className="mt-3 pt-3 text-[10px] text-gray-400 flex justify-between font-medium border-t border-gray-50">
-                        <span>{ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje'}</span>
+                        <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
                         <span className="flex items-center gap-1 truncate max-w-[60%]">
                            <MapPin size={12} className="text-gray-300 shrink-0"/> 
                            <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
@@ -305,7 +343,6 @@ export default function Home() {
               })}
             </div>
 
-            {/* 🚀 BOTÃO GIGANTE PARA VER TODOS OS ANÚNCIOS */}
             <div className="mt-12 flex justify-center">
               <Link 
                 href="/todos-anuncios" 
@@ -317,9 +354,6 @@ export default function Home() {
           </>
         )}
 
-        {/* ========================================================================= */}
-        {/* 🚀 SEÇÃO DE SEO INTACTA (Não altere isso para não perder o AdSense) */}
-        {/* ========================================================================= */}
         <section className="mt-20 bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
             <div>
@@ -352,11 +386,11 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
               <div>
                 <h4 className="font-bold text-gray-800 mb-1">1. Quanto custa anunciar e quais são os planos?</h4>
-                <p>O Desapego Piauí trabalha com planos flexíveis para destacar os seus anúncios. Atualmente, estamos com uma promoção incrível: o <strong>Plano Diário é 100% gratuito e fica ativo até você vender o seu produto</strong>, e o <strong>Plano VIP (Destaque) está totalmente gratuito por 24 horas</strong>! Além disso, nunca cobramos nenhuma taxa de comissão pelas suas vendas.</p>
+                <p>O Desapego Piauí trabalha com foco no seu resultado. O nosso <strong>Plano Básico é 100% gratuito e fica ativo por 30 dias</strong>. Para novos usuários, oferecemos uma promoção incrível: o seu primeiro anúncio ganha o <strong>Plano Destaque Turbo grátis por 5 dias</strong>! Além disso, nunca cobramos nenhuma taxa de comissão pelas suas vendas.</p>
               </div>
               <div>
-                <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque VIP na plataforma?</h4>
-                <p>Os planos de visibilidade servem para acelerar os seus negócios, posicionando os seus produtos no carrossel de destaques principais da página inicial. Aproveite a nossa promoção atual para experimentar o destaque VIP de graça durante as primeiras 24 horas.</p>
+                <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque na plataforma?</h4>
+                <p>Você pode utilizar ações rápidas para vender mais! O "Sobe pro Topo" joga seu anúncio para a primeira posição instantaneamente. Já os planos "Turbo" e "Ouro" adicionam bordas coloridas e posicionam seu produto no carrossel de super destaques.</p>
               </div>
               <div>
                 <h4 className="font-bold text-gray-800 mb-1">3. O site realiza entregas de mercadorias?</h4>

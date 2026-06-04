@@ -2,18 +2,16 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-// 🚀 CORREÇÃO: Adicionado o serverTimestamp para gravar a hora exata da venda
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
+// 🚀 CORREÇÃO: Adicionado o getDoc para puxar a carteira do usuário
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle } from 'lucide-react'
+import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle, Rocket } from 'lucide-react'
 
-// 🚀 NOVA FUNÇÃO: Calcula a diferença de dias entre a criação e a venda
+// Calcula a diferença de dias entre a criação e a venda
 function calcularDiasVenda(criadoEm: any, vendidoEm: any) {
   if (!criadoEm) return "Vendido!";
   
-  // Se o anúncio foi vendido antes de implementarmos essa função, ele não terá 'vendidoEm'.
-  // Nesse caso, retornamos apenas "Vendido".
   if (!vendidoEm) return "Vendido com sucesso!";
 
   const dataCriacao = criadoEm.seconds ? new Date(criadoEm.seconds * 1000) : new Date(criadoEm);
@@ -124,15 +122,13 @@ export default function MeusAnunciosPage() {
     
     try {
       const adToLog = ads.find(a => a.id === id);
-      const agora = new Date(); // Salva o momento atual para o estado local
+      const agora = new Date(); 
       
-      // 🚀 ATUALIZAÇÃO BANDO DE DADOS: Agora gravamos a data da venda (vendidoEm)
       await updateDoc(doc(db, 'anuncios', id), { 
         status: 'vendido',
         vendidoEm: serverTimestamp() 
       })
       
-      // Atualiza a tela instantaneamente
       setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido', vendidoEm: agora } : ad))
       alert("Parabéns pela venda! 🎉")
       
@@ -152,6 +148,44 @@ export default function MeusAnunciosPage() {
     } catch (error) {
       console.error("Erro ao vender:", error)
       alert("Ocorreu um erro ao atualizar o anúncio.")
+    }
+  }
+
+  // 🚀 NOVA FUNÇÃO: Checa se tem crédito na carteira antes de cobrar no PIX
+  const handleImpulsionar = async (id: string) => {
+    try {
+      if (!user) return;
+      
+      // 1. Puxa a carteira do usuário para ver se ele tem créditos comprados com moedas
+      const userRef = doc(db, 'usuarios', user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+
+      // 2. Se ele tem Crédito "Sobe pro Topo" guardado
+      if (userData?.creditosTopo && userData.creditosTopo > 0) {
+        if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
+           // Desconta 1 crédito do usuário
+           await updateDoc(userRef, { creditosTopo: userData.creditosTopo - 1 });
+           
+           // Atualiza o anúncio para o plano 1 e renova a data de pagamento para o momento atual (fazendo ele pular pro topo)
+           await updateDoc(doc(db, 'anuncios', id), {
+             planoId: 1,
+             pagoEm: new Date().toISOString()
+           });
+           
+           alert("🚀 Sucesso! Seu anúncio foi impulsionado para o topo gratuitamente usando seus créditos.");
+           fetchMyAds(user.uid); // Recarrega a tela para refletir a mudança
+           return;
+        }
+      }
+
+      // 3. Se não tem crédito (ou não quis usar), vai pro fluxo normal de pagamento do PIX
+      await updateDoc(doc(db, 'anuncios', id), { planoId: 1 });
+      router.push(`/pagamento/${id}`);
+
+    } catch (error) {
+      console.error("Erro ao gerar impulsionamento:", error);
+      alert("Ocorreu um erro ao tentar impulsionar. Tente novamente.");
     }
   }
 
@@ -226,7 +260,6 @@ export default function MeusAnunciosPage() {
                       <Sparkles size={10}/> VIP
                     </div>
                   )}
-                  {/* Tarja de Vendido por cima da imagem */}
                   {ad.status === 'vendido' && (
                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="text-white font-black text-xs tracking-widest uppercase rotate-[-15deg] border-2 border-white px-2 py-1">Vendido</span>
@@ -262,7 +295,6 @@ export default function MeusAnunciosPage() {
                        </span>
                     </div>
                     
-                    {/* 🚀 AQUI ESTÁ A EXIBIÇÃO DE QUANTOS DIAS DEMOROU PRA VENDER */}
                     {ad.status === 'vendido' && (
                        <div className="flex items-center gap-1.5 text-[11px] text-green-600 font-black uppercase tracking-wider bg-green-50 w-fit px-2 py-1 rounded-md">
                           <CheckCircle size={12} />
@@ -283,19 +315,31 @@ export default function MeusAnunciosPage() {
                   </div>
                 </div>
 
-                {/* Ações */}
-                <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+                {/* 🚀 AÇÕES COM FOCO NO UPSELL E USO DOS CRÉDITOS DA CARTEIRA */}
+                <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[160px]">
                   
                   {ad.status === 'ativo' && (
-                     <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
-                        <CheckCircle size={16}/> Já Vendi!
-                     </button>
+                     <>
+                        <button onClick={() => handleImpulsionar(ad.id)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-md flex justify-center items-center gap-2 animate-pulse hover:animate-none">
+                           <Rocket size={16} className="shrink-0"/> 
+                           <span className="text-left leading-tight">Sobe pro Topo <br/>(R$ 2,99)</span>
+                        </button>
+                        <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
+                           <CheckCircle size={16}/> Já Vendi!
+                        </button>
+                     </>
                   )}
 
                   {(ad.status === 'expirado' || ad.status === 'pendente') && (
-                     <Link href={`/pagamento/${ad.id}`} className="flex-1 md:flex-none text-center bg-accent hover:bg-accent-dark text-white font-bold text-sm px-4 py-3 rounded-xl transition shadow-sm">
-                       Renovar Plano
-                     </Link>
+                     <>
+                        <button onClick={() => handleImpulsionar(ad.id)} className="w-full text-center bg-accent hover:bg-accent-dark text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-md flex justify-center items-center gap-2">
+                           <Rocket size={16} className="shrink-0"/> 
+                           <span className="text-left leading-tight">Reviver no Topo <br/>(R$ 2,99)</span>
+                        </button>
+                        <Link href={`/pagamento/${ad.id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm border border-gray-200">
+                           Pagar Plano Atual
+                        </Link>
+                     </>
                   )}
 
                   <div className="flex gap-2 w-full mt-1">
