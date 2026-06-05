@@ -17,6 +17,14 @@ export const metadata: Metadata = {
   title: 'Desapego Piauí | Compra e Venda de Forma Rápida e Local',
   description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local. Anuncie imóveis, carros, celulares e muito mais!',
   manifest: '/manifest.json', // ATIVADOR DO PWA (Ícone na tela inicial)
+  
+  // 🚀 ADICIONADO: Forçando o Next.js, Google e Celulares a usarem o seu ícone
+  icons: {
+    icon: '/icon-512x512.png',
+    shortcut: '/icon-512x512.png',
+    apple: '/icon-512x512.png',
+  },
+
   keywords: [
     "desapego piaui", 
     "olx piaui", 
