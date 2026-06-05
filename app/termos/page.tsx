@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronLeft, Scale, AlertTriangle, MessageCircle, ShieldAlert } from 'lucide-react'
+import { ChevronLeft, Scale, AlertTriangle, MessageCircle, ShieldAlert, CreditCard, Coins } from 'lucide-react'
 
 export const metadata = {
   title: 'Termos de Uso | Desapego Piauí',
@@ -75,8 +75,29 @@ export default function TermosPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">5. Planos, Destaques e Gratuidade</h2>
-              <p>A plataforma pode oferecer planos gratuitos (como o Plano Diário) e planos pagos (Destaque VIP). As promoções de gratuidade podem ser alteradas ou encerradas a qualquer momento pela administração. Não há reembolso para anúncios VIP caso o usuário decida excluir o anúncio antes do término do período contratado ou caso o anúncio seja removido por violar nossas regras.</p>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <CreditCard className="text-blue-500" size={24} /> 5. Planos, Destaques e Taxas de Transação
+              </h2>
+              <p>A publicação do anúncio básico é gratuita. No entanto, oferecemos planos pagos de "Destaque" (como Topo, Turbo e Ouro) para maior visibilidade na plataforma.</p>
+              <ul className="list-disc pl-6 space-y-2 mt-2">
+                <li>Todos os pagamentos dos planos de destaque são processados via <strong>Mercado Pago</strong> (através de Pix).</li>
+                <li>O Mercado Pago cobra uma taxa operacional pelo processamento de cada transação financeira. Para mantermos a sustentabilidade da plataforma, <strong>essa taxa é repassada integralmente ao usuário anunciante</strong> no momento do pagamento.</li>
+                <li>O valor final (Custo do Plano + Taxa do Mercado Pago) será sempre exibido com clareza antes de você confirmar e efetuar o pagamento.</li>
+                <li>Não há reembolso para anúncios em destaque caso o usuário decida excluir o anúncio antes do término do período ou caso ele seja removido por violar nossas regras.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Coins className="text-amber-500" size={24} /> 6. Sistema de Recompensas e Moedas Virtuais
+              </h2>
+              <p>Para recompensar a fidelidade e o engajamento da nossa comunidade, o Desapego Piauí implementou um sistema de <strong>Moedas Virtuais</strong>. Ao utilizar a plataforma (como realizando login diário), o usuário pode acumular moedas em sua carteira digital.</p>
+              <ul className="list-disc pl-6 space-y-2 mt-2">
+                <li>As moedas virtuais <strong>não possuem qualquer valor financeiro ou monetário no mundo real</strong>.</li>
+                <li>É terminantemente proibido e impossível sacar, transferir para contas bancárias ou converter as moedas em dinheiro real (Reais - R$).</li>
+                <li>As moedas servem exclusivamente para serem trocadas por benefícios dentro da própria plataforma, como cupons de desconto ou impulsionamento de anúncios.</li>
+                <li>O Desapego Piauí reserva-se o direito de alterar as regras de ganho, os custos de resgate ou descontinuar o sistema de moedas a qualquer momento, sem aviso prévio.</li>
+              </ul>
             </section>
           </div>
         </div>

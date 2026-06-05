@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronLeft, BookOpen } from 'lucide-react'
+import { ChevronLeft, BookOpen, Coins, Rocket } from 'lucide-react'
 
 export const metadata = {
   title: 'Blog Desapego Piauí | Dicas de Compra e Venda',
@@ -26,12 +26,47 @@ export default function BlogPage() {
           
           <div className="space-y-12 text-gray-600 leading-relaxed font-medium">
             
+            {/* NOVO ARTIGO: SISTEMA DE MOEDAS */}
+            <article className="border-b border-gray-100 pb-8">
+              <h2 className="text-2xl font-black text-gray-900 mb-4 hover:text-primary transition-colors cursor-pointer flex items-center gap-2">
+                <Coins className="text-amber-500 shrink-0" size={28} /> Novo Sistema de Recompensas: Ganhe moedas!
+              </h2>
+              <p className="text-sm text-gray-400 mb-4">Publicado em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="mb-4">
+                Agora, a sua fidelidade vale muito! Lançamos o sistema de <strong>Carteira do Desapego Piauí</strong>. Mas como funciona? É simples: ao realizar ações no site, como simplesmente fazer o seu login diário, você acumula <strong>Moedas Virtuais</strong>.
+              </p>
+              <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 text-sm text-amber-900 font-medium mb-4 shadow-sm">
+                <strong className="text-amber-700 block mb-2 text-base">💡 O que você precisa saber:</strong>
+                As moedas virtuais não são dinheiro real e não podem ser sacadas via Pix ou transferidas para contas bancárias. Elas servem exclusivamente para você trocar por <strong>Destaques Grátis</strong> (como o Plano Turbo ou Ouro) para impulsionar os seus próprios anúncios dentro da plataforma!
+              </div>
+              <p>
+                Fique de olho no seu Perfil e acesse a aba "Minha Carteira" para acompanhar o seu saldo e resgatar suas recompensas. É a nossa forma de agradecer por você fazer parte da nossa comunidade.
+              </p>
+            </article>
+
+            {/* NOVO ARTIGO: TAXAS MERCADO PAGO */}
+            <article className="border-b border-gray-100 pb-8">
+              <h2 className="text-2xl font-black text-gray-900 mb-4 hover:text-primary transition-colors cursor-pointer flex items-center gap-2">
+                <Rocket className="text-blue-500 shrink-0" size={28} /> Transparência: Entenda os Planos e Taxas de Transação
+              </h2>
+              <p className="text-sm text-gray-400 mb-4">Publicado em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="mb-4">
+                Vender rápido é o objetivo de todo mundo! Nossos planos <strong>Turbo</strong> e <strong>Ouro</strong> aumentam drasticamente a chance de venda do seu produto ao colocá-lo no topo das buscas e no carrossel de super destaques. Como prezamos pela total transparência em nossa comunidade, queremos esclarecer a composição dos nossos valores.
+              </p>
+              <p className="mb-4">
+                Para garantir a segurança máxima das transações dentro do site, nós utilizamos o <strong>Mercado Pago</strong> como gateway de pagamento para gerar as cobranças via Pix. O Mercado Pago cobra uma pequena taxa operacional por cada pagamento processado.
+              </p>
+              <p>
+                <strong>Essa taxa operacional é repassada no checkout.</strong> Mas não se preocupe: não há surpresas ou pegadinhas. Você sempre verá o valor exato (Custo do Plano + Taxa do Mercado Pago) de forma detalhada e transparente na sua tela antes de confirmar e aprovar o Pix no seu aplicativo do banco.
+              </p>
+            </article>
+
             {/* ARTIGO 1 */}
             <article className="border-b border-gray-100 pb-8">
               <h2 className="text-2xl font-black text-gray-900 mb-4 hover:text-primary transition-colors cursor-pointer">
                 5 Dicas Infalíveis para Vender o seu Carro Usado mais Rápido no Piauí
               </h2>
-              <p className="text-sm text-gray-400 mb-4">Publicado em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm text-gray-400 mb-4">Publicado em 10/06/2026</p>
               <p className="mb-4">
                 Vender um veículo usado pode parecer uma tarefa difícil, mas com as estratégias certas, você pode fechar negócio em tempo recorde. No mercado automotivo do Piauí, a transparência e a apresentação do veículo são fundamentais. A primeira dica é investir em fotografias de alta qualidade. Tire fotos durante o dia, em locais iluminados, mostrando todos os ângulos do carro, inclusive detalhes do interior e do painel.
               </p>
@@ -48,7 +83,7 @@ export default function BlogPage() {
               <h2 className="text-2xl font-black text-gray-900 mb-4 hover:text-primary transition-colors cursor-pointer">
                 Como Evitar Golpes ao Comprar Celulares Usados na Internet
               </h2>
-              <p className="text-sm text-gray-400 mb-4">Publicado em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm text-gray-400 mb-4">Publicado em 05/06/2026</p>
               <p className="mb-4">
                 O mercado de celulares seminovos é um dos mais movimentados do Brasil. Trocar de smartphone comprando um modelo usado é uma excelente forma de economizar dinheiro, mas exige cautela. O "Golpe do Intermediário" é a fraude mais comum atualmente. Ele ocorre quando um golpista clona um anúncio real e tenta enganar tanto o comprador quanto o vendedor verdadeiro, pedindo que ambos não conversem sobre valores durante o encontro.
               </p>
@@ -65,7 +100,7 @@ export default function BlogPage() {
               <h2 className="text-2xl font-black text-gray-900 mb-4 hover:text-primary transition-colors cursor-pointer">
                 Economia Circular: Por que Vender Roupas e Móveis Usados Ajuda o Meio Ambiente?
               </h2>
-              <p className="text-sm text-gray-400 mb-4">Publicado em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm text-gray-400 mb-4">Publicado em 01/06/2026</p>
               <p className="mb-4">
                 Você já parou para pensar no impacto ambiental das coisas que estão paradas no fundo do seu armário? A economia circular é um conceito que visa prolongar a vida útil dos produtos, evitando que eles parem no lixo prematuramente. Quando você vende aquele sofá que já não cabe na sua sala ou aquelas roupas que não lhe servem mais no Desapego Piauí, você está diretamente contribuindo para a sustentabilidade.
               </p>

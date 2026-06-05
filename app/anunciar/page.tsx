@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket, Info, Coins } from 'lucide-react'
 
 const CATEGORIAS = [
   "Imóveis", "Veículos", "Eletrônicos", "Para Casa", 
@@ -484,8 +484,8 @@ export default function AnunciarPage() {
           </div>
 
           <div className="pt-6 border-t border-gray-100">
-             <label className="block text-primary font-black text-xl mb-4">Escolha um Plano para destacar*</label>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <h2 className="text-xl font-black text-gray-900 mb-4">Escolha um Plano para destacar*</h2>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                {planosDisponiveis.map((p) => {
                  const isGratis = p.valor === 0;
                  return (
@@ -509,6 +509,19 @@ export default function AnunciarPage() {
                    </div>
                  )
                })}
+             </div>
+
+             {/* 👇 AVISOS DE TRANSPARÊNCIA: TAXAS E MOEDAS 👇 */}
+             <div className="space-y-3">
+               <div className="flex items-start gap-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-xs font-medium text-blue-800">
+                 <Info className="shrink-0 mt-0.5 text-blue-500" size={16} />
+                 <p><strong>Taxas de Transação:</strong> Para planos pagos, uma pequena taxa de processamento financeiro do Mercado Pago será adicionada e informada a você com clareza na próxima tela antes do pagamento.</p>
+               </div>
+               
+               <div className="flex items-start gap-2 bg-amber-50/50 p-3 rounded-xl border border-amber-100 text-xs font-medium text-amber-800">
+                 <Coins className="shrink-0 mt-0.5 text-amber-500" size={16} />
+                 <p><strong>Sistema de Recompensas:</strong> O uso do site gera Moedas Virtuais sem valor financeiro (não conversíveis em dinheiro real). Elas servem apenas para resgatar Destaques Grátis. Consulte os <Link href="/termos" target="_blank" className="underline font-bold">Termos de Uso</Link>.</p>
+               </div>
              </div>
           </div>
 

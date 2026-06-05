@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronLeft, ShieldCheck, Lock, Eye, Database } from 'lucide-react'
+import { ChevronLeft, ShieldCheck, Lock, Eye, Database, CreditCard, Coins } from 'lucide-react'
 
 export const metadata = {
   title: 'Política de Privacidade | Desapego Piauí',
@@ -27,19 +27,20 @@ export default function PrivacidadePage() {
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Database className="text-primary" size={20} /> 1. Dados que Coletamos
+                <Database className="text-primary" size={24} /> 1. Dados que Coletamos
               </h2>
-              <p>Para fornecer nossos serviços de classificados, coletamos os seguintes dados:</p>
+              <p>Para fornecer nossos serviços de classificados e recompensas, coletamos os seguintes dados:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li><strong>Dados de Cadastro:</strong> Nome, endereço de e-mail e foto de perfil (coletados via Google ou fornecidos manualmente).</li>
                 <li><strong>Dados de Contato Profissional/Venda:</strong> Número de telefone/WhatsApp.</li>
                 <li><strong>Dados de Navegação:</strong> Informações técnicas como IP, tipo de navegador, localização aproximada (cidade) para filtros, e cookies para manter sua sessão ativa.</li>
+                <li><strong>Dados de Engajamento:</strong> Registramos suas interações diárias (como acessos e criação de anúncios) estritamente para contabilizar e distribuir suas <strong>Moedas Virtuais</strong> no nosso Sistema de Recompensas.</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Eye className="text-accent" size={20} /> 2. Exibição Pública do WhatsApp (Sem Chat Interno)
+                <Eye className="text-accent" size={24} /> 2. Exibição Pública do WhatsApp (Sem Chat Interno)
               </h2>
               <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
                 <p><strong>Atenção:</strong> O Desapego Piauí optou por <strong>não possuir um chat interno</strong> para garantir que você tenha conversas mais rápidas e diretas.</p>
@@ -49,19 +50,27 @@ export default function PrivacidadePage() {
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Lock className="text-gray-800" size={20} /> 3. Como Protegemos e Compartilhamos Seus Dados
+                <CreditCard className="text-blue-500" size={24} /> 3. Dados de Pagamento e Taxas (Mercado Pago)
+              </h2>
+              <p>O Desapego Piauí <strong>não armazena nem tem acesso</strong> aos seus dados bancários, números de cartão de crédito ou chaves Pix pessoais.</p>
+              <p className="mt-2">Toda a infraestrutura de pagamento dos planos de destaque e o cálculo de taxas operacionais são processados diretamente pelo gateway do <strong>Mercado Pago</strong>, que possui os mais altos padrões de criptografia e conformidade legal. Apenas recebemos uma notificação informando se o pagamento foi aprovado ou recusado. Ressaltamos que a taxa de processamento cobrada pelo Mercado Pago é <strong>repassada ao usuário</strong>, sendo este valor sempre exibido de forma totalmente transparente no momento do checkout.</p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Lock className="text-gray-800" size={24} /> 4. Como Protegemos e Compartilhamos Seus Dados
               </h2>
               <p>O Desapego Piauí <strong>não vende, não aluga e não repassa</strong> seus dados pessoais para empresas de marketing de terceiros.</p>
               <p className="mt-2">Seus dados são armazenados em servidores seguros utilizando infraestrutura de ponta (Google Cloud / Firebase), com criptografia em trânsito e em repouso. Compartilhamos dados apenas em casos de ordem judicial ou solicitações de autoridades competentes para a investigação de fraudes e crimes cibernéticos.</p>
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">4. Retenção de Dados</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-4">5. Retenção de Dados</h2>
               <p>Manteremos seus dados pessoais apenas pelo tempo necessário para cumprir as finalidades descritas nesta política. Caso você exclua sua conta, seus dados pessoais e anúncios serão removidos permanentemente dos nossos bancos de dados ativos, exceto se houver obrigação legal de retenção por prazos estipulados no Marco Civil da Internet (Lei nº 12.965/2014).</p>
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">5. Seus Direitos (Art. 18 da LGPD)</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-4">6. Seus Direitos (Art. 18 da LGPD)</h2>
               <p>Como titular dos dados, você tem o direito garantido por lei de solicitar a qualquer momento:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li>Confirmação e acesso aos dados que possuímos sobre você.</li>
