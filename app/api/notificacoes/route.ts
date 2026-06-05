@@ -41,16 +41,27 @@ export async function POST(request: Request) {
     }
 
     const promises = [];
+    
+    // Define os textos da notificação para manter um padrão
+    const tituloNotificacao = `Nova mensagem: ${tituloAnuncio}`;
+    const corpoNotificacao = mensagem.length > 50 ? mensagem.substring(0, 50) + '...' : mensagem;
 
-    // 2. DISPARA A NOTIFICAÇÃO PUSH (Para o Celular!) 🚀
+    // 2. DISPARA A NOTIFICAÇÃO PUSH (Para o Celular tocar e exibir!) 🚀
     if (userData.fcmToken) {
-      const pushMessage = {
+      const pushMessage: admin.messaging.Message = {
         notification: {
-          title: `Nova mensagem: ${tituloAnuncio}`,
-          body: mensagem.length > 50 ? mensagem.substring(0, 50) + '...' : mensagem,
+          title: tituloNotificacao,
+          body: corpoNotificacao,
+        },
+        // 👇 ESTE É O BLOCO NOVO QUE FAZ O CELULAR TOCAR E MOSTRAR O SEU ÍCONE
+        android: {
+          notification: {
+            sound: 'default',
+            icon: 'ic_notification_icon',
+          }
         },
         data: {
-          chatId: chatId,
+          chatId: String(chatId), // Garantindo que seja string (exigência do FCM)
           click_action: `https://desapegopiaui.com.br/chat?id=${chatId}`
         },
         token: userData.fcmToken,
@@ -63,7 +74,23 @@ export async function POST(request: Request) {
       promises.push(pushPromise);
     }
 
-    // 3. DISPARA O E-MAIL (Fallback) 📧
+    // 3. SALVA NO BANCO DE DADOS (Para aparecer quando o usuário clicar no Sino! 🔔)
+    // Criamos uma subcoleção 'notificacoes' dentro do usuário logado
+    const notificacaoRef = db.collection('users').doc(destinatarioId).collection('notificacoes').doc();
+    const salvarNotificacaoPromise = notificacaoRef.set({
+      id: notificacaoRef.id,
+      titulo: tituloNotificacao,
+      mensagem: corpoNotificacao,
+      lida: false,
+      tipo: 'chat',
+      link: `/chat?id=${chatId}`,
+      remetenteId: remetenteId || null,
+      dataCriacao: admin.firestore.FieldValue.serverTimestamp(),
+    }).then(() => console.log('✅ Notificação salva no banco para o Sino.'));
+    
+    promises.push(salvarNotificacaoPromise);
+
+    // 4. DISPARA O E-MAIL (Fallback) 📧
     if (userData.email) {
       const emailPromise = resend.emails.send({
         from: 'Desapego Piauí <contato@desapegopiaui.com.br>', 
@@ -81,14 +108,15 @@ export async function POST(request: Request) {
             </a>
           </div>
         `
-      });
+      }).catch(error => console.error('❌ Erro no Email:', error));
+      
       promises.push(emailPromise);
     }
 
-    // Aguarda os dois envios terminarem
+    // Aguarda todos os envios (Push, Banco de Dados e Email) terminarem
     await Promise.all(promises);
 
-    return NextResponse.json({ success: true, message: 'Notificações disparadas' });
+    return NextResponse.json({ success: true, message: 'Notificações disparadas e salvas com sucesso' });
   } catch (error) {
     console.error('Erro na API de notificação:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });

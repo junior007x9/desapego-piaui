@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Bell, BookOpen, Coins } from 'lucide-react';
+import { MapPin, Bell, BookOpen, Coins, Plus } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useEffect, useState } from 'react';
@@ -58,85 +58,104 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="glass shadow-sm border-b border-gray-100/50 sticky top-0 z-50 transition-all duration-300">
+    <nav className="bg-white/90 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-gray-100 sticky top-0 z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        <div className="flex justify-between h-20 items-center">
           
-          {/* LOGO */}
+          {/* LOGO (Com animação 3D sutil) */}
           <div className="flex items-center gap-2 md:gap-4">
-            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-              <div className="rounded-full overflow-hidden border border-gray-100 shadow-sm w-9 h-9 md:w-11 md:h-11 flex items-center justify-center bg-gray-50">
+            <Link href="/" className="flex items-center gap-2 md:gap-3 group outline-none">
+              <div className="rounded-2xl overflow-hidden border-2 border-b-[4px] border-gray-200 shadow-sm w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-gray-50 group-active:border-b-2 group-active:translate-y-[2px] transition-all duration-150">
                 <Image 
                   src="/logo.jpeg" 
                   alt="Logo Desapego Piauí" 
-                  width={44}
-                  height={44}
-                  className="object-cover"
+                  width={48}
+                  height={48}
+                  className="object-cover group-hover:scale-110 transition-transform duration-300"
                   priority
                 />
               </div>
-              <span className="text-primary font-black text-xl tracking-tighter group-hover:text-primary-dark transition-colors">
-                Desapego <span className="text-accent">Piauí</span>
+              <span className="text-primary font-black text-xl md:text-2xl tracking-tighter group-hover:text-primary-dark transition-colors">
+                Desapego<span className="text-accent">Piauí</span>
               </span>
             </Link>
           </div>
 
           {/* MENU DESKTOP */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center gap-1 text-gray-500 bg-gray-50/80 px-3 py-1.5 rounded-full mr-2">
+          <div className="hidden md:flex items-center space-x-5">
+            {/* Pílula de Localização 3D */}
+            <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-4 py-2 rounded-xl border-2 border-b-[4px] border-gray-200 shadow-sm mr-2">
               <MapPin size={16} className="text-accent" />
               <span className="text-xs font-bold uppercase tracking-wider">{locFull}</span>
             </div>
 
-            <Link href="/blog" className="flex items-center gap-1 text-gray-600 hover:text-primary font-bold text-sm transition-colors">
-              <BookOpen size={16} /> Dicas
+            <Link href="/blog" className="flex items-center gap-1.5 text-gray-500 hover:text-primary font-bold text-sm transition-colors outline-none">
+              <BookOpen size={18} /> Dicas
             </Link>
 
-            <Link href="/favoritos" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Favoritos</Link>
+            <Link href="/favoritos" className="text-gray-500 hover:text-primary font-bold text-sm transition-colors outline-none">
+              Favoritos
+            </Link>
             
             {user ? (
-              <div className="flex items-center gap-5 border-l border-gray-200 pl-6 ml-2">
+              <div className="flex items-center gap-5 border-l-2 border-gray-100 pl-6 ml-2">
                 
-                {/* 🚀 BOTÃO DA CARTEIRA VIP */}
-                <Link href="/carteira" className="flex items-center gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 font-black text-sm px-4 py-2 rounded-full border border-amber-200 transition-all shadow-sm">
-                  <Coins size={16} /> Carteira
+                {/* 🚀 BOTÃO DA CARTEIRA VIP 3D */}
+                <Link href="/carteira" className="flex items-center gap-1.5 bg-gradient-to-b from-amber-50 to-amber-100 text-amber-600 hover:text-amber-700 font-black text-sm px-5 py-2.5 rounded-xl border-2 border-b-[4px] border-amber-200 active:border-b-2 active:translate-y-[2px] transition-all shadow-sm outline-none">
+                  <Coins size={18} /> Carteira
                 </Link>
 
-                <Link href="/meus-anuncios" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Meus Anúncios</Link>
-                <Link href="/perfil" className="text-gray-600 hover:text-primary font-bold text-sm transition-colors">Minha Conta</Link>
-                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">Sair</button>
+                <Link href="/meus-anuncios" className="text-gray-500 hover:text-primary font-bold text-sm transition-colors outline-none">
+                  Meus Anúncios
+                </Link>
+                <Link href="/perfil" className="text-gray-500 hover:text-primary font-bold text-sm transition-colors outline-none">
+                  Minha Conta
+                </Link>
+                <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors outline-none">
+                  Sair
+                </button>
               </div>
             ) : (
-              <div className="flex items-center gap-4 border-l border-gray-200 pl-6 ml-2">
-                <Link href="/login" className="text-primary hover:text-primary-dark font-black text-sm transition-colors">Entrar</Link>
+              <div className="flex items-center gap-4 border-l-2 border-gray-100 pl-6 ml-2">
+                <Link href="/login" className="text-primary hover:text-primary-dark font-black text-sm transition-colors outline-none">
+                  Entrar
+                </Link>
               </div>
             )}
 
+            {/* BOTÃO ANUNCIAR GRÁTIS 3D REALISTA */}
             <Link 
               href={user ? "/anunciar" : "/login"} 
-              className="bg-accent hover:bg-accent-dark text-white px-6 py-2.5 rounded-xl font-black text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ml-2"
+              className="bg-gradient-to-b from-accent to-[#d97706] text-white px-6 py-2.5 rounded-xl font-black text-sm flex items-center gap-2 border-x border-t border-[#d97706] border-b-[5px] active:border-b-[2px] active:translate-y-[3px] hover:brightness-110 transition-all shadow-md ml-2 outline-none"
             >
-              + Anunciar Grátis
+              <Plus size={18} strokeWidth={3} />
+              Anunciar Grátis
             </Link>
           </div>
 
           {/* MENU MOBILE */}
           <div className="flex md:hidden items-center gap-3">
-             <div className="flex items-center gap-1 text-gray-800 font-black text-[10px] uppercase tracking-wider bg-gray-100/80 px-3 py-1.5 rounded-full">
-                <MapPin size={12} className="text-accent" />
+             {/* Localização Pílula 3D */}
+             <div className="flex items-center gap-1 text-gray-700 font-black text-[10px] uppercase tracking-wider bg-gray-50 border-2 border-b-[4px] border-gray-200 px-3 py-2 rounded-xl shadow-sm">
+                <MapPin size={14} className="text-accent" />
                 <span className="truncate max-w-[90px]">{locShort}</span>
              </div>
              
-             {/* 🚀 ÍCONE DA CARTEIRA NO CELULAR */}
+             {/* 🚀 ÍCONE DA CARTEIRA NO CELULAR 3D */}
              {user && (
-               <Link href="/carteira" className="text-amber-500 hover:text-amber-600 bg-amber-50 border border-amber-100 p-2 rounded-full transition-colors shadow-sm">
-                 <Coins size={18} />
+               <Link href="/carteira" className="text-amber-500 bg-gradient-to-b from-amber-50 to-amber-100 border-2 border-b-[4px] border-amber-200 active:border-b-2 active:translate-y-[2px] p-2 rounded-xl transition-all shadow-sm outline-none">
+                 <Coins size={20} strokeWidth={2.5} />
                </Link>
              )}
 
-             <button className="text-gray-500 hover:text-primary transition-colors bg-gray-50/80 p-2 rounded-full">
-                <Bell size={18} />
-             </button>
+             {/* SINO DE NOTIFICAÇÕES 3D */}
+             <Link href="/notificacoes" className="relative text-gray-500 bg-gray-50 border-2 border-b-[4px] border-gray-200 active:border-b-2 active:translate-y-[2px] p-2 rounded-xl transition-all shadow-sm outline-none">
+                <Bell size={20} strokeWidth={2.5} />
+                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-white"></span>
+                </span>
+             </Link>
           </div>
 
         </div>

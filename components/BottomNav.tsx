@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Search, PlusCircle, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle, Coins } from 'lucide-react'
+import { Home, Search, Plus, Menu, X, User, Heart, Shield, LogOut, FileText, ChevronRight, HelpCircle, Coins } from 'lucide-react'
 import { auth } from '@/lib/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 
@@ -31,58 +31,68 @@ export default function BottomNav() {
   const closeMenu = () => setIsMenuOpen(false)
 
   if (pathname === '/login' || pathname === '/cadastro') return null
+  if (pathname?.startsWith('/chat')) return null // Esconde no chat para não atrapalhar o teclado
+
+  const isActive = (path: string) => pathname === path
 
   return (
     <>
       {/* ESPAÇO FANTASMA PARA A BARRA NÃO COBRIR CONTEÚDO */}
-      <div className="h-24 md:hidden"></div>
+      <div className="h-28 md:hidden"></div>
 
-      {/* BARRA DE NAVEGAÇÃO INFERIOR FLUTUANTE (APP STYLE) */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full z-40 px-4 pb-5 pt-2 pointer-events-none">
-        <nav className="glass border border-gray-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-3xl flex justify-around items-end px-2 pb-2 pt-3 pointer-events-auto relative">
+      {/* BARRA DE NAVEGAÇÃO INFERIOR FLUTUANTE 3D */}
+      <div className="md:hidden fixed bottom-4 left-4 right-4 z-40 pointer-events-none">
+        <nav className="bg-white/90 backdrop-blur-xl border border-white/60 shadow-[0_10px_40px_rgba(109,40,217,0.15)] rounded-[2rem] flex justify-between items-center px-2 h-[72px] relative pointer-events-auto">
           
-          {/* 1. INÍCIO */}
-          <Link href="/" onClick={closeMenu} className={`flex flex-col items-center justify-center transition-all duration-300 w-16 outline-none ${pathname === '/' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <div className={`relative transition-transform duration-300 ${pathname === '/' ? '-translate-y-1' : ''}`}>
-              <Home size={22} strokeWidth={pathname === '/' ? 2.5 : 2} />
-              {pathname === '/' && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-            </div>
-            <span className={`text-[10px] font-bold mt-1.5 transition-all duration-300 ${pathname === '/' ? 'opacity-100' : 'opacity-0 translate-y-2 absolute'}`}>Início</span>
-          </Link>
+          {/* Esquerda */}
+          <div className="flex w-2/5 justify-around h-full">
+            <Link href="/" onClick={closeMenu} className={`relative flex flex-col items-center justify-center w-full h-full group outline-none ${isActive('/') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+              <div className={`transition-all duration-300 ${isActive('/') ? '-translate-y-1' : 'group-active:scale-90'}`}>
+                <Home size={24} strokeWidth={isActive('/') ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-bold mt-1 transition-all duration-300 ${isActive('/') ? 'opacity-100' : 'opacity-70'}`}>Início</span>
+              {isActive('/') && <div className="w-1.5 h-1.5 bg-primary rounded-full absolute bottom-1 shadow-[0_0_8px_rgba(109,40,217,0.8)]" />}
+            </Link>
+            
+            <Link href="/todos-anuncios" onClick={closeMenu} className={`relative flex flex-col items-center justify-center w-full h-full group outline-none ${isActive('/todos-anuncios') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+              <div className={`transition-all duration-300 ${isActive('/todos-anuncios') ? '-translate-y-1' : 'group-active:scale-90'}`}>
+                <Search size={24} strokeWidth={isActive('/todos-anuncios') ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-bold mt-1 transition-all duration-300 ${isActive('/todos-anuncios') ? 'opacity-100' : 'opacity-70'}`}>Buscar</span>
+              {isActive('/todos-anuncios') && <div className="w-1.5 h-1.5 bg-primary rounded-full absolute bottom-1 shadow-[0_0_8px_rgba(109,40,217,0.8)]" />}
+            </Link>
+          </div>
 
-          {/* 2. BUSCAR */}
-          <Link href="/todos-anuncios" onClick={closeMenu} className={`flex flex-col items-center justify-center transition-all duration-300 w-16 outline-none ${pathname === '/todos-anuncios' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <div className={`relative transition-transform duration-300 ${pathname === '/todos-anuncios' ? '-translate-y-1' : ''}`}>
-              <Search size={22} strokeWidth={pathname === '/todos-anuncios' ? 2.5 : 2} />
-              {pathname === '/todos-anuncios' && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-            </div>
-            <span className={`text-[10px] font-bold mt-1.5 transition-all duration-300 ${pathname === '/todos-anuncios' ? 'opacity-100' : 'opacity-0 translate-y-2 absolute'}`}>Buscar</span>
-          </Link>
+          {/* Centro - Botão 3D Flutuante Realista */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-6 flex justify-center w-1/5">
+            <Link href="/anunciar" onClick={closeMenu} className="group flex flex-col items-center outline-none">
+              <div className="bg-gradient-to-b from-primary to-primary-dark text-white w-16 h-16 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(109,40,217,0.5)] border-[3px] border-white 
+                border-b-[6px] active:border-b-[3px] active:translate-y-[3px] transition-all duration-150">
+                <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
+              </div>
+            </Link>
+          </div>
 
-          {/* 3. ANUNCIAR (CENTRALIZADO, FLUTUANTE E COM ANIMAÇÃO) */}
-          <Link href="/anunciar" onClick={closeMenu} className="relative -top-6 flex flex-col items-center group px-2 outline-none">
-            <div className="bg-accent hover:bg-accent-dark text-white p-4 rounded-full shadow-lg shadow-accent/40 transform transition-transform active:scale-90 animate-float border-4 border-white/50">
-              <PlusCircle size={28} strokeWidth={2.5} />
-            </div>
-          </Link>
+          {/* Direita */}
+          <div className="flex w-2/5 justify-around h-full">
+            <Link href="/favoritos" onClick={closeMenu} className={`relative flex flex-col items-center justify-center w-full h-full group outline-none ${isActive('/favoritos') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+              <div className={`transition-all duration-300 ${isActive('/favoritos') ? '-translate-y-1' : 'group-active:scale-90'}`}>
+                <Heart size={24} strokeWidth={isActive('/favoritos') ? 2.5 : 2} className={isActive('/favoritos') ? 'fill-primary' : ''} />
+              </div>
+              <span className={`text-[10px] font-bold mt-1 transition-all duration-300 ${isActive('/favoritos') ? 'opacity-100' : 'opacity-70'}`}>Favoritos</span>
+              {isActive('/favoritos') && <div className="w-1.5 h-1.5 bg-primary rounded-full absolute bottom-1 shadow-[0_0_8px_rgba(109,40,217,0.8)]" />}
+            </Link>
 
-          {/* 4. FAVORITOS */}
-          <Link href="/favoritos" onClick={closeMenu} className={`flex flex-col items-center justify-center transition-all duration-300 w-16 outline-none ${pathname === '/favoritos' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <div className={`relative transition-transform duration-300 ${pathname === '/favoritos' ? '-translate-y-1' : ''}`}>
-              <Heart size={22} strokeWidth={pathname === '/favoritos' ? 2.5 : 2} className={pathname === '/favoritos' ? 'fill-primary' : ''} />
-              {pathname === '/favoritos' && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-            </div>
-            <span className={`text-[10px] font-bold mt-1.5 transition-all duration-300 ${pathname === '/favoritos' ? 'opacity-100' : 'opacity-0 translate-y-2 absolute'}`}>Favoritos</span>
-          </Link>
+            {/* BOTÃO DO MENU (Mantivemos a sua gaveta) */}
+            <button onClick={() => setIsMenuOpen(true)} className={`relative flex flex-col items-center justify-center w-full h-full group outline-none ${isMenuOpen ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+              <div className={`transition-all duration-300 ${isMenuOpen ? '-translate-y-1' : 'group-active:scale-90'}`}>
+                <Menu size={24} strokeWidth={isMenuOpen ? 2.5 : 2} />
+              </div>
+              <span className={`text-[10px] font-bold mt-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-70'}`}>Menu</span>
+              {isMenuOpen && <div className="w-1.5 h-1.5 bg-primary rounded-full absolute bottom-1 shadow-[0_0_8px_rgba(109,40,217,0.8)]" />}
+            </button>
+          </div>
 
-          {/* 5. MENU GAVETA */}
-          <button onClick={() => setIsMenuOpen(true)} className={`flex flex-col items-center justify-center transition-all duration-300 w-16 outline-none ${isMenuOpen ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-            <div className={`relative transition-transform duration-300 ${isMenuOpen ? '-translate-y-1' : ''}`}>
-              <Menu size={22} strokeWidth={isMenuOpen ? 2.5 : 2} />
-              {isMenuOpen && <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-            </div>
-            <span className={`text-[10px] font-bold mt-1.5 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0 translate-y-2 absolute'}`}>Menu</span>
-          </button>
         </nav>
       </div>
 
@@ -111,7 +121,6 @@ export default function BottomNav() {
           <div className="space-y-3">
             {user ? (
               <>
-                {/* 🚀 BOTÃO DA CARTEIRA EM DESTAQUE NO MENU MOBILE */}
                 <Link href="/carteira" onClick={closeMenu} className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl hover:bg-amber-100 border border-amber-100 transition-colors group mb-2 shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="bg-amber-100 p-3 rounded-full text-amber-500 group-hover:scale-110 transition-transform shadow-sm"><Coins size={24} /></div>

@@ -202,7 +202,8 @@ function SearchContent() {
   }
 
   const FiltrosComponent = () => (
-    <div className="space-y-6">
+    // Adicionado um pb-28 no mobile para o usuário conseguir ver até o fim da lista
+    <div className="space-y-6 pb-28 md:pb-0">
       <div className="flex justify-between items-center md:hidden mb-6 border-b pb-4">
         <h2 className="text-xl font-black text-gray-900 flex items-center gap-2"><SlidersHorizontal size={20}/> Filtros</h2>
         <button onClick={() => setShowFiltersMobile(false)} className="bg-gray-100 p-2 rounded-full text-gray-600"><X size={20}/></button>
@@ -246,9 +247,12 @@ function SearchContent() {
         Limpar Filtros
       </button>
       
-      <button onClick={() => setShowFiltersMobile(false)} className="w-full py-4 bg-primary text-white font-bold rounded-xl transition-colors md:hidden mt-4 shadow-lg">
-        Ver {filteredAds.length} resultados
-      </button>
+      {/* Botão flutuante exclusivo para o mobile */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 md:hidden z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <button onClick={() => setShowFiltersMobile(false)} className="w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg active:scale-95 transition-all">
+          Ver {filteredAds.length} resultados
+        </button>
+      </div>
     </div>
   )
 
@@ -326,10 +330,10 @@ function SearchContent() {
                       href={`/anuncio/${ad.id}`} 
                       key={ad.id} 
                       className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-                         isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
-                         isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
-                         isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
-                         'bg-white border-gray-100 shadow-sm hover:-translate-y-1'
+                          isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
+                          isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
+                          isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
+                          'bg-white border-gray-100 shadow-sm hover:-translate-y-1'
                       }`}
                     >
                       
