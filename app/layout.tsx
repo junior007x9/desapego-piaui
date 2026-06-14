@@ -7,8 +7,8 @@ import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
 import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
-import { Toaster } from 'react-hot-toast' // IMPORTAÇÃO DOS AVISOS (TOASTS)
-import DailyCheckin from '@/components/DailyCheckin' // IMPORTAÇÃO DO COMPONENTE FANTASMA
+import { Toaster } from 'react-hot-toast' 
+import DailyCheckin from '@/components/DailyCheckin' // O componente foi importado aqui!
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -139,6 +139,7 @@ export default function RootLayout({
         <CookieBanner />
         <FeedbackButton />
         
+        {/* 👇 O componente está sendo usado aqui, agora a Vercel vai aprovar! 👇 */}
         <DailyCheckin />
         
         <Toaster position="top-right" toastOptions={{
