@@ -8,7 +8,7 @@ import CookieBanner from '@/components/CookieBanner'
 import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
 import { Toaster } from 'react-hot-toast' // IMPORTAÇÃO DOS AVISOS (TOASTS)
-import DailyCheckin from '@/components/DailyCheckin' // 🚀 IMPORTAÇÃO DO COMPONENTE FANTASMA
+import DailyCheckin from '@/components/DailyCheckin' // IMPORTAÇÃO DO COMPONENTE FANTASMA
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -109,20 +109,18 @@ export default function RootLayout({
 
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
         
-        {/* 👇 ATIVADOR DO APLICATIVO CORRIGIDO PARA O PWABUILDER 👇 */}
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('ServiceWorker registado com sucesso!');
-                }).catch(function(err) {
-                  console.log('Falha no registo do ServiceWorker: ', err);
-                });
-              });
-            }
-          `}
-        </Script>
+        {/* 👇 ATIVADOR DO APLICATIVO FORÇADO PARA O PWABUILDER 👇 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                  .then(function(reg) { console.log('SW Registrado!'); })
+                  .catch(function(err) { console.log('Erro no SW: ', err); });
+              }
+            `
+          }}
+        />
 
         <Navbar />
         
