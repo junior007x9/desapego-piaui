@@ -65,12 +65,25 @@ export default function PrivacidadePage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">5. Retenção de Dados</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Eye className="text-blue-500" size={24} /> 5. Publicidade e Google AdSense
+              </h2>
+              <p>O Desapego Piauí utiliza o <strong>Google AdSense</strong> para exibir publicidade, o que nos ajuda a manter a plataforma gratuita. Em conformidade com as regras do Google, informamos que:</p>
+              <ul className="list-disc pl-6 space-y-2 mt-2">
+                <li>Fornecedores de terceiros, incluindo o Google, utilizam cookies para veicular anúncios com base nas visitas anteriores que o usuário fez ao nosso site ou a outros sites na Internet.</li>
+                <li>O uso de cookies de publicidade permite que o Google e seus parceiros veiculem anúncios para os usuários com base na navegação.</li>
+                <li>Você pode desativar a publicidade personalizada acessando as <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Configurações de Anúncios do Google</a>.</li>
+                <li>Para entender detalhadamente como o Google coleta e processa esses dados, acesse a página oficial: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Como o Google usa informações de sites ou apps que utilizam nossos serviços</a>.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4">6. Retenção de Dados</h2>
               <p>Manteremos seus dados pessoais apenas pelo tempo necessário para cumprir as finalidades descritas nesta política. Caso você exclua sua conta, seus dados pessoais e anúncios serão removidos permanentemente dos nossos bancos de dados ativos, exceto se houver obrigação legal de retenção por prazos estipulados no Marco Civil da Internet (Lei nº 12.965/2014).</p>
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">6. Seus Direitos (Art. 18 da LGPD)</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-4">7. Seus Direitos (Art. 18 da LGPD)</h2>
               <p>Como titular dos dados, você tem o direito garantido por lei de solicitar a qualquer momento:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li>Confirmação e acesso aos dados que possuímos sobre você.</li>

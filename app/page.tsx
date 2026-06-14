@@ -225,10 +225,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BANNER ADSENSE COMENTADO TEMPORARIAMENTE PARA APROVAÇÃO */}
-        {/* <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
+        {/* BANNER ADSENSE ATIVADO PARA APROVAÇÃO DO GOOGLE */}
+        <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
           <AdBanner dataAdSlot="8830353493" />
-        </div> */}
+        </div>
 
         {/* CARROSSEL OURO NO TOPO (Apenas Plano Ouro = 3) */}
         {!loading && vipAds.length > 0 && (
