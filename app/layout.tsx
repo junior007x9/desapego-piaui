@@ -74,18 +74,20 @@ export default function RootLayout({
         <meta name="google-site-verification" content="MpSBIeObHIeNjSIanheXLRqWVLvCtzPsu2Qtv2Ydo8E" />
         <meta name="google-adsense-account" content="ca-pub-5151678673256465" />
 
+        {/* 🚨 SCRIPTS COMENTADOS TEMPORARIAMENTE PARA O PWABUILDER NÃO TRAVAR 🚨 */}
+        {/*
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
-          {`
+          {\`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-998KLBW15Q');
-          `}
+          \`}
         </Script>
 
         <Script id="meta-pixel" strategy="afterInteractive">
-          {`
+          {\`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -96,7 +98,7 @@ export default function RootLayout({
             'https://connect.facebook.net/en_US/fbevents.js');
             fbq('init', 'SEU_PIXEL_ID');
             fbq('track', 'PageView');
-          `}
+          \`}
         </Script>
 
         <Script
@@ -105,6 +107,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5151678673256465"
         />
+        */}
       </head>
 
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
