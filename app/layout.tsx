@@ -12,13 +12,12 @@ import DailyCheckin from '@/components/DailyCheckin' // 🚀 IMPORTAÇÃO DO COM
 
 const inter = Inter({ subsets: ['latin'] })
 
-// OTIMIZAÇÃO GLOBAL DE SEO (Google, WhatsApp, Facebook) E PWA
+// OTIMIZAÇÃO GLOBAL DE SEO E PWA
 export const metadata: Metadata = {
   title: 'Desapego Piauí | Compra e Venda de Forma Rápida e Local',
   description: 'A melhor plataforma para conectar quem quer vender com quem quer comprar no Piauí. Simples, rápido e local. Anuncie imóveis, carros, celulares e muito mais!',
-  manifest: '/manifest.json', // ATIVADOR DO PWA (Ícone na tela inicial)
+  manifest: '/manifest.json', // ATIVADOR DO PWA
   
-  // 🚀 ADICIONADO: Forçando o Next.js, Google e Celulares a usarem o seu ícone
   icons: {
     icon: '/icon-512x512.png',
     shortcut: '/icon-512x512.png',
@@ -72,13 +71,9 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <head>
-        {/* GOOGLE SITE VERIFICATION (Aprovação do Search Console) */}
         <meta name="google-site-verification" content="MpSBIeObHIeNjSIanheXLRqWVLvCtzPsu2Qtv2Ydo8E" />
-
-        {/* 👇 METATAG PARA VERIFICAÇÃO DO ADSENSE 👇 */}
         <meta name="google-adsense-account" content="ca-pub-5151678673256465" />
 
-        {/* GOOGLE ANALYTICS 4 */}
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
@@ -89,7 +84,6 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* META PIXEL DO FACEBOOK/INSTAGRAM */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -105,7 +99,6 @@ export default function RootLayout({
           `}
         </Script>
 
-        {/* GOOGLE ADSENSE SCRIPT (Monetização) */}
         <Script
           id="adsbygoogle-init"
           strategy="afterInteractive"
@@ -116,20 +109,20 @@ export default function RootLayout({
 
       <body className={`${inter.className} bg-gray-50 flex flex-col min-h-screen w-full overflow-x-hidden`}>
         
-        {/* ATIVADOR DO APLICATIVO (Service Worker) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                  });
+        {/* 👇 ATIVADOR DO APLICATIVO CORRIGIDO PARA O PWABUILDER 👇 */}
+        <Script id="register-sw" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                  console.log('ServiceWorker registado com sucesso!');
+                }).catch(function(err) {
+                  console.log('Falha no registo do ServiceWorker: ', err);
                 });
-              }
-            `,
-          }}
-        />
+              });
+            }
+          `}
+        </Script>
 
         <Navbar />
         
@@ -145,10 +138,8 @@ export default function RootLayout({
         <CookieBanner />
         <FeedbackButton />
         
-        {/* 🚀 COMPONENTE FANTASMA PARA GAMIFICAÇÃO */}
         <DailyCheckin />
         
-        {/* 🚀 O ALTO-FALANTE DE NOTIFICAÇÕES (Instalado em todas as páginas) */}
         <Toaster position="top-right" toastOptions={{
           duration: 4000,
           style: {
@@ -157,7 +148,7 @@ export default function RootLayout({
             fontWeight: 'bold',
             borderRadius: '12px',
             padding: '16px',
-            zIndex: 9999, // Garante que a notificação apareça acima de tudo
+            zIndex: 9999,
           },
           success: {
             style: { background: '#10B981' }
