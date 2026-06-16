@@ -57,9 +57,12 @@ export const metadata: Metadata = {
   }
 }
 
+// 👇 ATUALIZADO: Trava de zoom e scroll horizontal forçado no celular
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: '#4c1d95', 
 }
 
