@@ -34,9 +34,8 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
-// 🚀 NOVOS PLANOS FOCADOS EM MICROTRANSAÇÕES E RESULTADOS IMEDIATOS
+// 🚀 PLANOS ATUALIZADOS (Sem o Básico de 30 dias)
 const PLANOS_BASE = [
-  { id: 99, nome: 'Básico (Grátis)', dias: 30, valor: 0, desc: 'Publicação simples por 30 dias (Sem destaque)' },
   { id: 1, nome: 'Sobe pro Topo', dias: 1, valor: 2.99, desc: 'Seu anúncio vai para o 1º lugar agora' },
   { id: 2, nome: 'Destaque Turbo', dias: 5, valor: 9.90, desc: '5 dias com borda e máxima visibilidade' },
   { id: 3, nome: 'Ouro / Urgente', dias: 7, valor: 19.90, desc: '7 dias fixo no Carrossel Principal do site' }
@@ -48,10 +47,10 @@ const removerAcentos = (texto: string) => {
 
 // 🚀 MÁSCARA AUTOMÁTICA DE WHATSAPP
 const mascaraTelefone = (v: string) => {
-  v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
-  if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
-  v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses no DDD
-  v = v.replace(/(\d)(\d{4})$/, "$1-$2");    // Coloca o traço
+  v = v.replace(/\D/g, ""); 
+  if (v.length > 11) v = v.substring(0, 11); 
+  v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
+  v = v.replace(/(\d)(\d{4})$/, "$1-$2");    
   return v;
 };
 
@@ -496,7 +495,6 @@ export default function AnunciarPage() {
                       className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-gray-50'}`}
                    >
                       {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> Presente VIP</div>)}
-                      {p.id === 99 && (<div className="absolute top-0 right-0 bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Store size={12}/> Padrão</div>)}
                       {p.id === 1 && (<div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Rocket size={12}/> Imediato</div>)}
 
                       <div className="flex justify-between items-start mb-2">
