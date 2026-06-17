@@ -6,12 +6,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, 
-  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart, Rocket, Flame
+  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart, Rocket, Flame, Download
 } from 'lucide-react'
 import ContadorEstatisticas from '@/components/ContadorEstatisticas'
 import AdBanner from '@/components/AdBanner'
 
-// CATEGORIAS ATUALIZADAS COM CORES PARA EFEITO 3D
 const CATEGORIAS_HOME = [
   { nome: 'Imóveis', slug: 'Imóveis', icon: <HomeIcon size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-blue-50 to-blue-100 border-blue-200 text-blue-600" },
   { nome: 'Veículos', slug: 'Veículos', icon: <Car size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-orange-50 to-orange-100 border-orange-200 text-orange-600" },
@@ -23,6 +22,14 @@ const CATEGORIAS_HOME = [
   { nome: 'Esportes', slug: 'Esportes', icon: <Bike size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-teal-50 to-teal-100 border-teal-200 text-teal-600" },
   { nome: 'Empregos', slug: 'Vagas de Emprego', icon: <Briefcase size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-cyan-50 to-cyan-100 border-cyan-200 text-cyan-600" },
   { nome: 'Outros', slug: 'Outros', icon: <ShoppingBag size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 text-gray-600" },
+]
+
+// Filtros Rápidos (UX Premium)
+const FILTROS_RAPIDOS = [
+  { nome: 'Carros', icone: '🚗', slug: 'Veículos' },
+  { nome: 'Celulares', icone: '📱', slug: 'Eletrônicos' },
+  { nome: 'Imóveis', icone: '🏠', slug: 'Imóveis' },
+  { nome: 'Moda', icone: '👗', slug: 'Moda e Beleza' },
 ]
 
 function formatTimeAgo(timestampSeconds: number) {
@@ -45,6 +52,11 @@ export default function Home() {
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
+  
+  // Estados para o Banner PWA
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -65,7 +77,25 @@ export default function Home() {
       }
     }
     fetchCity();
+
+    // Lógica para interceptar o convite de instalação do App
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true); // Exibe o nosso banner customizado
+    });
   }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+      }
+      setDeferredPrompt(null);
+    }
+  };
 
   useEffect(() => {
     async function fetchRecentAds() {
@@ -89,7 +119,6 @@ export default function Home() {
             if (dataExpiracao < agora) isExpired = true;
           }
 
-          // Fallback visual de expiração (O robô CRON também faz isso no backend)
           if (isExpired && statusFinal === 'ativo') {
              statusFinal = 'expirado';
              updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
@@ -99,19 +128,17 @@ export default function Home() {
             const adFinal = { id: document.id, ...data, planoId: plano }
             listGeral.push(adFinal)
             
-            // Apenas o plano OURO (3) vai para o carrossel superior
             if (plano === 3) {
               listCarrosselOuro.push(adFinal)
             }
           }
         }
         
-        // 🚀 ORDENAÇÃO INTELIGENTE (Pesos + Data)
         const getPesoPlano = (planoId: number) => {
-          if (planoId === 3) return 4; // Ouro
-          if (planoId === 2 || planoId === 0) return 3; // Turbo / Boas vindas
-          if (planoId === 1) return 2; // Sobe pro Topo
-          return 1; // Básico (99)
+          if (planoId === 3) return 4;
+          if (planoId === 2 || planoId === 0) return 3;
+          if (planoId === 1) return 2;
+          return 1; 
         };
 
         const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
@@ -119,18 +146,11 @@ export default function Home() {
         const ordenarPorRelevancia = (a: any, b: any) => {
           const pesoA = getPesoPlano(a.planoId);
           const pesoB = getPesoPlano(b.planoId);
-          
-          // 1º Prioridade: O plano mais alto vence
           if (pesoA !== pesoB) return pesoB - pesoA;
-          
-          // 2º Prioridade: Quem pagou/criou mais recentemente fica acima
           return getTempo(b) - getTempo(a);
         };
 
-        // O Carrossel só tem Ouro, então ordenamos apenas pela data
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
-        
-        // O Feed geral usa a ordenação por relevância completa
         listGeral.sort(ordenarPorRelevancia);
         
         setVipAds(listCarrosselOuro.slice(0, 15)) 
@@ -149,13 +169,15 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
+  // Novo Skeleton Loader mais suave
   const SkeletonCard = () => (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse">
-      <div className="aspect-square bg-gray-200"></div>
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded w-full"></div>
-        <div className="h-6 bg-gray-200 rounded w-1/2 mt-4"></div>
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse flex flex-col h-full">
+      <div className="aspect-[4/3] bg-gray-200"></div>
+      <div className="p-4 flex flex-col flex-1 space-y-3">
+        <div className="h-3 bg-gray-200 rounded-full w-1/4"></div>
+        <div className="h-4 bg-gray-200 rounded-full w-full"></div>
+        <div className="h-4 bg-gray-200 rounded-full w-3/4"></div>
+        <div className="h-6 bg-gray-200 rounded-md w-1/2 mt-auto"></div>
       </div>
     </div>
   )
@@ -185,21 +207,34 @@ export default function Home() {
               type="text" 
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder={`Buscar carros, celulares, casas em ${userCity}...`} 
+              placeholder={`Buscar carros, celulares em ${userCity}...`} 
               className="w-full py-3 md:py-4 px-4 outline-none text-gray-800 font-medium text-base md:text-lg bg-transparent"
             />
             <button type="submit" className="bg-accent hover:bg-accent-dark text-white font-black px-6 md:px-10 py-3 md:py-4 rounded-xl transition-transform active:scale-95 shadow-sm flex items-center gap-2">
               <Search className="md:hidden" size={20} /> <span className="hidden md:inline">Pesquisar</span>
             </button>
           </form>
+
+          {/* 🚀 FILTROS RÁPIDOS */}
+          <div className="flex gap-2 justify-center mt-6 flex-wrap">
+             {FILTROS_RAPIDOS.map(filtro => (
+                <Link 
+                  href={`/todos-anuncios?categoria=${filtro.slug}`} 
+                  key={filtro.nome} 
+                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-md border border-white/20 flex items-center gap-1.5 active:scale-95 shadow-sm"
+                >
+                  <span className="text-lg">{filtro.icone}</span> {filtro.nome}
+                </Link>
+             ))}
+          </div>
+
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-8 md:-mt-14 relative z-20">
         
-        {/* CATEGORIAS COM SCROLL HORIZONTAL E EFEITO 3D */}
+        {/* CATEGORIAS COM SCROLL HORIZONTAL */}
         <div className="mb-8 pl-4 pr-0 md:px-0">
-          {/* As classes abaixo ocultam a scrollbar nativa mas mantêm a rolagem funcionando */}
           <div className="flex gap-4 md:gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
               <Link 
@@ -207,16 +242,9 @@ export default function Home() {
                 key={cat.nome} 
                 className="snap-start shrink-0 flex flex-col items-center gap-3 group cursor-pointer w-20 md:w-24 outline-none"
               >
-                {/* CAIXA 3D DO ÍCONE */}
-                <div className={`
-                  relative w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center 
-                  shadow-sm group-hover:shadow-md 
-                  border-2 border-b-[6px] active:border-b-2 active:translate-y-[4px] 
-                  transition-all duration-150 ${cat.cores}
-                `}>
+                <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[6px] active:border-b-2 active:translate-y-[4px] transition-all duration-150 ${cat.cores}`}>
                   {cat.icon}
                 </div>
-                {/* TEXTO DA CATEGORIA */}
                 <span className="text-[11px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
                   {cat.nome}
                 </span>
@@ -225,12 +253,36 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BANNER ADSENSE ATIVADO PARA APROVAÇÃO DO GOOGLE */}
+        {/* 🚀 BANNER INSTALAÇÃO APP (PWA) */}
+        {showInstallBanner && (
+          <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
+             <div className="flex items-center gap-3 md:gap-4 relative z-10">
+                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed]">
+                   <Download size={24} strokeWidth={2.5} />
+                </div>
+                <div>
+                   <h3 className="text-white font-black text-sm md:text-lg leading-tight">Baixe nosso Aplicativo!</h3>
+                   <p className="text-purple-100 text-[10px] md:text-sm font-medium mt-0.5">Compre e venda com 1 clique do celular.</p>
+                </div>
+             </div>
+             <div className="flex gap-2 relative z-10">
+                <button onClick={() => setShowInstallBanner(false)} className="text-white/60 hover:text-white p-2 outline-none">
+                   ✕
+                </button>
+                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-sm px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">
+                   Instalar
+                </button>
+             </div>
+          </div>
+        )}
+
+        {/* BANNER ADSENSE */}
         <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
           <AdBanner dataAdSlot="8830353493" />
         </div>
 
-        {/* CARROSSEL OURO NO TOPO (Apenas Plano Ouro = 3) */}
+        {/* CARROSSEL OURO NO TOPO */}
         {!loading && vipAds.length > 0 && (
           <div className="mb-12 mt-8 px-4 md:px-0">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
@@ -267,17 +319,23 @@ export default function Home() {
            </h2>
         </div>
 
-        {/* LISTA GERAL DE ANÚNCIOS (Feed Dinâmico) */}
+        {/* LISTA GERAL DE ANÚNCIOS */}
         <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : ads.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 font-medium text-lg bg-white rounded-2xl border border-gray-100 shadow-sm">
-               <ShoppingBag size={48} className="mx-auto mb-3 opacity-30 text-primary" />
-               Nenhum anúncio encontrado.<br/>
-               <Link href="/anunciar" className="text-primary hover:underline font-bold mt-2 inline-block">Seja o primeiro a anunciar!</Link>
+            // 🚀 EMPTY STATE MELHORADO
+            <div className="text-center py-20 px-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
+               <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-6 text-primary/40">
+                  <ShoppingBag size={48} strokeWidth={1.5} />
+               </div>
+               <h3 className="text-xl font-black text-gray-900 mb-2">Nenhum anúncio por aqui (ainda!)</h3>
+               <p className="text-gray-500 font-medium max-w-sm mb-6">Que tal ser o primeiro a faturar vendendo algo que você não usa mais?</p>
+               <Link href="/anunciar" className="bg-accent hover:bg-accent-dark text-white font-black px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95">
+                  Anunciar Grátis Agora
+               </Link>
             </div>
           ) : (
             <>
@@ -285,7 +343,6 @@ export default function Home() {
                 {ads.map((ad) => {
                   const plano = Number(ad.planoId) || 0;
                   
-                  // Mapeamento visual das microtransações
                   const isOuro = plano === 3;
                   const isTurbo = plano === 2 || plano === 0; 
                   const isImpulsionado = plano === 1;
@@ -298,7 +355,6 @@ export default function Home() {
                       'bg-white border-gray-100 hover:-translate-y-1'
                     }`}>
                       
-                      {/* Selos de Destaque no Grid */}
                       {isOuro && (
                          <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
                             <Sparkles size={10}/> Ouro
@@ -352,7 +408,7 @@ export default function Home() {
                 })}
               </div>
 
-              {/* 👇 BOTÃO DE EXPLORAR PADRÃO (Para Desktop) */}
+              {/* BOTÃO EXPLORAR */}
               <div className="mt-12 hidden md:flex justify-center">
                 <Link 
                   href="/todos-anuncios" 
@@ -362,7 +418,6 @@ export default function Home() {
                 </Link>
               </div>
 
-              {/* 👇 BOTÃO DE EXPLORAR FLUTUANTE (Exclusivo para Mobile) */}
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 md:hidden z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                 <Link 
                   href="/todos-anuncios" 
@@ -375,6 +430,7 @@ export default function Home() {
           )}
         </div>
 
+        {/* TEXTO DE SEO OTIMIZADO */}
         <section className="mt-20 px-4 md:px-0">
           <div className="bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
