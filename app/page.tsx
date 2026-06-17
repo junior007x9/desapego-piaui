@@ -6,25 +6,25 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   Search, MapPin, ShoppingBag, Car, Home as HomeIcon, Smartphone, 
-  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart, Rocket, Flame, Download
+  Zap, Sparkles, Wrench, Baby, Bike, Briefcase, Shirt, ChevronRight, Heart, Rocket, Flame, Download, X
 } from 'lucide-react'
 import ContadorEstatisticas from '@/components/ContadorEstatisticas'
 import AdBanner from '@/components/AdBanner'
 
 const CATEGORIAS_HOME = [
-  { nome: 'Imóveis', slug: 'Imóveis', icon: <HomeIcon size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-blue-50 to-blue-100 border-blue-200 text-blue-600" },
-  { nome: 'Veículos', slug: 'Veículos', icon: <Car size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-orange-50 to-orange-100 border-orange-200 text-orange-600" },
-  { nome: 'Celulares', slug: 'Eletrônicos', icon: <Smartphone size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-purple-50 to-purple-100 border-purple-200 text-purple-600" },
-  { nome: 'Casa', slug: 'Para Casa', icon: <Zap size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-amber-50 to-amber-100 border-amber-200 text-amber-600" },
-  { nome: 'Moda', slug: 'Moda e Beleza', icon: <Shirt size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-pink-50 to-pink-100 border-pink-200 text-pink-600" },
-  { nome: 'Serviços', slug: 'Serviços', icon: <Wrench size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-600" },
-  { nome: 'Bebês', slug: 'Bebês e Crianças', icon: <Baby size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-rose-50 to-rose-100 border-rose-200 text-rose-600" },
-  { nome: 'Esportes', slug: 'Esportes', icon: <Bike size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-teal-50 to-teal-100 border-teal-200 text-teal-600" },
-  { nome: 'Empregos', slug: 'Vagas de Emprego', icon: <Briefcase size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-cyan-50 to-cyan-100 border-cyan-200 text-cyan-600" },
-  { nome: 'Outros', slug: 'Outros', icon: <ShoppingBag size={26} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 text-gray-600" },
+  { nome: 'Imóveis', slug: 'Imóveis', icon: <HomeIcon size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-blue-50 to-blue-100 border-blue-200 text-blue-600" },
+  { nome: 'Veículos', slug: 'Veículos', icon: <Car size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-orange-50 to-orange-100 border-orange-200 text-orange-600" },
+  { nome: 'Celulares', slug: 'Eletrônicos', icon: <Smartphone size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-purple-50 to-purple-100 border-purple-200 text-purple-600" },
+  { nome: 'Casa', slug: 'Para Casa', icon: <Zap size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-amber-50 to-amber-100 border-amber-200 text-amber-600" },
+  { nome: 'Moda', slug: 'Moda e Beleza', icon: <Shirt size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-pink-50 to-pink-100 border-pink-200 text-pink-600" },
+  { nome: 'Serviços', slug: 'Serviços', icon: <Wrench size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-600" },
+  { nome: 'Bebês', slug: 'Bebês e Crianças', icon: <Baby size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-rose-50 to-rose-100 border-rose-200 text-rose-600" },
+  { nome: 'Esportes', slug: 'Esportes', icon: <Bike size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-teal-50 to-teal-100 border-teal-200 text-teal-600" },
+  { nome: 'Empregos', slug: 'Vagas de Emprego', icon: <Briefcase size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-cyan-50 to-cyan-100 border-cyan-200 text-cyan-600" },
+  { nome: 'Outros', slug: 'Outros', icon: <ShoppingBag size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 text-gray-600" },
 ]
 
-// Filtros Rápidos (UX Premium)
+// Filtros Rápidos
 const FILTROS_RAPIDOS = [
   { nome: 'Carros', icone: '🚗', slug: 'Veículos' },
   { nome: 'Celulares', icone: '📱', slug: 'Eletrônicos' },
@@ -78,11 +78,16 @@ export default function Home() {
     }
     fetchCity();
 
-    // Lógica para interceptar o convite de instalação do App
+    // 🚀 Lógica Forçada do App (Garante que sempre apareça a menos que fechado)
+    const bannerClosed = localStorage.getItem('app_banner_closed');
+    if (!bannerClosed) {
+       setShowInstallBanner(true); 
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallBanner(true); // Exibe o nosso banner customizado
+      if (!bannerClosed) setShowInstallBanner(true);
     });
   }, []);
 
@@ -92,9 +97,18 @@ export default function Home() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setShowInstallBanner(false);
+        localStorage.setItem('app_banner_closed', 'true');
       }
       setDeferredPrompt(null);
+    } else {
+      // 🚀 Fallback Premium (Para iOS e Navegadores que bloqueiam)
+      alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar (quadrado com seta para cima) e selecione 'Adicionar à Tela de Início'.");
     }
+  };
+
+  const closeBanner = () => {
+     setShowInstallBanner(false);
+     localStorage.setItem('app_banner_closed', 'true');
   };
 
   useEffect(() => {
@@ -169,7 +183,6 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
-  // Novo Skeleton Loader mais suave
   const SkeletonCard = () => (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse flex flex-col h-full">
       <div className="aspect-[4/3] bg-gray-200"></div>
@@ -185,21 +198,21 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* HERO SECTION */}
-      <div className="bg-gradient-to-br from-primary to-primary/90 pt-10 pb-20 md:pb-28 px-4 rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-lg relative overflow-hidden">
+      {/* 🚀 HERO SECTION CORRIGIDA PARA O CELULAR RESPIRAR */}
+      <div className="bg-gradient-to-br from-primary to-primary/90 pt-8 pb-32 md:pb-36 px-4 rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           
           <ContadorEstatisticas />
 
-          <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight leading-tight">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
-          <p className="text-primary-100 font-medium mb-8 text-sm md:text-lg">
+          <p className="text-primary-100 font-medium mb-6 md:mb-8 text-sm md:text-lg px-2">
             O maior marketplace local. Compre e venda de forma segura em {userCity}.
           </p>
           
-          <form onSubmit={handleSearch} className="flex bg-white p-2 rounded-2xl shadow-2xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border-2 border-white/20">
+          <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-2xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border-2 border-white/20">
             <div className="hidden md:flex items-center pl-4 text-gray-400">
               <Search size={24} />
             </div>
@@ -207,23 +220,23 @@ export default function Home() {
               type="text" 
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder={`Buscar carros, celulares em ${userCity}...`} 
-              className="w-full py-3 md:py-4 px-4 outline-none text-gray-800 font-medium text-base md:text-lg bg-transparent"
+              placeholder={`Buscar carros, imóveis...`} 
+              className="w-full py-3 px-3 md:py-4 md:px-4 outline-none text-gray-800 font-medium text-sm md:text-lg bg-transparent placeholder:text-sm md:placeholder:text-lg"
             />
-            <button type="submit" className="bg-accent hover:bg-accent-dark text-white font-black px-6 md:px-10 py-3 md:py-4 rounded-xl transition-transform active:scale-95 shadow-sm flex items-center gap-2">
+            <button type="submit" className="bg-accent hover:bg-accent-dark text-white font-black px-4 md:px-10 py-3 md:py-4 rounded-xl transition-transform active:scale-95 shadow-sm flex items-center gap-2 outline-none">
               <Search className="md:hidden" size={20} /> <span className="hidden md:inline">Pesquisar</span>
             </button>
           </form>
 
-          {/* 🚀 FILTROS RÁPIDOS */}
-          <div className="flex gap-2 justify-center mt-6 flex-wrap">
+          {/* FILTROS RÁPIDOS */}
+          <div className="flex gap-2 justify-center mt-5 mb-2 flex-wrap px-2">
              {FILTROS_RAPIDOS.map(filtro => (
                 <Link 
                   href={`/todos-anuncios?categoria=${filtro.slug}`} 
                   key={filtro.nome} 
-                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-md border border-white/20 flex items-center gap-1.5 active:scale-95 shadow-sm"
+                  className="bg-white/10 hover:bg-white/20 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold transition-all backdrop-blur-md border border-white/20 flex items-center gap-1.5 active:scale-95 shadow-sm outline-none"
                 >
-                  <span className="text-lg">{filtro.icone}</span> {filtro.nome}
+                  <span className="text-base md:text-lg">{filtro.icone}</span> {filtro.nome}
                 </Link>
              ))}
           </div>
@@ -231,21 +244,21 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-8 md:-mt-14 relative z-20">
+      <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-12 md:-mt-14 relative z-20">
         
-        {/* CATEGORIAS COM SCROLL HORIZONTAL */}
-        <div className="mb-8 pl-4 pr-0 md:px-0">
-          <div className="flex gap-4 md:gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* 🚀 CATEGORIAS DIMINUÍDAS NO CELULAR PARA NÃO ENCAVALAR */}
+        <div className="mb-6 md:mb-8 pl-4 pr-0 md:px-0">
+          <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
               <Link 
                 href={`/todos-anuncios?categoria=${cat.slug}`} 
                 key={cat.nome} 
-                className="snap-start shrink-0 flex flex-col items-center gap-3 group cursor-pointer w-20 md:w-24 outline-none"
+                className="snap-start shrink-0 flex flex-col items-center gap-2 md:gap-3 group cursor-pointer w-[4.5rem] md:w-24 outline-none"
               >
-                <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[6px] active:border-b-2 active:translate-y-[4px] transition-all duration-150 ${cat.cores}`}>
-                  {cat.icon}
+                <div className={`relative w-14 h-14 md:w-20 md:h-20 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[4px] md:border-b-[6px] active:border-b-2 active:translate-y-[2px] transition-all duration-150 ${cat.cores}`}>
+                  <div className="scale-[0.8] md:scale-100">{cat.icon}</div>
                 </div>
-                <span className="text-[11px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
+                <span className="text-[10px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
                   {cat.nome}
                 </span>
               </Link>
@@ -253,24 +266,24 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🚀 BANNER INSTALAÇÃO APP (PWA) */}
+        {/* 🚀 BANNER INSTALAÇÃO APP (PWA) FORÇADO */}
         {showInstallBanner && (
           <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl"></div>
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
              <div className="flex items-center gap-3 md:gap-4 relative z-10">
-                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed]">
+                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed] shrink-0">
                    <Download size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                   <h3 className="text-white font-black text-sm md:text-lg leading-tight">Baixe nosso Aplicativo!</h3>
-                   <p className="text-purple-100 text-[10px] md:text-sm font-medium mt-0.5">Compre e venda com 1 clique do celular.</p>
+                   <h3 className="text-white font-black text-sm md:text-lg leading-tight">Baixe nosso App!</h3>
+                   <p className="text-purple-100 text-[10px] md:text-sm font-medium mt-0.5 leading-snug">Rápido, leve e não gasta memória.</p>
                 </div>
              </div>
-             <div className="flex gap-2 relative z-10">
-                <button onClick={() => setShowInstallBanner(false)} className="text-white/60 hover:text-white p-2 outline-none">
-                   ✕
+             <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0 ml-2">
+                <button onClick={closeBanner} className="text-white/60 hover:text-white p-1 sm:p-2 outline-none">
+                   <X size={20} />
                 </button>
-                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-sm px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">
+                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">
                    Instalar
                 </button>
              </div>
@@ -290,7 +303,7 @@ export default function Home() {
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {vipAds.map(ad => (
-                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[260px] bg-white rounded-2xl border border-amber-300 hover:border-amber-500 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(251,191,36,0.3)] transition-all overflow-hidden flex flex-col group relative">
+                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[240px] md:w-[260px] bg-white rounded-2xl border border-amber-300 hover:border-amber-500 shadow-[0_4px_20px_rgb(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(251,191,36,0.3)] transition-all overflow-hidden flex flex-col group relative outline-none">
                   <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md shadow-md z-10 flex items-center gap-1">
                     <Sparkles size={10}/> Ouro
                   </div>
@@ -326,7 +339,6 @@ export default function Home() {
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : ads.length === 0 ? (
-            // 🚀 EMPTY STATE MELHORADO
             <div className="text-center py-20 px-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
                <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-6 text-primary/40">
                   <ShoppingBag size={48} strokeWidth={1.5} />
@@ -348,7 +360,7 @@ export default function Home() {
                   const isImpulsionado = plano === 1;
 
                   return (
-                    <Link href={`/anuncio/${ad.id}`} key={`recent-${ad.id}`} className={`group rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
+                    <Link href={`/anuncio/${ad.id}`} key={`recent-${ad.id}`} className={`group rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative outline-none ${
                       isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
                       isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
                       isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
@@ -412,7 +424,7 @@ export default function Home() {
               <div className="mt-12 hidden md:flex justify-center">
                 <Link 
                   href="/todos-anuncios" 
-                  className="bg-primary hover:bg-primary-dark text-white font-black px-8 py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 active:scale-95 text-base"
+                  className="bg-primary hover:bg-primary-dark text-white font-black px-8 py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 active:scale-95 text-base outline-none"
                 >
                   Explorar Todos os Anúncios <ChevronRight size={20} />
                 </Link>
@@ -421,7 +433,7 @@ export default function Home() {
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 md:hidden z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                 <Link 
                   href="/todos-anuncios" 
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg active:scale-95 transition-all outline-none"
                 >
                   Explorar Todos os Anúncios <ChevronRight size={20} />
                 </Link>
@@ -430,7 +442,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* TEXTO DE SEO OTIMIZADO */}
         <section className="mt-20 px-4 md:px-0">
           <div className="bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
@@ -456,28 +467,6 @@ export default function Home() {
                 <p>
                   Navegue pelas nossas diversas categorias, que cobrem desde o mercado imobiliário e automotivo até eletrônicos de última geração, ofertas de vagas de emprego, serviços autônomos e artigos de moda e beleza. Encontre tudo o que precisa pertinho de você!
                 </p>
-              </div>
-            </div>
-
-            <div className="mt-8 pt-8 border-t border-gray-100">
-              <h3 className="text-lg font-black text-gray-900 uppercase mb-4">Perguntas Frequentes — Desapego Piauí</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600">
-                <div>
-                  <h4 className="font-bold text-gray-800 mb-1">1. Quanto custa anunciar e quais são os planos?</h4>
-                  <p>O Desapego Piauí trabalha com foco no seu resultado. O nosso <strong>Plano Básico é 100% gratuito e fica ativo por 30 dias</strong>. Para novos usuários, oferecemos uma promoção incrível: o seu primeiro anúncio ganha o <strong>Plano Destaque Turbo grátis por 5 dias</strong>! Além disso, nunca cobramos nenhuma taxa de comissão pelas suas vendas.</p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-800 mb-1">2. Como funciona o destaque na plataforma?</h4>
-                  <p>Você pode utilizar ações rápidas para vender mais! O "Sobe pro Topo" joga seu anúncio para a primeira posição instantaneamente. Já os planos "Turbo" e "Ouro" adicionam bordas coloridas e posicionam seu produto no carrossel de super destaques.</p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-800 mb-1">3. O site realiza entregas de mercadorias?</h4>
-                  <p>Não. O Desapego Piauí funciona exclusivamente como uma ponte de contato direto. Toda a logística de entrega e a forma de pagamento são combinadas diretamente entre o comprador e o vendedor através do WhatsApp.</p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-800 mb-1">4. Quais produtos são proibidos na plataforma?</h4>
-                  <p>De acordo com os nossos termos de uso, é estritamente proibido anunciar medicamentos, substâncias ilícitas, armas de fogo, produtos falsificados ou quaisquer itens que infrinjam a legislação vigente.</p>
-                </div>
               </div>
             </div>
           </div>
