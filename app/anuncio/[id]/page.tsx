@@ -50,7 +50,7 @@ export default function DetalhesAnuncio() {
         const adData: any = { id: adSnapshot.id, ...adSnapshot.data() };
 
         if (adData.vendedorId) {
-          const vendedorDoc = await getDoc(doc(db, 'usuarios', adData.vendedorId)); // Corrigido para 'usuarios' caso seja sua coleção correta
+          const vendedorDoc = await getDoc(doc(db, 'usuarios', adData.vendedorId));
           if (vendedorDoc.exists()) {
             setVendedor(vendedorDoc.data());
           } else {
@@ -369,7 +369,7 @@ export default function DetalhesAnuncio() {
               <ContactButtons />
             </div>
 
-            {/* 🚀 PERFIL DO VENDEDOR MELHORADO COM SELOS DE CONFIANÇA */}
+            {/* 👇 CORREÇÃO: title colocado em uma tag span para não gerar erro no TypeScript 👇 */}
             <div className="bg-white md:rounded-3xl rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative group">
                <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-r from-primary/10 to-transparent"></div>
                <Link href={`/vendedor/${ad.vendedorId}`} className="p-5 md:p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer relative z-10 outline-none">
@@ -385,7 +385,9 @@ export default function DetalhesAnuncio() {
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <p className="font-black text-gray-900 text-lg truncate max-w-[150px] md:max-w-[180px]">{vendedor?.nome || "Vendedor"}</p>
-                      <BadgeCheck size={20} className="text-blue-500 shrink-0" title="Usuário Verificado" />
+                      <span title="Usuário Verificado" className="flex shrink-0">
+                         <BadgeCheck size={20} className="text-blue-500" />
+                      </span>
                     </div>
                     <p className="text-xs text-green-600 font-bold flex items-center gap-1 bg-green-50 w-fit px-2 py-0.5 rounded-md border border-green-100">
                       <ShieldCheck size={14} />
