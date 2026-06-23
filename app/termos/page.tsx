@@ -1,105 +1,63 @@
 import Link from 'next/link'
-import { ChevronLeft, Scale, AlertTriangle, MessageCircle, ShieldAlert, CreditCard, Coins } from 'lucide-react'
-
-export const metadata = {
-  title: 'Termos de Uso | Desapego Piauí',
-  description: 'Termos de uso, isenção de responsabilidade e condições de serviço do marketplace Desapego Piauí.',
-}
+import { ArrowLeft, FileText, CheckCircle } from 'lucide-react'
 
 export default function TermosPage() {
   return (
-    <div className="bg-gray-50 min-h-screen py-10 font-sans">
-      <div className="container mx-auto px-4 max-w-4xl">
-        
-        <Link href="/" className="inline-flex items-center gap-2 text-primary font-bold hover:underline mb-6 transition-colors">
-          <ChevronLeft size={20} /> Voltar para o início
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12">
+        <Link href="/" className="inline-flex items-center gap-2 text-primary font-bold hover:text-primary-dark transition-colors mb-8">
+          <ArrowLeft size={20} /> Voltar para o início
         </Link>
-
-        <div className="bg-white p-8 md:p-12 rounded-[2rem] shadow-sm border border-gray-100">
-          <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-8 shadow-sm">
-            <Scale size={32} strokeWidth={2.5} />
+        
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+            <FileText size={32} />
           </div>
-          
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-8 tracking-tight">Termos e Condições de Uso</h1>
-          
-          <div className="space-y-8 text-gray-600 leading-relaxed font-medium">
-            <p className="text-sm text-gray-500"><strong>Última atualização:</strong> {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
-            
-            <p>Bem-vindo ao <strong>Desapego Piauí</strong>. Ao acessar, navegar ou utilizar nossa plataforma, você concorda expressamente em cumprir e estar vinculado aos presentes Termos de Uso. Recomendamos a leitura atenta antes de criar anúncios ou iniciar negociações.</p>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <ShieldAlert className="text-accent" size={24} /> 1. Natureza do Serviço e Isenção de Responsabilidade
-              </h2>
-              <p className="mb-4">O Desapego Piauí atua <strong>exclusivamente como um portal de classificados online (vitrine virtual)</strong>. Nosso objetivo é fornecer um espaço para que usuários (vendedores) publiquem anúncios e compradores os encontrem.</p>
-              <div className="bg-orange-50 text-orange-900 p-5 rounded-2xl border border-orange-200 shadow-sm">
-                <ul className="list-disc pl-5 space-y-2 font-bold">
-                  <li>NÃO intermediamos pagamentos, não retemos valores e não oferecemos "Compra Garantida".</li>
-                  <li>NÃO realizamos ou garantimos a entrega de mercadorias.</li>
-                  <li>NÃO garantimos a veracidade, qualidade, procedência ou existência física dos produtos anunciados pelos usuários.</li>
-                  <li>Qualquer negociação é feita por conta e risco exclusivo dos usuários envolvidos.</li>
-                </ul>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <MessageCircle className="text-green-500" size={24} /> 2. Comunicação Externa (Sem Chat Interno)
-              </h2>
-              <p>O Desapego Piauí <strong>não possui sistema de chat interno</strong>. Toda a comunicação entre compradores e vendedores é realizada externamente, geralmente através do WhatsApp ou ligações telefônicas, utilizando o número disponibilizado voluntariamente pelo vendedor no anúncio.</p>
-              <p className="mt-2 text-red-600 font-bold">O Desapego Piauí não tem acesso, não monitora e não se responsabiliza por conversas, promessas, envio de links ou acordos firmados fora da nossa plataforma (ex: no WhatsApp).</p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <AlertTriangle className="text-red-500" size={24} /> 3. Prevenção Contra Golpes (Alerta Importante)
-              </h2>
-              <p>Ao utilizar nossa plataforma, o usuário declara estar ciente dos riscos inerentes ao comércio online. O Desapego Piauí não se responsabiliza por perdas financeiras decorrentes de fraudes. Recomendamos veementemente:</p>
-              <ul className="list-disc pl-6 space-y-2 mt-4 text-gray-700">
-                <li><strong>Cuidado com o "Golpe do Intermediário":</strong> Desconfie de pessoas que dizem estar comprando para terceiros (para pagar uma dívida, para um funcionário, etc.) e pedem para você não falar o valor real do produto.</li>
-                <li><strong>Locais Seguros:</strong> Sempre marque encontros para testar e entregar o produto em locais públicos, claros e movimentados (ex: shoppings, praças de alimentação, em frente a postos policiais).</li>
-                <li><strong>Pagamentos:</strong> Nunca envie o produto antes de confirmar que o valor (PIX ou transferência) realmente caiu e está <strong>liberado</strong> na sua conta bancária. Não confie apenas em comprovantes enviados pelo WhatsApp.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">4. Regras de Publicação de Anúncios</h2>
-              <p>O usuário é o único responsável civil e criminalmente pelo conteúdo que publica. É estritamente proibido anunciar:</p>
-              <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>Armas de fogo, munições, explosivos ou réplicas.</li>
-                <li>Drogas ilícitas, substâncias controladas, anabolizantes ou medicamentos.</li>
-                <li>Produtos furtados, roubados, falsificados, pirateados ou que violem direitos autorais.</li>
-                <li>Serviços de prostituição, conteúdos pornográficos ou que promovam violência e ódio.</li>
-              </ul>
-              <p className="mt-2">O Desapego Piauí reserva-se o direito de excluir, sem aviso prévio, anúncios que violem estas regras, bem como banir o usuário infrator e reportar às autoridades competentes.</p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <CreditCard className="text-blue-500" size={24} /> 5. Planos, Destaques e Taxas de Transação
-              </h2>
-              <p>A publicação do anúncio básico é gratuita. No entanto, oferecemos planos pagos de "Destaque" (como Topo, Turbo e Ouro) para maior visibilidade na plataforma.</p>
-              <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>Todos os pagamentos dos planos de destaque são processados via <strong>Mercado Pago</strong> (através de Pix).</li>
-                <li>O Mercado Pago cobra uma taxa operacional pelo processamento de cada transação financeira. Para mantermos a sustentabilidade da plataforma, <strong>essa taxa é repassada integralmente ao usuário anunciante</strong> no momento do pagamento.</li>
-                <li>O valor final (Custo do Plano + Taxa do Mercado Pago) será sempre exibido com clareza antes de você confirmar e efetuar o pagamento.</li>
-                <li>Não há reembolso para anúncios em destaque caso o usuário decida excluir o anúncio antes do término do período ou caso ele seja removido por violar nossas regras.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Coins className="text-amber-500" size={24} /> 6. Sistema de Recompensas e Moedas Virtuais
-              </h2>
-              <p>Para recompensar a fidelidade e o engajamento da nossa comunidade, o Desapego Piauí implementou um sistema de <strong>Moedas Virtuais</strong>. Ao utilizar a plataforma (como realizando login diário), o usuário pode acumular moedas em sua carteira digital.</p>
-              <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>As moedas virtuais <strong>não possuem qualquer valor financeiro ou monetário no mundo real</strong>.</li>
-                <li>É terminantemente proibido e impossível sacar, transferir para contas bancárias ou converter as moedas em dinheiro real (Reais - R$).</li>
-                <li>As moedas servem exclusivamente para serem trocadas por benefícios dentro da própria plataforma, como cupons de desconto ou impulsionamento de anúncios.</li>
-                <li>O Desapego Piauí reserva-se o direito de alterar as regras de ganho, os custos de resgate ou descontinuar o sistema de moedas a qualquer momento, sem aviso prévio.</li>
-              </ul>
-            </section>
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Termos de Uso</h1>
+            <p className="text-gray-500 font-medium mt-1">Última atualização: Junho de 2026</p>
           </div>
+        </div>
+
+        <div className="prose prose-blue max-w-none text-gray-600 space-y-6">
+          <p>
+            Bem-vindo ao <strong>Desapego Piauí</strong>. Ao acessar e utilizar o nosso portal, você concorda expressamente com os termos e condições descritos abaixo. Leia atentamente antes de publicar qualquer anúncio.
+          </p>
+
+          <h3 className="text-xl font-black text-gray-900 mt-8 mb-3">1. Natureza do Serviço</h3>
+          <p>
+            O Desapego Piauí atua exclusivamente como uma plataforma de classificados online, oferecendo um espaço virtual para que usuários (compradores e vendedores) se encontrem e negociem diretamente. <strong>Nós não participamos, não intermediamos, não garantimos e não nos responsabilizamos pelas transações realizadas entre os usuários.</strong>
+          </p>
+
+          <h3 className="text-xl font-black text-gray-900 mt-8 mb-3">2. Planos de Destaque e Pagamentos</h3>
+          <ul className="space-y-2 list-none pl-0">
+            <li className="flex items-start gap-2"><CheckCircle size={18} className="text-green-500 shrink-0 mt-0.5"/> <strong>Plano Básico (Grátis):</strong> Permite a inclusão de até 5 fotos e o anúncio permanece no ar por 7 dias.</li>
+            <li className="flex items-start gap-2"><CheckCircle size={18} className="text-blue-500 shrink-0 mt-0.5"/> <strong>Planos Pagos (Topo, Turbo, Ouro):</strong> Permitem até 10 fotos, garantem posição de destaque de acordo com a categoria comprada, e permanecem no ar por 20 dias.</li>
+          </ul>
+          <p className="mt-4">
+            Todos os pagamentos (PIX) referentes à compra de destaques são processados por uma instituição financeira terceira (Mercado Pago). Uma taxa de transação poderá ser acrescida ao valor final para cobrir os custos operacionais da intermediadora financeira. Não realizamos reembolsos de planos de destaque após a ativação do anúncio, visto que o serviço de exposição virtual é prestado imediatamente.
+          </p>
+
+          <h3 className="text-xl font-black text-gray-900 mt-8 mb-3">3. Sistema de Moedas Virtuais</h3>
+          <p>
+            A plataforma pode fornecer "Moedas Virtuais" através de atividades promocionais (Gamificação). Estas moedas não possuem nenhum valor monetário real, não podem ser sacadas, transferidas para contas bancárias ou convertidas em dinheiro. Elas servem estritamente para ser trocadas por benefícios internos dentro do site (ex: resgatar um plano de destaque).
+          </p>
+
+          <h3 className="text-xl font-black text-gray-900 mt-8 mb-3">4. Regras de Publicação</h3>
+          <p>É terminantemente proibido anunciar:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Armas de fogo, munições ou explosivos.</li>
+            <li>Drogas, entorpecentes ou medicamentos sob prescrição.</li>
+            <li>Produtos falsificados, clonados ou pirateados.</li>
+            <li>Animais cuja venda seja proibida por lei.</li>
+            <li>Serviços de natureza ilícita ou conteúdo adulto/pornográfico.</li>
+          </ul>
+          <p>O Desapego Piauí reserva-se o direito de excluir, sem aviso prévio, qualquer anúncio que viole estas regras ou a legislação brasileira, bem como banir o usuário infrator.</p>
+
+          <h3 className="text-xl font-black text-gray-900 mt-8 mb-3">5. Isenção de Responsabilidade</h3>
+          <p>
+            O usuário reconhece que o Desapego Piauí não garante a veracidade, exatidão ou qualidade dos produtos e serviços anunciados. Recomendamos cautela em todas as negociações. Nunca realize pagamentos antecipados e sempre marque encontros para troca de produtos em locais públicos e seguros.
+          </p>
         </div>
       </div>
     </div>

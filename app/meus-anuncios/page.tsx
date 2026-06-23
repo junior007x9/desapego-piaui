@@ -2,16 +2,14 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
-// 🚀 CORREÇÃO: Adicionado o getDoc para puxar a carteira do usuário
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle, Rocket } from 'lucide-react'
+import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle, Rocket, Flame } from 'lucide-react'
 
 // Calcula a diferença de dias entre a criação e a venda
 function calcularDiasVenda(criadoEm: any, vendidoEm: any) {
   if (!criadoEm) return "Vendido!";
-  
   if (!vendidoEm) return "Vendido com sucesso!";
 
   const dataCriacao = criadoEm.seconds ? new Date(criadoEm.seconds * 1000) : new Date(criadoEm);
@@ -151,36 +149,46 @@ export default function MeusAnunciosPage() {
     }
   }
 
-  // 🚀 NOVA FUNÇÃO: Checa se tem crédito na carteira antes de cobrar no PIX
-  const handleImpulsionar = async (id: string) => {
+  // 🚀 NOVA FUNÇÃO COM SUPORTE AOS 3 PLANOS VIP
+  const handleImpulsionar = async (id: string, tipoPlano: number) => {
     try {
       if (!user) return;
       
-      // 1. Puxa a carteira do usuário para ver se ele tem créditos comprados com moedas
       const userRef = doc(db, 'usuarios', user.uid);
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
 
-      // 2. Se ele tem Crédito "Sobe pro Topo" guardado
-      if (userData?.creditosTopo && userData.creditosTopo > 0) {
-        if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
-           // Desconta 1 crédito do usuário
-           await updateDoc(userRef, { creditosTopo: userData.creditosTopo - 1 });
+      // Checa se ele tem crédito na carteira dependendo do plano escolhido
+      let temCredito = false;
+      let campoCredito = '';
+
+      if (tipoPlano === 1 && userData?.creditosTopo > 0) { temCredito = true; campoCredito = 'creditosTopo'; }
+      if (tipoPlano === 2 && userData?.creditosTurbo > 0) { temCredito = true; campoCredito = 'creditosTurbo'; }
+      if (tipoPlano === 3 && userData?.creditosOuro > 0) { temCredito = true; campoCredito = 'creditosOuro'; }
+
+      if (temCredito) {
+        if (confirm("Você tem um crédito para este plano na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
            
-           // Atualiza o anúncio para o plano 1 e renova a data de pagamento para o momento atual (fazendo ele pular pro topo)
+           await updateDoc(userRef, { [campoCredito]: userData[campoCredito] - 1 });
+           
+           const dataExp = new Date();
+           dataExp.setDate(dataExp.getDate() + 20); // Destaques dão 20 dias
+
            await updateDoc(doc(db, 'anuncios', id), {
-             planoId: 1,
+             planoId: tipoPlano,
+             status: 'ativo',
+             expiraEm: dataExp.toISOString(),
              pagoEm: new Date().toISOString()
            });
            
-           alert("🚀 Sucesso! Seu anúncio foi impulsionado para o topo gratuitamente usando seus créditos.");
-           fetchMyAds(user.uid); // Recarrega a tela para refletir a mudança
+           alert("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
+           fetchMyAds(user.uid); 
            return;
         }
       }
 
-      // 3. Se não tem crédito (ou não quis usar), vai pro fluxo normal de pagamento do PIX
-      await updateDoc(doc(db, 'anuncios', id), { planoId: 1 });
+      // Se não tem crédito, joga pro PIX cobrando o novo plano
+      await updateDoc(doc(db, 'anuncios', id), { planoId: tipoPlano });
       router.push(`/pagamento/${id}`);
 
     } catch (error) {
@@ -244,7 +252,7 @@ export default function MeusAnunciosPage() {
              </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
              {ads.map((ad) => (
               <div key={ad.id} className="bg-white p-4 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative overflow-hidden">
                 
@@ -315,16 +323,22 @@ export default function MeusAnunciosPage() {
                   </div>
                 </div>
 
-                {/* 🚀 AÇÕES COM FOCO NO UPSELL E USO DOS CRÉDITOS DA CARTEIRA */}
-                <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[160px]">
+                {/* 🚀 AÇÕES COM FOCO NO UPSELL E COMPRA DE DESTAQUES */}
+                <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[180px]">
                   
                   {ad.status === 'ativo' && (
                      <>
-                        <button onClick={() => handleImpulsionar(ad.id)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-md flex justify-center items-center gap-2 animate-pulse hover:animate-none">
-                           <Rocket size={16} className="shrink-0"/> 
-                           <span className="text-left leading-tight">Sobe pro Topo <br/>(R$ 2,99)</span>
+                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 animate-pulse hover:animate-none">
+                           <Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)
                         </button>
-                        <button onClick={() => handleMarkAsSold(ad.id)} className="w-full text-center bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
+                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1">
+                           <Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)
+                        </button>
+                        <button onClick={() => handleImpulsionar(ad.id, 3)} className="w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1">
+                           <Sparkles size={14} className="shrink-0"/> Ouro (R$ 19,90)
+                        </button>
+
+                        <button onClick={() => handleMarkAsSold(ad.id)} className="mt-2 w-full text-center bg-green-100 hover:bg-green-200 text-green-700 font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
                            <CheckCircle size={16}/> Já Vendi!
                         </button>
                      </>
@@ -332,24 +346,24 @@ export default function MeusAnunciosPage() {
 
                   {(ad.status === 'expirado' || ad.status === 'pendente') && (
                      <>
-                        <button onClick={() => handleImpulsionar(ad.id)} className="w-full text-center bg-accent hover:bg-accent-dark text-white font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition shadow-md flex justify-center items-center gap-2">
-                           <Rocket size={16} className="shrink-0"/> 
-                           <span className="text-left leading-tight">Reviver no Topo <br/>(R$ 2,99)</span>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase text-center mb-1">Renove seu Anúncio:</p>
+                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1">
+                           <Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)
                         </button>
-                        <Link href={`/pagamento/${ad.id}`} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm border border-gray-200">
-                           Pagar Plano Atual
-                        </Link>
+                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1">
+                           <Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)
+                        </button>
                      </>
                   )}
 
-                  <div className="flex gap-2 w-full mt-1">
+                  <div className="flex gap-2 w-full mt-2">
                     {ad.status !== 'vendido' && (
-                      <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs px-3 py-2.5 rounded-xl transition">
+                      <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs px-3 py-2 rounded-xl transition">
                         <Edit size={14}/> Editar
                       </Link>
                     )}
                     
-                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 font-bold text-xs px-3 py-2.5 rounded-xl transition">
+                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 font-bold text-xs px-3 py-2 rounded-xl transition">
                       <Trash2 size={14}/> Excluir
                     </button>
                   </div>

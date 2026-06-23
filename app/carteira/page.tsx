@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Coins, Flame, Copy, CheckCircle, Share2, Rocket, Sparkles, ChevronLeft, Gift, AlertCircle } from 'lucide-react'
+import { Coins, Flame, Copy, CheckCircle, Share2, Rocket, Sparkles, ChevronLeft, Gift, AlertCircle, ShoppingBag, Info, Loader2 } from 'lucide-react'
 
 export default function CarteiraPage() {
   const [loading, setLoading] = useState(true)
@@ -16,8 +16,9 @@ export default function CarteiraPage() {
   const router = useRouter()
 
   // Custos na nossa Loja de Recompensas
-  const CUSTO_TOPO = 50; // 50 moedas
+  const CUSTO_TOPO = 50;   // 50 moedas
   const CUSTO_TURBO = 150; // 150 moedas
+  const CUSTO_OURO = 400;  // 400 moedas
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -47,7 +48,8 @@ export default function CarteiraPage() {
               codigoIndicacao: data.codigoIndicacao || codigoGerado,
               diasSeguidos: 1,
               creditosTopo: 0,
-              creditosTurbo: 0
+              creditosTurbo: 0,
+              creditosOuro: 0
            };
            await updateDoc(userRef, novosDados);
            setPerfil({ ...data, ...novosDados });
@@ -63,6 +65,7 @@ export default function CarteiraPage() {
             diasSeguidos: 1,
             creditosTopo: 0,
             creditosTurbo: 0,
+            creditosOuro: 0,
             email: currentUser.email
          };
          await setDoc(userRef, novoPerfil);
@@ -99,7 +102,7 @@ export default function CarteiraPage() {
     }
   }
 
-  const comprarItem = async (tipo: 'topo' | 'turbo', custo: number) => {
+  const comprarItem = async (tipo: 'topo' | 'turbo' | 'ouro', custo: number) => {
     if (perfil.moedas < custo) {
        alert("Você não tem moedas suficientes! Complete missões para ganhar mais.");
        return;
@@ -113,21 +116,24 @@ export default function CarteiraPage() {
       const novoSaldo = perfil.moedas - custo;
       const novosCreditosTopo = tipo === 'topo' ? (perfil.creditosTopo || 0) + 1 : (perfil.creditosTopo || 0);
       const novosCreditosTurbo = tipo === 'turbo' ? (perfil.creditosTurbo || 0) + 1 : (perfil.creditosTurbo || 0);
+      const novosCreditosOuro = tipo === 'ouro' ? (perfil.creditosOuro || 0) + 1 : (perfil.creditosOuro || 0);
 
       await updateDoc(userRef, {
          moedas: novoSaldo,
          creditosTopo: novosCreditosTopo,
-         creditosTurbo: novosCreditosTurbo
+         creditosTurbo: novosCreditosTurbo,
+         creditosOuro: novosCreditosOuro
       });
 
       setPerfil({
          ...perfil,
          moedas: novoSaldo,
          creditosTopo: novosCreditosTopo,
-         creditosTurbo: novosCreditosTurbo
+         creditosTurbo: novosCreditosTurbo,
+         creditosOuro: novosCreditosOuro
       });
 
-      alert("Compra realizada com sucesso! O item está nos seus Créditos Disponíveis.");
+      alert("Compra realizada com sucesso! O item está nos seus Créditos Disponíveis e poderá ser usado ao criar um anúncio.");
     } catch (error) {
       console.error("Erro ao comprar:", error);
       alert("Erro ao processar compra.");
@@ -166,108 +172,116 @@ export default function CarteiraPage() {
       <div className="max-w-4xl mx-auto px-4 -mt-8 relative z-20 space-y-6">
         
         {/* CRÉDITOS DISPONÍVEIS */}
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex gap-4">
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 grid grid-cols-2 md:grid-cols-3 gap-4">
            <div className="flex-1 bg-green-50 rounded-xl p-4 border border-green-100">
-              <div className="flex items-center gap-2 text-green-700 font-black mb-1">
-                 <Rocket size={18}/> Sobe pro Topo
+              <div className="flex items-center gap-2 text-green-700 font-black mb-1 text-sm">
+                 <Rocket size={16}/> Topo
               </div>
-              <p className="text-2xl font-black text-green-800">{perfil?.creditosTopo || 0} <span className="text-xs font-bold text-green-600 uppercase">disponíveis</span></p>
+              <p className="text-2xl font-black text-green-800">{perfil?.creditosTopo || 0}</p>
+              <span className="text-[10px] font-bold text-green-600 uppercase">disponíveis</span>
            </div>
            <div className="flex-1 bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-2 text-blue-700 font-black mb-1">
-                 <Flame size={18}/> Turbo 5 Dias
+              <div className="flex items-center gap-2 text-blue-700 font-black mb-1 text-sm">
+                 <Flame size={16}/> Turbo
               </div>
-              <p className="text-2xl font-black text-blue-800">{perfil?.creditosTurbo || 0} <span className="text-xs font-bold text-blue-600 uppercase">disponíveis</span></p>
+              <p className="text-2xl font-black text-blue-800">{perfil?.creditosTurbo || 0}</p>
+              <span className="text-[10px] font-bold text-blue-600 uppercase">disponíveis</span>
+           </div>
+           <div className="col-span-2 md:col-span-1 bg-amber-50 rounded-xl p-4 border border-amber-100">
+              <div className="flex items-center gap-2 text-amber-700 font-black mb-1 text-sm">
+                 <Sparkles size={16}/> Ouro
+              </div>
+              <p className="text-2xl font-black text-amber-800">{perfil?.creditosOuro || 0}</p>
+              <span className="text-[10px] font-bold text-amber-600 uppercase">disponíveis</span>
            </div>
         </div>
 
         {/* LOJA DE RECOMPENSAS */}
         <div>
-           <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2"><Gift className="text-primary"/> Loja de Recompensas</h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+           <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2"><ShoppingBag className="text-primary"/> Loja de Destaques</h3>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
                  <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-1"><Rocket size={16} className="text-green-500"/> Sobe pro Topo</h4>
-                    <p className="text-xs text-gray-500 mt-1">Impulsione 1 anúncio agora</p>
+                    <h4 className="font-bold text-gray-900 flex items-center gap-1.5 mb-2"><Rocket size={18} className="text-green-500"/> Sobe pro Topo</h4>
+                    <p className="text-xs text-gray-500 font-medium mb-4">Impulsione 1 anúncio para acima dos gratuitos por 20 dias.</p>
                  </div>
                  <button 
                    onClick={() => comprarItem('topo', CUSTO_TOPO)}
-                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold transition-all shadow-sm ${perfil?.moedas >= CUSTO_TOPO ? 'bg-amber-400 hover:bg-amber-500 text-amber-900' : 'bg-gray-100 text-gray-400'}`}
+                   className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm ${perfil?.moedas >= CUSTO_TOPO ? 'bg-amber-400 hover:bg-amber-500 text-amber-900' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                  >
-                    <Coins size={16}/> {CUSTO_TOPO}
+                    <Coins size={16}/> {CUSTO_TOPO} Moedas
                  </button>
               </div>
 
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
                  <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-1"><Flame size={16} className="text-blue-500"/> Destaque Turbo</h4>
-                    <p className="text-xs text-gray-500 mt-1">5 dias de visibilidade máxima</p>
+                    <h4 className="font-bold text-gray-900 flex items-center gap-1.5 mb-2"><Flame size={18} className="text-blue-500"/> Destaque Turbo</h4>
+                    <p className="text-xs text-gray-500 font-medium mb-4">Apareça no formato Stories com borda colorida por 20 dias.</p>
                  </div>
                  <button 
                    onClick={() => comprarItem('turbo', CUSTO_TURBO)}
-                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold transition-all shadow-sm ${perfil?.moedas >= CUSTO_TURBO ? 'bg-amber-400 hover:bg-amber-500 text-amber-900' : 'bg-gray-100 text-gray-400'}`}
+                   className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm ${perfil?.moedas >= CUSTO_TURBO ? 'bg-amber-400 hover:bg-amber-500 text-amber-900' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                  >
-                    <Coins size={16}/> {CUSTO_TURBO}
+                    <Coins size={16}/> {CUSTO_TURBO} Moedas
+                 </button>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                 <div>
+                    <h4 className="font-bold text-gray-900 flex items-center gap-1.5 mb-2"><Sparkles size={18} className="text-amber-500"/> Ouro Urgente</h4>
+                    <p className="text-xs text-gray-500 font-medium mb-4">Fique visível no Carrossel gigante do topo por 20 dias.</p>
+                 </div>
+                 <button 
+                   onClick={() => comprarItem('ouro', CUSTO_OURO)}
+                   className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm ${perfil?.moedas >= CUSTO_OURO ? 'bg-amber-400 hover:bg-amber-500 text-amber-900' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                 >
+                    <Coins size={16}/> {CUSTO_OURO} Moedas
                  </button>
               </div>
            </div>
         </div>
 
-        {/* MISSÕES DIÁRIAS & INDICAÇÃO */}
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100">
-           <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Sparkles className="text-amber-500"/> Ganhe mais Moedas</h3>
-           
-           <div className="space-y-6">
-              
-              {/* Indique um Amigo */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-5 rounded-2xl border border-amber-100">
-                 <div className="flex gap-4 items-start">
-                    <div className="bg-amber-400 text-white p-3 rounded-xl shadow-sm mt-1">
-                       <Share2 size={24} />
-                    </div>
-                    <div className="flex-1">
-                       <h4 className="font-black text-gray-900 text-lg mb-1">Indique e Ganhe</h4>
-                       <p className="text-sm text-gray-600 mb-4">Ganhe <strong className="text-amber-600">50 moedas</strong> para cada amigo que se cadastrar usando seu link exclusivo. O seu amigo também ganha 20 moedas!</p>
-                       
-                       <div className="flex gap-2">
-                         <input 
-                           readOnly 
-                           value={linkIndicacao} 
-                           className="w-full bg-white border border-amber-200 rounded-xl px-4 py-3 text-sm text-gray-500 truncate focus:outline-none font-medium"
-                         />
-                         <button 
-                           onClick={shareLink}
-                           className="bg-amber-500 hover:bg-amber-600 text-white p-3.5 rounded-xl transition-all shadow-sm transform active:scale-95"
-                         >
-                           {copied ? <CheckCircle size={20} /> : <Copy size={20} />}
-                         </button>
-                       </div>
-                    </div>
-                 </div>
-              </div>
+        {/* COMO FUNCIONA E MISSÕES */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-6">
+           <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2"><Info size={20} className="text-blue-500"/> Entenda as Moedas</h2>
+           <p className="text-sm text-gray-600 leading-relaxed mb-6">
+             As <strong>Moedas Piauí</strong> são o nosso sistema de recompensa (sem valor monetário em dinheiro). Elas servem estritamente para serem acumuladas e trocadas pelos Planos VIP. Ao usar essas moedas, você não paga a taxa do Mercado Pago.
+           </p>
 
-              {/* Login Diário / Ofensiva */}
-              <div className="flex items-center gap-4 p-4 border border-gray-100 rounded-2xl">
-                 <div className="bg-orange-100 text-orange-500 p-3 rounded-full">
-                    <Flame size={24} />
-                 </div>
-                 <div className="flex-1">
-                    <h4 className="font-bold text-gray-900">Ofensiva Diária</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">Acesse o site todos os dias e ganhe moedas.</p>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-lg font-black text-orange-500">{perfil?.diasSeguidos || 1} 🔥</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Dias seguidos</p>
-                 </div>
-              </div>
+           <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2 border-t border-gray-100 pt-6"><Gift size={20} className="text-green-500"/> Como ganhar moedas?</h2>
+           <div className="space-y-3">
+             <div className="flex items-center justify-between bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                <div className="flex flex-col">
+                   <span className="font-bold text-gray-800 text-sm">Criar o seu primeiro anúncio</span>
+                   <span className="text-xs text-gray-500 font-medium">Bônus de boas-vindas</span>
+                </div>
+                <span className="bg-green-100 text-green-700 font-black text-xs px-3 py-1.5 rounded-lg">+10 Moedas</span>
+             </div>
+             
+             <div className="flex items-center justify-between bg-amber-50 border border-amber-100 p-4 rounded-xl">
+                <div className="flex flex-col">
+                   <span className="font-bold text-gray-800 text-sm">Indicar um amigo</span>
+                   <span className="text-xs text-gray-500 font-medium">Quando ele criar o primeiro anúncio</span>
+                </div>
+                <button onClick={copiarLink} className="bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 py-2 rounded-lg flex items-center gap-1 transition-transform active:scale-95 shadow-sm">
+                   <Share2 size={14}/> Indicar (+50)
+                </button>
+             </div>
+           </div>
+        </div>
 
-              <div className="flex items-start gap-3 p-4 bg-blue-50/50 rounded-2xl">
-                 <AlertCircle size={20} className="text-blue-500 shrink-0 mt-0.5" />
-                 <p className="text-xs text-blue-800 font-medium leading-relaxed">
-                   Em breve novas missões! Continue utilizando o Desapego Piauí para acumular mais moedas e destacar todos os seus anúncios de graça.
-                 </p>
-              </div>
-
+        {/* Login Diário / Ofensiva */}
+        <div className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+           <div className="bg-orange-100 text-orange-500 p-3 rounded-full">
+              <Flame size={24} />
+           </div>
+           <div className="flex-1">
+              <h4 className="font-bold text-gray-900">Ofensiva Diária</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Acesse o site todos os dias e ganhe moedas.</p>
+           </div>
+           <div className="text-right">
+              <p className="text-lg font-black text-orange-500">{perfil?.diasSeguidos || 1} 🔥</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">Dias seguidos</p>
            </div>
         </div>
 

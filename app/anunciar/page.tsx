@@ -5,7 +5,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket, Info, Coins, Sparkles, Flame } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket, Info, Sparkles, Flame, Check } from 'lucide-react'
 
 const CATEGORIAS = [
   "Imóveis", "Veículos", "Eletrônicos", "Para Casa", 
@@ -34,20 +34,18 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
-// 🚀 PLANOS ATUALIZADOS: Duração e Preços (O Back-end também forçará isso)
+// 🚀 PLANOS COM DESCRIÇÕES DETALHADAS (Checklists)
 const PLANOS_BASE = [
-  { id: 1, nome: 'Sobe pro Topo', dias: 20, valor: 5.00, fotos: 10, desc: 'Sempre acima dos anúncios gratuitos' },
-  { id: 2, nome: 'Destaque Turbo', dias: 20, valor: 9.90, fotos: 10, desc: 'Aparece exclusivo no formato de Stories' },
-  { id: 3, nome: 'Ouro / Urgente', dias: 20, valor: 19.90, fotos: 10, desc: 'Fixo no Topo do site no Carrossel Principal' }
+  { id: 1, nome: 'Sobe pro Topo', dias: 20, valor: 5.00, fotos: 10, desc: 'Fique sempre à frente dos gratuitos', detalhes: ['Aparece acima dos anúncios grátis', 'Recebe até 3x mais cliques', 'Ideal para vendas rápidas'] },
+  { id: 2, nome: 'Destaque Turbo', dias: 20, valor: 9.90, fotos: 10, desc: 'Aparece no formato Stories (Bolinhas)', detalhes: ['Destaque visual colorido nas listas', 'Aparece na barra de Stories no topo', 'Recebe até 5x mais visualizações'] },
+  { id: 3, nome: 'Ouro / Urgente', dias: 20, valor: 19.90, fotos: 10, desc: 'Fixo no Carrossel Máximo do site', detalhes: ['Sua foto gigante no topo do site', 'Borda dourada de altíssimo luxo', 'A melhor opção para Imóveis e Carros'] }
 ]
-const PLANO_PRESENTE = { id: 0, nome: 'Básico (Grátis)', dias: 7, valor: 0, fotos: 5, desc: 'Válido por 7 dias na lista comum' };
-
+const PLANO_PRESENTE = { id: 0, nome: 'Básico (Grátis)', dias: 7, valor: 0, fotos: 5, desc: 'Anúncio simples na lista geral', detalhes: ['Vai descendo conforme outros pagam', 'Dura apenas 7 dias', 'Máximo de 5 fotos'] };
 
 const removerAcentos = (texto: string) => {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
-// 🚀 MÁSCARA AUTOMÁTICA DE WHATSAPP
 const mascaraTelefone = (v: string) => {
   v = v.replace(/\D/g, ""); 
   if (v.length > 11) v = v.substring(0, 11); 
@@ -192,7 +190,6 @@ export default function AnunciarPage() {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
       
-      // Inteligência da trava de fotos baseada no plano
       if (fotos.length + selectedFiles.length > maxFotosPermitidas) {
         alert(`Você pode adicionar no máximo ${maxFotosPermitidas} fotos para o plano selecionado. (Planos de Destaque permitem até 10 fotos).`)
         return
@@ -297,7 +294,7 @@ export default function AnunciarPage() {
       }
 
       const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
-      const diasDuracao = planoEscolhido ? planoEscolhido.dias : 20; // 7 ou 20
+      const diasDuracao = planoEscolhido ? planoEscolhido.dias : 20; 
       const dataCalculada = new Date();
       dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
 
@@ -492,8 +489,11 @@ export default function AnunciarPage() {
              </div>
           </div>
 
+          {/* SESSÃO DE PLANOS COM INFORMATIVOS DETALHADOS */}
           <div className="pt-6 border-t border-gray-100">
-             <h2 className="text-xl font-black text-gray-900 mb-4">Escolha um Plano para destacar*</h2>
+             <h2 className="text-xl font-black text-gray-900 mb-2">Escolha um Plano para destacar*</h2>
+             <p className="text-sm text-gray-500 mb-6">Quanto maior o destaque, mais rápido você vende no Piauí.</p>
+             
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                {planosDisponiveis.map((p) => {
                  const isGratis = p.valor === 0;
@@ -508,8 +508,9 @@ export default function AnunciarPage() {
                          }
                          setPlanoId(p.id);
                       }}
-                      className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-gray-50'}`}
+                      className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative flex flex-col ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-white'}`}
                    >
+                      {/* Selos (Badges) */}
                       {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> 7 Dias Grátis</div>)}
                       {p.id === 1 && (<div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Rocket size={12}/> No Topo</div>)}
                       {p.id === 2 && (<div className="absolute top-0 right-0 bg-purple-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Flame size={12}/> Stories</div>)}
@@ -519,21 +520,32 @@ export default function AnunciarPage() {
                          <h3 className={`font-bold ${isGratis ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
                          {planoId === p.id && <CheckCircle className={isGratis ? 'text-green-600' : 'text-amber-500'} size={20}/>}
                       </div>
+                      
                       <p className={`text-2xl font-black mb-1 ${isGratis ? 'text-green-600' : 'text-gray-900'}`}>
                         {isGratis ? 'Grátis' : `R$ ${p.valor.toFixed(2).replace('.', ',')}`}
                       </p>
                       
                       {/* Mostra a quantidade de fotos e dias de forma clara */}
-                      <div className="flex items-center gap-2 mb-2 mt-2">
-                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
-                            {p.dias} dias
+                      <div className="flex items-center gap-2 mb-3 mt-1">
+                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                            {p.dias} dias no ar
                          </span>
-                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
-                            {p.fotos} fotos
+                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                            Até {p.fotos} fotos
                          </span>
                       </div>
                       
-                      <p className={`text-xs font-medium ${isGratis ? 'text-green-600/80' : 'text-gray-500'}`}>{p.desc}</p>
+                      <p className={`text-xs font-medium mb-3 ${isGratis ? 'text-green-700/80' : 'text-gray-600'}`}>{p.desc}</p>
+                      
+                      {/* INFORMATIVOS DETALHADOS (Checklists) */}
+                      <ul className="mt-auto space-y-1.5 border-t border-gray-100 pt-3">
+                         {p.detalhes.map((detalhe, idx) => (
+                           <li key={idx} className="flex items-start gap-1.5 text-[10px] md:text-xs text-gray-500 font-medium">
+                              <Check size={14} className={isGratis ? 'text-green-500 shrink-0' : 'text-amber-500 shrink-0'} />
+                              <span className="leading-tight">{detalhe}</span>
+                           </li>
+                         ))}
+                      </ul>
                    </div>
                  )
                })}
