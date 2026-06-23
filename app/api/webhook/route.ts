@@ -48,7 +48,8 @@ export async function POST(request: Request) {
               
               if (adData?.ultimoPagamentoId !== String(paymentId)) {
                 
-                const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (Number(adData.planoId) || 0);
+                // ✅ CORREÇÃO AQUI TAMBÉM: adData?.planoId
+                const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (Number(adData?.planoId) || 0);
                 const diasReais = DIAS_POR_PLANO[planoIdFinal] || 20;
                 
                 const dataExp = new Date();

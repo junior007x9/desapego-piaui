@@ -55,7 +55,9 @@ export async function GET(request: Request) {
           
           // Descobre qual é o plano baseado nos metadados que enviamos ao gerar o PIX
           const planoIdDoPix = data.metadata?.plano_id;
-          const planoFinal = planoIdDoPix !== undefined ? Number(planoIdDoPix) : (Number(adData.planoId) || 0);
+          
+          // ✅ CORREÇÃO AQUI: adData?.planoId evita o erro no build do Vercel
+          const planoFinal = planoIdDoPix !== undefined ? Number(planoIdDoPix) : (Number(adData?.planoId) || 0);
           
           // Aplica a regra de segurança de dias
           const diasReais = DIAS_POR_PLANO[planoFinal] || 20;
