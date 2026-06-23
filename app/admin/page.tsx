@@ -2,18 +2,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc, query, where } from 'firebase/firestore'
-import { ShoppingBag, CheckCircle, Trash2, Loader2, Flag, AlertTriangle, ExternalLink, Lock, Mail, ShieldAlert, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Calendar, BarChart3, Crown, Clock, Reply, Send, Users, Phone, Search, Activity, Gift, Power, Coins, Flame, Rocket, Sparkles } from 'lucide-react'
+import { ShoppingBag, CheckCircle, Trash2, Loader2, AlertTriangle, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Clock, Reply, Send, Users, Phone, Search, Activity, Gift, Power, Coins, Flame, Rocket, Sparkles, Mail } from 'lucide-react'
 import Link from 'next/link'
 
-// 🚀 ATUALIZADO: Identidade Visual dos Novos Planos
+// 🚀 ATUALIZADO: Identidade Visual e Nomenclatura dos Novos Planos
 const getInfoPlano = (planoId: number) => {
-  if (planoId === 3) return { nome: 'Ouro (Carrossel)', cor: 'bg-amber-100 text-amber-700 border-amber-300' }
-  if (planoId === 2) return { nome: 'Destaque Turbo', cor: 'bg-blue-100 text-blue-700 border-blue-300' }
-  if (planoId === 1) return { nome: 'Sobe pro Topo', cor: 'bg-green-100 text-green-700 border-green-300' }
-  if (planoId === 0) return { nome: 'Turbo (Presente)', cor: 'bg-purple-100 text-purple-700 border-purple-300' }
-  if (planoId === 99) return { nome: 'Básico (Grátis)', cor: 'bg-gray-100 text-gray-600 border-gray-200' }
+  if (planoId === 3) return { nome: 'Ouro / Urgente', cor: 'bg-amber-100 text-amber-700 border-amber-300' }
+  if (planoId === 2) return { nome: 'Destaque Turbo', cor: 'bg-purple-100 text-purple-700 border-purple-300' }
+  if (planoId === 1) return { nome: 'Sobe pro Topo', cor: 'bg-blue-100 text-blue-700 border-blue-300' }
+  if (planoId === 0) return { nome: 'Básico (Grátis)', cor: 'bg-green-100 text-green-700 border-green-300' }
   return { nome: 'Desconhecido', cor: 'bg-gray-100 text-gray-500 border-gray-200' }
 }
 
@@ -45,9 +44,8 @@ export default function AdminPage() {
   
   const [adsPagos, setAdsPagos] = useState(0)
   const [receitaTotal, setReceitaTotal] = useState(0)
-  const [moedasSistema, setMoedasSistema] = useState(0) // 🚀 NOVO: Economia de moedas
+  const [moedasSistema, setMoedasSistema] = useState(0)
   
-  // 🚀 ATUALIZADO: Contadores dos novos planos
   const [planosVendidos, setPlanosVendidos] = useState({ topo: 0, turbo: 0, ouro: 0 })
   const [filtroPlano, setFiltroPlano] = useState('todos')
 
@@ -87,18 +85,16 @@ export default function AdminPage() {
       let totalMoedasVirtual = 0
       let pTopo = 0, pTurbo = 0, pOuro = 0
 
-      // 1. MAPA DE USUÁRIOS E MOEDAS
       const mapUsuarios = new Map();
       try {
          const snapshotUsuarios = await getDocs(collection(db, 'usuarios'))
          snapshotUsuarios.forEach(doc => {
             const uData = doc.data();
-            totalMoedasVirtual += (uData.moedas || 0); // Conta moedas em circulação
+            totalMoedasVirtual += (uData.moedas || 0); 
             mapUsuarios.set(doc.id, { id: doc.id, ...uData })
          })
       } catch(e) { console.log("Coleção de usuários não encontrada.") }
 
-      // 2. BUSCAR ANÚNCIOS
       const snapshotAds = await getDocs(collection(db, 'anuncios'))
       const listaAds: any[] = []
       const listaPendentes: any[] = []
@@ -125,10 +121,10 @@ export default function AdminPage() {
 
         const plano = Number(data.planoId) || 0;
 
-        // 🚀 ATUALIZADO: Cálculo de receita dos novos planos
+        // 🚀 ATUALIZADO: Cálculo com os valores novos do sistema
         if (plano > 0 && plano !== 99 && (data.status === 'ativo' || data.status === 'vendido' || data.status === 'expirado')) {
            contagemPagos++
-           if (plano === 1) { totalMovimentado += 2.99; pTopo++ } 
+           if (plano === 1) { totalMovimentado += 5.00; pTopo++ } 
            else if (plano === 2) { totalMovimentado += 9.90; pTurbo++ } 
            else if (plano === 3) { totalMovimentado += 19.90; pOuro++ } 
         }
@@ -146,7 +142,6 @@ export default function AdminPage() {
       
       setUsuarios(Array.from(mapUsuarios.values()))
 
-      // 3. BUSCAR LOGS DE ATIVIDADE
       try {
          const snapshotLogs = await getDocs(collection(db, 'logs'))
          const listaLogs: any[] = []
@@ -157,7 +152,6 @@ export default function AdminPage() {
          setLogs(listaLogs)
       } catch(e) { console.log("Ainda não existem logs registrados.") }
 
-      // 4. BUSCAR DENÚNCIAS E FEEDBACKS
       const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
       const listaDenuncias: any[] = []
       snapshotDenuncias.forEach(doc => {
@@ -182,7 +176,7 @@ export default function AdminPage() {
   }
 
   const handleZerarGratis = async (vendedorId: string) => {
-    if (!confirm("Isto vai dar permissão para o usuário usar o Plano Presente Grátis (Turbo 5 Dias) novamente. Deseja confirmar?")) return;
+    if (!confirm("Isto vai dar permissão para o usuário usar o Plano Presente Grátis novamente. Deseja confirmar?")) return;
     try {
       setLoadingAuth(true);
       const q = query(collection(db, 'anuncios'), where('vendedorId', '==', vendedorId), where('planoId', '==', 0));
@@ -191,7 +185,7 @@ export default function AdminPage() {
       const promessas = snap.docs.map(docSnap => updateDoc(doc(db, 'anuncios', docSnap.id), { planoId: 99 }));
       await Promise.all(promessas);
 
-      alert("🎉 Bônus grátis resetado! O usuário já pode publicar com destaque Turbo gratuito.");
+      alert("🎉 Bônus grátis resetado! O usuário já pode publicar grátis de novo.");
       fetchDados();
     } catch(e) {
       alert("Erro ao resetar o bônus.");
@@ -199,8 +193,9 @@ export default function AdminPage() {
     }
   }
 
+  // 🚀 ATIVAR FORÇADO PELO PAINEL DO USUÁRIO
   const handleForcarAtivacao = async (ad: any, dias: number, novoPlanoId: number) => {
-    if (!confirm(`Tem a certeza que deseja ativar este anúncio no VIP [${getInfoPlano(novoPlanoId).nome}] por ${dias} dias?`)) return;
+    if (!confirm(`Ativar o plano ${getInfoPlano(novoPlanoId).nome} para este anúncio com validade de ${dias} dias?`)) return;
     try {
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
@@ -219,6 +214,30 @@ export default function AdminPage() {
     }
   }
 
+  // 🚀 ALTERAR PLANO GLOBAL (MENU DE BENEFÍCIOS)
+  const handleMudarPlano = async (adId: string, novoPlanoId: number) => {
+    if (!window.confirm(`Deseja alterar este anúncio para o plano ${getInfoPlano(novoPlanoId).nome}? Ele receberá nova data de expiração.`)) return;
+
+    try {
+      const dias = novoPlanoId === 0 ? 7 : 20; // Aplica a regra de dias (7 para grátis, 20 para pagos)
+      const dataExp = new Date();
+      dataExp.setDate(dataExp.getDate() + dias);
+
+      await updateDoc(doc(db, 'anuncios', adId), {
+        planoId: novoPlanoId,
+        status: 'ativo', 
+        pagoEm: new Date().toISOString(),
+        expiraEm: dataExp.toISOString()
+      });
+
+      alert(`Benefício concedido com sucesso! Válido por ${dias} dias.`);
+      fetchDados();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao mudar plano.");
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth)
     router.push('/')
@@ -233,7 +252,7 @@ export default function AdminPage() {
     } catch (error) { alert("Erro ao excluir anúncio.") }
   }
 
-  // 🚀 ATUALIZADO: Aprovação Manual Inteligente
+  // 🚀 APROVAÇÃO INTELIGENTE DE PIX
   const handleAprovarPix = async (ad: any) => {
     const plano = Number(ad.planoId) || 0;
     const nomePlano = getInfoPlano(plano).nome;
@@ -241,10 +260,8 @@ export default function AdminPage() {
     if (!confirm(`Aprovar o PIX e ativar o plano ${nomePlano} para o anúncio "${ad.titulo}"?`)) return;
     
     try {
-      let dias = 30; // Padrão
-      if (plano === 1) dias = 30; // Sobe pro Topo (A ação é instantânea, mas renova a vida dele)
-      if (plano === 2) dias = 5;  // Turbo
-      if (plano === 3) dias = 7;  // Ouro
+      // Regra de Dias
+      const dias = plano === 0 ? 7 : 20;
 
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
@@ -255,10 +272,8 @@ export default function AdminPage() {
         pagoEm: new Date().toISOString()
       });
 
-      alert("Pagamento Aprovado! O anúncio está VIP.");
-      setAdsPendentes(adsPendentes.filter(item => item.id !== ad.id));
-      fetchDados(); // Atualiza tudo
-      
+      alert(`Pagamento Aprovado! Anúncio ativo por ${dias} dias.`);
+      fetchDados(); 
     } catch (error) {
       alert("Erro ao aprovar o pagamento.");
     }
@@ -322,7 +337,7 @@ export default function AdminPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 relative">
       
-      {/* MODAL DE FEEDBACK CORRIGIDO */}
+      {/* MODAL DE FEEDBACK */}
       {replyingTo && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative animate-in fade-in zoom-in duration-200">
@@ -413,7 +428,6 @@ export default function AdminPage() {
             </div>
             <p className="text-xl md:text-2xl font-black text-emerald-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receitaTotal)}</p>
           </div>
-          {/* 🚀 NOVO CARD: ECONOMIA DE MOEDAS */}
           <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-2xl shadow-sm border border-amber-200 flex flex-col justify-center relative overflow-hidden">
             <Sparkles className="absolute -right-4 -bottom-4 text-amber-200 opacity-50" size={80}/>
             <div className="flex items-center gap-2 mb-2 text-amber-600 relative z-10">
@@ -483,7 +497,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 🚀 LISTA SUPER COMPLETA DE USUÁRIOS E PESQUISA */}
+        {/* LISTA COMPLETA DE USUÁRIOS E PESQUISA */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div className="flex items-center gap-3">
@@ -496,7 +510,6 @@ export default function AdminPage() {
                </div>
              </div>
              
-             {/* BARRA DE PESQUISA */}
              <div className="relative w-full md:w-72">
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input 
@@ -552,7 +565,6 @@ export default function AdminPage() {
                                    </div>
                                  )}
                                </div>
-                               {/* 🚀 EXIBE A CARTEIRA VIP DO USUÁRIO */}
                                <div className="bg-amber-50 border border-amber-100 rounded-lg p-2 flex items-center gap-3">
                                   <div className="flex items-center gap-1 text-amber-600 font-black text-xs">
                                      <Coins size={14}/> {u.moedas || 0}
@@ -589,15 +601,15 @@ export default function AdminPage() {
 
                                          <p className="text-[10px] text-gray-500 font-medium">Plano Atual: {getInfoPlano(ad.planoId).nome}</p>
 
-                                         {/* 🚀 BOTÕES DE ATIVAÇÃO FORÇADA DOS NOVOS PLANOS */}
                                          <div className="mt-1 pt-2 border-t border-gray-200">
                                             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
-                                               <Power size={10}/> Forçar Ativação VIP Grátis:
+                                               <Power size={10}/> Forçar Ativação VIP:
                                             </p>
                                             <div className="flex flex-wrap gap-1">
-                                               <button onClick={() => handleForcarAtivacao(ad, 30, 1)} className="bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Topo (30d)</button>
-                                               <button onClick={() => handleForcarAtivacao(ad, 5, 2)} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Turbo (5d)</button>
-                                               <button onClick={() => handleForcarAtivacao(ad, 7, 3)} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Ouro (7d)</button>
+                                               <button onClick={() => handleForcarAtivacao(ad, 20, 1)} className="bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Topo (20d)</button>
+                                               <button onClick={() => handleForcarAtivacao(ad, 20, 2)} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Turbo (20d)</button>
+                                               <button onClick={() => handleForcarAtivacao(ad, 20, 3)} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2 py-1 rounded text-[9px] font-black transition-colors">Ouro (20d)</button>
+                                               <button onClick={() => handleForcarAtivacao(ad, 7, 0)} className="bg-gray-200 text-gray-700 hover:bg-gray-300 px-2 py-1 rounded text-[9px] font-black transition-colors">Grátis (7d)</button>
                                             </div>
                                          </div>
                                        </li>
@@ -625,7 +637,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 🚀 AUDITORIA E LOGS GLOBAIS */}
+        {/* AUDITORIA E LOGS GLOBAIS */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div className="flex items-center gap-3">
@@ -673,7 +685,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 🚀 DESEMPENHO DOS NOVOS PLANOS */}
+        {/* DESEMPENHO DOS PLANOS */}
         <div className="mb-10">
           <h2 className="text-lg font-black text-gray-800 mb-4 px-2">Desempenho dos Planos VIP</h2>
           <div className="grid grid-cols-3 gap-4">
@@ -682,8 +694,8 @@ export default function AdminPage() {
                 <span className="text-xs text-gray-500 font-bold uppercase mb-1">Sobe pro Topo</span>
                 <span className="text-2xl font-black text-gray-900">{planosVendidos.topo}</span>
              </div>
-             <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm flex flex-col items-center text-center">
-                <div className="bg-blue-50 p-3 rounded-full text-blue-600 mb-3"><Flame size={24}/></div>
+             <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm flex flex-col items-center text-center">
+                <div className="bg-purple-50 p-3 rounded-full text-purple-600 mb-3"><Flame size={24}/></div>
                 <span className="text-xs text-gray-500 font-bold uppercase mb-1">Destaque Turbo</span>
                 <span className="text-2xl font-black text-gray-900">{planosVendidos.turbo}</span>
              </div>
@@ -695,7 +707,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* TABELA DE ANÚNCIOS GERAIS */}
+        {/* TABELA DE ANÚNCIOS GERAIS + MENU DE UPGRADE/BENEFÍCIO */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h2 className="text-xl font-black text-gray-800 whitespace-nowrap">Anúncios Globais ({adsFiltrados.length})</h2>
@@ -704,7 +716,7 @@ export default function AdminPage() {
               <button onClick={() => setFiltroPlano('todos')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === 'todos' ? 'bg-primary text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>Todos</button>
               <button onClick={() => setFiltroPlano('gratis')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === 'gratis' ? 'bg-gray-600 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}>Grátis</button>
               <button onClick={() => setFiltroPlano('1')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '1' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-green-600 border border-green-200 hover:bg-green-50'}`}>Topo</button>
-              <button onClick={() => setFiltroPlano('2')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '2' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}>Turbo</button>
+              <button onClick={() => setFiltroPlano('2')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '2' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-50'}`}>Turbo</button>
               <button onClick={() => setFiltroPlano('3')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition ${filtroPlano === '3' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-amber-600 border border-amber-200 hover:bg-amber-50'}`}>Ouro</button>
             </div>
           </div>
@@ -716,9 +728,9 @@ export default function AdminPage() {
                   <th className="p-4 font-bold">Título</th>
                   <th className="p-4 font-bold">Status</th>
                   <th className="p-4 font-bold">Plano VIP</th>
-                  <th className="p-4 font-bold">Preço do Item</th>
-                  <th className="p-4 font-bold">Data</th>
-                  <th className="p-4 font-bold text-center">Excluir</th>
+                  <th className="p-4 font-bold">Data de Criação</th>
+                  <th className="p-4 font-bold text-center">Benefício (Upgrade)</th>
+                  <th className="p-4 font-bold text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -744,9 +756,26 @@ export default function AdminPage() {
                             {infoPlano.nome}
                           </span>
                         </td>
-                        <td className="p-4 font-black text-gray-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}</td>
                         <td className="p-4 text-sm font-medium text-gray-500 whitespace-nowrap">
                           {formatarData(ad.criadoEm)}
+                        </td>
+                        <td className="p-4 text-center">
+                           {/* DROP DOWN DE UPGRADES RÁPIDOS */}
+                           <select 
+                              onChange={(e) => {
+                                 if(e.target.value !== "") {
+                                    handleMudarPlano(ad.id, Number(e.target.value));
+                                    e.target.value = ""; 
+                                 }
+                              }}
+                              className="bg-gray-50 border border-gray-300 text-gray-700 text-[10px] rounded-lg focus:ring-primary focus:border-primary block w-full p-2 outline-none font-bold cursor-pointer"
+                           >
+                              <option value="">Alterar plano...</option>
+                              <option value="3">✨ Ouro (20 dias)</option>
+                              <option value="2">🔥 Turbo (20 dias)</option>
+                              <option value="1">🚀 Topo (20 dias)</option>
+                              <option value="0">🎁 Grátis (7 dias)</option>
+                           </select>
                         </td>
                         <td className="p-4 text-center">
                           <button onClick={() => handleDeleteAd(ad.id)} className="text-gray-400 hover:bg-red-50 hover:text-red-500 p-2 rounded-lg transition-colors"><Trash2 size={18} /></button>
