@@ -24,14 +24,6 @@ const CATEGORIAS_HOME = [
   { nome: 'Outros', slug: 'Outros', icon: <ShoppingBag size={24} strokeWidth={2.5} />, cores: "bg-gradient-to-b from-gray-50 to-gray-100 border-gray-300 text-gray-600" },
 ]
 
-// Filtros Rápidos
-const FILTROS_RAPIDOS = [
-  { nome: 'Carros', icone: '🚗', slug: 'Veículos' },
-  { nome: 'Celulares', icone: '📱', slug: 'Eletrônicos' },
-  { nome: 'Imóveis', icone: '🏠', slug: 'Imóveis' },
-  { nome: 'Moda', icone: '👗', slug: 'Moda e Beleza' },
-]
-
 function formatTimeAgo(timestampSeconds: number) {
   if (!timestampSeconds) return 'Data desconhecida';
   const now = new Date();
@@ -198,21 +190,21 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 HERO SECTION CORRIGIDA PARA O CELULAR RESPIRAR */}
-      <div className="bg-gradient-to-br from-primary to-primary/90 pt-8 pb-32 md:pb-36 px-4 rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-lg relative overflow-hidden">
+      {/* 🚀 HERO SECTION CORRIGIDA: Menos espaço em branco, layout exato */}
+      <div className="bg-gradient-to-br from-primary to-primary/90 pt-8 pb-16 md:pb-24 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           
           <ContadorEstatisticas />
 
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight leading-tight mt-2">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
           <p className="text-primary-100 font-medium mb-6 md:mb-8 text-sm md:text-lg px-2">
             O maior marketplace local. Compre e venda de forma segura em {userCity}.
           </p>
           
-          <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-2xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border-2 border-white/20">
+          <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-2xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border-2 border-white/20 mb-2">
             <div className="hidden md:flex items-center pl-4 text-gray-400">
               <Search size={24} />
             </div>
@@ -228,26 +220,13 @@ export default function Home() {
             </button>
           </form>
 
-          {/* FILTROS RÁPIDOS */}
-          <div className="flex gap-2 justify-center mt-5 mb-2 flex-wrap px-2">
-             {FILTROS_RAPIDOS.map(filtro => (
-                <Link 
-                  href={`/todos-anuncios?categoria=${filtro.slug}`} 
-                  key={filtro.nome} 
-                  className="bg-white/10 hover:bg-white/20 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold transition-all backdrop-blur-md border border-white/20 flex items-center gap-1.5 active:scale-95 shadow-sm outline-none"
-                >
-                  <span className="text-base md:text-lg">{filtro.icone}</span> {filtro.nome}
-                </Link>
-             ))}
-          </div>
-
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-12 md:-mt-14 relative z-20">
+      {/* 🚀 CATEGORIAS DIMINUÍDAS E SOBREPOSTAS CORRETAMENTE */}
+      <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-8 md:-mt-12 relative z-20">
         
-        {/* 🚀 CATEGORIAS DIMINUÍDAS NO CELULAR PARA NÃO ENCAVALAR */}
-        <div className="mb-6 md:mb-8 pl-4 pr-0 md:px-0">
+        <div className="mb-6 md:mb-8 pl-4 pr-4 md:px-0">
           <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
               <Link 
