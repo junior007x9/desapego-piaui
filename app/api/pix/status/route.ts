@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// 🚀 Trava de Segurança: Só inicializa se a chave existir (evita erro no Build da Vercel)
+// Inicializa o Firebase Admin caso não esteja rodando
 if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -16,19 +16,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const paymentId = searchParams.get('id');
   const anuncioId = searchParams.get('anuncioId');
-  const dias = parseInt(searchParams.get('dias') || '1');
+  const dias = parseInt(searchParams.get('dias') || '30'); // Tempo do plano
 
   if (!paymentId || !anuncioId) {
     return NextResponse.json({ error: 'Faltam parâmetros' }, { status: 400 });
   }
 
-  // Como bloqueamos a inicialização no build, precisamos garantir que ela existe aqui na vida real
   if (!admin.apps.length) {
-     return NextResponse.json({ error: 'Servidor Firebase não inicializado. Verifique as chaves na Vercel.' }, { status: 500 });
+     return NextResponse.json({ error: 'Servidor Firebase não inicializado.' }, { status: 500 });
   }
 
   try {
-    // 1. Pergunta diretamente ao Mercado Pago se este PIX foi pago
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       method: 'GET',
       headers: {
@@ -38,24 +36,28 @@ export async function GET(request: Request) {
 
     const data = await response.json();
 
-    // 2. Se o Mercado Pago disser que foi Aprovado
+    // Se o mercado pago diz que está pago
     if (data.status === 'approved') {
-      
       const db = admin.firestore();
       const adRef = db.collection('anuncios').doc(anuncioId);
       const adDoc = await adRef.get();
 
-      // 3. O SERVIDOR ativa o anúncio de forma segura!
-      if (adDoc.exists && adDoc.data()?.status !== 'ativo') {
-        const dataExp = new Date();
-        dataExp.setDate(dataExp.getDate() + dias);
+      if (adDoc.exists) {
+        const adData = adDoc.data();
+        
+        // A INTELIGÊNCIA: Verifica se ESTE PIX exato já liberou o anúncio antes
+        if (adData?.ultimoPagamentoId !== paymentId) {
+          const dataExp = new Date();
+          dataExp.setDate(dataExp.getDate() + dias); // Renova a validade
 
-        await adRef.update({
-          status: 'ativo',
-          expiraEm: dataExp.toISOString(),
-          pagoEm: new Date().toISOString()
-        });
-        console.log(`✅ Anúncio ${anuncioId} ativado pelo servidor!`);
+          await adRef.update({
+            status: 'ativo',
+            expiraEm: dataExp.toISOString(),
+            pagoEm: new Date().toISOString(),
+            ultimoPagamentoId: paymentId // Salva o ID desse PIX para não repetir
+          });
+          console.log(`✅ Anúncio ${anuncioId} ativado/renovado pelo front-end!`);
+        }
       }
     }
 
