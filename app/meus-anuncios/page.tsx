@@ -149,7 +149,7 @@ export default function MeusAnunciosPage() {
     }
   }
 
-  // 🚀 NOVA FUNÇÃO COM SUPORTE AOS 3 PLANOS VIP
+  // 🚀 FUNÇÃO CORRIGIDA PARA O TYPESCRIPT
   const handleImpulsionar = async (id: string, tipoPlano: number) => {
     try {
       if (!user) return;
@@ -158,36 +158,51 @@ export default function MeusAnunciosPage() {
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
 
-      // Checa se ele tem crédito na carteira dependendo do plano escolhido
-      let temCredito = false;
-      let campoCredito = '';
-
-      if (tipoPlano === 1 && userData?.creditosTopo > 0) { temCredito = true; campoCredito = 'creditosTopo'; }
-      if (tipoPlano === 2 && userData?.creditosTurbo > 0) { temCredito = true; campoCredito = 'creditosTurbo'; }
-      if (tipoPlano === 3 && userData?.creditosOuro > 0) { temCredito = true; campoCredito = 'creditosOuro'; }
-
-      if (temCredito) {
-        if (confirm("Você tem um crédito para este plano na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
-           
-           await updateDoc(userRef, { [campoCredito]: userData[campoCredito] - 1 });
-           
-           const dataExp = new Date();
-           dataExp.setDate(dataExp.getDate() + 20); // Destaques dão 20 dias
-
-           await updateDoc(doc(db, 'anuncios', id), {
-             planoId: tipoPlano,
-             status: 'ativo',
-             expiraEm: dataExp.toISOString(),
-             pagoEm: new Date().toISOString()
-           });
-           
-           alert("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
-           fetchMyAds(user.uid); 
-           return;
-        }
+      // Se o usuário não existir no banco de dados, vai direto pro pagamento
+      if (!userData) {
+         await updateDoc(doc(db, 'anuncios', id), { planoId: tipoPlano });
+         router.push(`/pagamento/${id}`);
+         return;
       }
 
-      // Se não tem crédito, joga pro PIX cobrando o novo plano
+      let usouCredito = false;
+
+      // Verifica de forma explícita qual crédito está sendo usado
+      if (tipoPlano === 1 && userData.creditosTopo > 0) {
+         if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+            await updateDoc(userRef, { creditosTopo: userData.creditosTopo - 1 });
+            usouCredito = true;
+         }
+      } else if (tipoPlano === 2 && userData.creditosTurbo > 0) {
+         if (confirm("Você tem um crédito 'Destaque Turbo' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+            await updateDoc(userRef, { creditosTurbo: userData.creditosTurbo - 1 });
+            usouCredito = true;
+         }
+      } else if (tipoPlano === 3 && userData.creditosOuro > 0) {
+         if (confirm("Você tem um crédito 'Ouro' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+            await updateDoc(userRef, { creditosOuro: userData.creditosOuro - 1 });
+            usouCredito = true;
+         }
+      }
+
+      // Se o usuário usou o crédito, ativamos o anúncio na hora
+      if (usouCredito) {
+         const dataExp = new Date();
+         dataExp.setDate(dataExp.getDate() + 20); // Destaques dão 20 dias
+
+         await updateDoc(doc(db, 'anuncios', id), {
+           planoId: tipoPlano,
+           status: 'ativo',
+           expiraEm: dataExp.toISOString(),
+           pagoEm: new Date().toISOString()
+         });
+         
+         alert("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
+         fetchMyAds(user.uid); 
+         return;
+      }
+
+      // Se não tem crédito ou cancelou, joga pro fluxo do PIX cobrando o novo plano
       await updateDoc(doc(db, 'anuncios', id), { planoId: tipoPlano });
       router.push(`/pagamento/${id}`);
 
