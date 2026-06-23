@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// O BACKEND DECIDE OS DIAS (Inteligência e Segurança Máxima)
-const DIAS_POR_PLANO: Record<number, number> = {
-  0: 7,   // Grátis = 7 dias
-  1: 20,  // Sobe pro Topo = 20 dias
-  2: 20,  // Destaque Turbo = 20 dias
-  3: 20   // Ouro Urgente = 20 dias
-};
+// O BACKEND DECIDE OS DIAS E SOBE PRO TOPO!
+const DIAS_POR_PLANO: Record<number, number> = { 0: 7, 1: 20, 2: 20, 3: 20 };
 
 if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   admin.initializeApp({
@@ -35,11 +30,8 @@ export async function GET(request: Request) {
   try {
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`
-      }
+      headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` }
     });
-
     const data = await response.json();
 
     if (data.status === 'approved') {
@@ -49,17 +41,10 @@ export async function GET(request: Request) {
 
       if (adDoc.exists) {
         const adData = adDoc.data();
-        
-        // Verifica se ESSE PIX já foi processado antes
         if (adData?.ultimoPagamentoId !== paymentId) {
           
-          // Descobre qual é o plano baseado nos metadados que enviamos ao gerar o PIX
           const planoIdDoPix = data.metadata?.plano_id;
-          
-          // ✅ CORREÇÃO AQUI: adData?.planoId evita o erro no build do Vercel
           const planoFinal = planoIdDoPix !== undefined ? Number(planoIdDoPix) : (Number(adData?.planoId) || 0);
-          
-          // Aplica a regra de segurança de dias
           const diasReais = DIAS_POR_PLANO[planoFinal] || 20;
 
           const dataExp = new Date();
@@ -67,19 +52,17 @@ export async function GET(request: Request) {
 
           await adRef.update({
             status: 'ativo',
-            planoId: planoFinal, // Garante que o anúncio subiu de plano se for uma renovação/upgrade
+            planoId: planoFinal, 
             expiraEm: dataExp.toISOString(),
             pagoEm: new Date().toISOString(),
-            ultimoPagamentoId: paymentId // Trava para não processar duas vezes
+            criadoEm: admin.firestore.FieldValue.serverTimestamp(), // 🚀 JOGA O ANÚNCIO PRO TOPO DA TELA INICIAL
+            ultimoPagamentoId: paymentId
           });
-          console.log(`✅ Anúncio ${anuncioId} ativado/renovado pelo front-end para o plano ${planoFinal} por ${diasReais} dias!`);
         }
       }
     }
-
     return NextResponse.json({ status: data.status });
   } catch (error) {
-    console.error('Erro na API de status do PIX:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }

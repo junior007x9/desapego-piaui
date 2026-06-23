@@ -12,13 +12,7 @@ if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   });
 }
 
-// O BACKEND DECIDE OS DIAS (Inteligência e Segurança Máxima)
-const DIAS_POR_PLANO: Record<number, number> = {
-  0: 7,   // Grátis = 7 dias
-  1: 20,  // Sobe pro Topo = 20 dias
-  2: 20,  // Destaque Turbo = 20 dias
-  3: 20   // Ouro Urgente = 20 dias
-};
+const DIAS_POR_PLANO: Record<number, number> = { 0: 7, 1: 20, 2: 20, 3: 20 };
 
 export async function POST(request: Request) {
   try {
@@ -45,10 +39,8 @@ export async function POST(request: Request) {
 
             if (adSnap.exists) {
               const adData = adSnap.data();
-              
               if (adData?.ultimoPagamentoId !== String(paymentId)) {
                 
-                // ✅ CORREÇÃO AQUI TAMBÉM: adData?.planoId
                 const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (Number(adData?.planoId) || 0);
                 const diasReais = DIAS_POR_PLANO[planoIdFinal] || 20;
                 
@@ -60,23 +52,17 @@ export async function POST(request: Request) {
                   planoId: planoIdFinal, 
                   expiraEm: dataExp.toISOString(),
                   pagoEm: new Date().toISOString(),
+                  criadoEm: admin.firestore.FieldValue.serverTimestamp(), // 🚀 JOGA O ANÚNCIO PRO TOPO DA TELA INICIAL
                   ultimoPagamentoId: String(paymentId) 
                 });
-                console.log(`✅ Sucesso Webhook: Anúncio ${adId} ativado/renovado em background para o plano ${planoIdFinal}!`);
-              } else {
-                console.log(`⚠️ Webhook ignorado: Pagamento ${paymentId} já processado. (Idempotência Funcionando)`);
-              }
+              } 
             }
           }
-        } catch (fbError) {
-          console.error("Erro Firebase Webhook:", fbError);
-        }
+        } catch (fbError) { console.error("Erro Firebase Webhook:", fbError); }
       }
     }
-
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("❌ Erro Webhook:", error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }

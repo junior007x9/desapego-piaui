@@ -7,17 +7,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Eye, Trash2, Edit, TrendingUp, ShoppingBag, Sparkles, PlusCircle, Calendar, CheckCircle, Rocket, Flame } from 'lucide-react'
 
-// Calcula a diferença de dias entre a criação e a venda
 function calcularDiasVenda(criadoEm: any, vendidoEm: any) {
   if (!criadoEm) return "Vendido!";
   if (!vendidoEm) return "Vendido com sucesso!";
-
   const dataCriacao = criadoEm.seconds ? new Date(criadoEm.seconds * 1000) : new Date(criadoEm);
   const dataVenda = vendidoEm.seconds ? new Date(vendidoEm.seconds * 1000) : new Date(vendidoEm);
-
   const diffTime = Math.abs(dataVenda.getTime() - dataCriacao.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
   if (diffDays === 0) return "Vendido no mesmo dia!";
   if (diffDays === 1) return "Vendido em 1 dia no site";
   return `Vendido em ${diffDays} dias no site`;
@@ -27,10 +23,8 @@ export default function MeusAnunciosPage() {
   const [ads, setAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<FirebaseUser | null>(null)
-  
   const [totalViews, setTotalViews] = useState(0)
   const [activeAds, setActiveAds] = useState(0)
-
   const router = useRouter()
 
   useEffect(() => {
@@ -47,11 +41,7 @@ export default function MeusAnunciosPage() {
 
   async function fetchMyAds(userId: string) {
     try {
-      const q = query(
-        collection(db, 'anuncios'), 
-        where('vendedorId', '==', userId)
-      )
-      
+      const q = query(collection(db, 'anuncios'), where('vendedorId', '==', userId))
       const snap = await getDocs(q)
       const list: any[] = []
       let views = 0
@@ -61,7 +51,6 @@ export default function MeusAnunciosPage() {
       for (const document of snap.docs) {
         const data = document.data()
         let statusFinal = data.status
-
         if (data.expiraEm) {
           const dataExpiracao = new Date(data.expiraEm);
           if (dataExpiracao < agora && statusFinal === 'ativo') {
@@ -69,96 +58,48 @@ export default function MeusAnunciosPage() {
              updateDoc(doc(db, 'anuncios', document.id), { status: 'expirado' }).catch(console.error);
           }
         }
-
         list.push({ id: document.id, ...data, status: statusFinal })
-        
         views += (data.visualizacoes || 0)
         if (statusFinal === 'ativo') ativos++
       }
 
       list.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
-
       setAds(list)
       setTotalViews(views)
       setActiveAds(ativos)
-    } catch (error) {
-      console.error("Erro ao buscar meus anúncios:", error)
-    } finally {
-      setLoading(false)
-    }
+    } catch (error) { console.error(error) } finally { setLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações dele no Google. Recomendamos usar o botão 'Marcar como Vendido'. Deseja excluir mesmo assim?")) return;
-    
+    if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações. Deseja excluir mesmo assim?")) return;
     try {
       const adToLog = ads.find(a => a.id === id);
-      
       await deleteDoc(doc(db, 'anuncios', id))
       setAds(ads.filter(ad => ad.id !== id))
-      
-      if (user) {
-         try {
-            await addDoc(collection(db, 'logs'), {
-               usuarioId: user.uid,
-               acao: 'EXCLUIU',
-               tituloAnuncio: adToLog?.titulo || "Anúncio Removido",
-               criadoEm: new Date()
-            });
-         } catch (logError) {
-            console.error("Erro ao salvar log de exclusão", logError)
-         }
-      }
-      
-    } catch (error) {
-      alert("Ocorreu um erro ao excluir o anúncio.")
-    }
+      if (user) { try { await addDoc(collection(db, 'logs'), { usuarioId: user.uid, acao: 'EXCLUIU', tituloAnuncio: adToLog?.titulo || "Anúncio Removido", criadoEm: new Date() }); } catch (logError) {} }
+    } catch (error) { alert("Ocorreu um erro ao excluir.") }
   }
 
   const handleMarkAsSold = async (id: string) => {
-    if (!confirm("Tem certeza que deseja marcar este anúncio como VENDIDO? Ele sairá das buscas, mas a página continuará a existir para quem tiver o link.")) return;
-    
+    if (!confirm("Marcar anúncio como VENDIDO?")) return;
     try {
       const adToLog = ads.find(a => a.id === id);
       const agora = new Date(); 
-      
-      await updateDoc(doc(db, 'anuncios', id), { 
-        status: 'vendido',
-        vendidoEm: serverTimestamp() 
-      })
-      
+      await updateDoc(doc(db, 'anuncios', id), { status: 'vendido', vendidoEm: serverTimestamp() })
       setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido', vendidoEm: agora } : ad))
       alert("Parabéns pela venda! 🎉")
-      
-      if (user) {
-         try {
-            await addDoc(collection(db, 'logs'), {
-               usuarioId: user.uid,
-               acao: 'EDITOU', 
-               tituloAnuncio: adToLog?.titulo ? `${adToLog.titulo} (Vendido)` : "Anúncio Marcado como Vendido",
-               criadoEm: new Date()
-            });
-         } catch (logError) {
-            console.error("Erro ao salvar log de edição", logError)
-         }
-      }
-      
-    } catch (error) {
-      console.error("Erro ao vender:", error)
-      alert("Ocorreu um erro ao atualizar o anúncio.")
-    }
+      if (user) { try { await addDoc(collection(db, 'logs'), { usuarioId: user.uid, acao: 'EDITOU', tituloAnuncio: adToLog?.titulo ? `${adToLog.titulo} (Vendido)` : "Marcado como Vendido", criadoEm: new Date() }); } catch (logError) {} }
+    } catch (error) { alert("Erro ao atualizar o anúncio.") }
   }
 
-  // 🚀 FUNÇÃO CORRIGIDA PARA O TYPESCRIPT
+  // 🚀 O SEGREDO DO "BUMP" USANDO MOEDAS:
   const handleImpulsionar = async (id: string, tipoPlano: number) => {
     try {
       if (!user) return;
-      
       const userRef = doc(db, 'usuarios', user.uid);
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
 
-      // Se o usuário não existir no banco de dados, vai direto pro pagamento
       if (!userData) {
          await updateDoc(doc(db, 'anuncios', id), { planoId: tipoPlano });
          router.push(`/pagamento/${id}`);
@@ -166,26 +107,23 @@ export default function MeusAnunciosPage() {
       }
 
       let usouCredito = false;
-
-      // Verifica de forma explícita qual crédito está sendo usado
       if (tipoPlano === 1 && userData.creditosTopo > 0) {
-         if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+         if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosTopo: userData.creditosTopo - 1 });
             usouCredito = true;
          }
       } else if (tipoPlano === 2 && userData.creditosTurbo > 0) {
-         if (confirm("Você tem um crédito 'Destaque Turbo' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+         if (confirm("Você tem um crédito 'Destaque Turbo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosTurbo: userData.creditosTurbo - 1 });
             usouCredito = true;
          }
       } else if (tipoPlano === 3 && userData.creditosOuro > 0) {
-         if (confirm("Você tem um crédito 'Ouro' na sua carteira VIP! Deseja usá-lo agora gratuitamente?")) {
+         if (confirm("Você tem um crédito 'Ouro' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosOuro: userData.creditosOuro - 1 });
             usouCredito = true;
          }
       }
 
-      // Se o usuário usou o crédito, ativamos o anúncio na hora
       if (usouCredito) {
          const dataExp = new Date();
          dataExp.setDate(dataExp.getDate() + 20); // Destaques dão 20 dias
@@ -194,7 +132,8 @@ export default function MeusAnunciosPage() {
            planoId: tipoPlano,
            status: 'ativo',
            expiraEm: dataExp.toISOString(),
-           pagoEm: new Date().toISOString()
+           pagoEm: new Date().toISOString(),
+           criadoEm: serverTimestamp() // 🚀 ESSA LINHA FAZ O ANÚNCIO SUBIR PARA O TOPO DA TELA INICIAL (BUMP)
          });
          
          alert("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
@@ -202,13 +141,12 @@ export default function MeusAnunciosPage() {
          return;
       }
 
-      // Se não tem crédito ou cancelou, joga pro fluxo do PIX cobrando o novo plano
+      // Se não usou a moeda, vai pro PIX
       await updateDoc(doc(db, 'anuncios', id), { planoId: tipoPlano });
       router.push(`/pagamento/${id}`);
 
     } catch (error) {
-      console.error("Erro ao gerar impulsionamento:", error);
-      alert("Ocorreu um erro ao tentar impulsionar. Tente novamente.");
+      alert("Ocorreu um erro ao tentar impulsionar.");
     }
   }
 
@@ -217,7 +155,6 @@ export default function MeusAnunciosPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 pb-28 md:pb-10">
       <div className="container mx-auto px-4 max-w-5xl">
-        
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
            <div>
              <h1 className="text-3xl font-black text-gray-900 tracking-tight">Meus Anúncios</h1>
@@ -228,159 +165,80 @@ export default function MeusAnunciosPage() {
            </Link>
         </div>
 
-        {/* DASHBOARD DE RESULTADOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex items-center gap-5">
-              <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shrink-0">
-                 <ShoppingBag size={28} />
-              </div>
-              <div>
-                 <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Anúncios Ativos</p>
-                 <p className="text-3xl font-black text-gray-900">{activeAds}</p>
-              </div>
+              <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shrink-0"><ShoppingBag size={28} /></div>
+              <div><p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Anúncios Ativos</p><p className="text-3xl font-black text-gray-900">{activeAds}</p></div>
            </div>
-
            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-100 flex items-center gap-5 relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 text-emerald-50 opacity-50">
-                <TrendingUp size={100} />
-              </div>
-              <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shrink-0 relative z-10">
-                 <Eye size={28} />
-              </div>
-              <div className="relative z-10">
-                 <p className="text-sm font-bold text-emerald-600/70 uppercase tracking-wider">Total de Visualizações</p>
-                 <p className="text-3xl font-black text-emerald-600">{totalViews}</p>
-              </div>
+              <div className="absolute -right-4 -top-4 text-emerald-50 opacity-50"><TrendingUp size={100} /></div>
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shrink-0 relative z-10"><Eye size={28} /></div>
+              <div className="relative z-10"><p className="text-sm font-bold text-emerald-600/70 uppercase tracking-wider">Visualizações</p><p className="text-3xl font-black text-emerald-600">{totalViews}</p></div>
            </div>
         </div>
 
-        {/* LISTA DE ANÚNCIOS DO USUÁRIO */}
         {ads.length === 0 ? (
           <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100">
-             <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-               <ShoppingBag size={40} />
-             </div>
+             <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4"><ShoppingBag size={40} /></div>
              <h3 className="text-xl font-black text-gray-800 mb-2">Sua vitrine está vazia</h3>
              <p className="text-gray-500 mb-6 max-w-md mx-auto">Você ainda não publicou nenhum anúncio. Comece a desapegar agora mesmo e ganhe dinheiro!</p>
-             <Link href="/anunciar" className="bg-accent hover:bg-accent-dark text-white px-8 py-4 rounded-xl font-bold transition shadow-md inline-block">
-                Anunciar meu primeiro produto
-             </Link>
+             <Link href="/anunciar" className="bg-accent hover:bg-accent-dark text-white px-8 py-4 rounded-xl font-bold transition shadow-md inline-block">Anunciar meu primeiro produto</Link>
           </div>
         ) : (
           <div className="space-y-6">
              {ads.map((ad) => (
               <div key={ad.id} className="bg-white p-4 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center relative overflow-hidden">
-                
-                {/* Imagem */}
                 <Link href={`/anuncio/${ad.id}`} className="shrink-0 relative w-full md:w-32 h-48 md:h-32 bg-gray-50 rounded-2xl overflow-hidden block group">
-                  {ad.imagemUrl ? (
-                    <img src={ad.imagemUrl} alt={ad.titulo} className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${ad.status === 'vendido' ? 'grayscale opacity-70' : ''}`} />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>
-                  )}
-                  {ad.planoId > 0 && ad.status === 'ativo' && (
-                    <div className="absolute top-2 left-2 bg-accent text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
-                      <Sparkles size={10}/> VIP
-                    </div>
-                  )}
-                  {ad.status === 'vendido' && (
-                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white font-black text-xs tracking-widest uppercase rotate-[-15deg] border-2 border-white px-2 py-1">Vendido</span>
-                     </div>
-                  )}
+                  {ad.imagemUrl ? <img src={ad.imagemUrl} className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${ad.status === 'vendido' ? 'grayscale opacity-70' : ''}`} /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>}
+                  {ad.planoId > 0 && ad.status === 'ativo' && (<div className="absolute top-2 left-2 bg-accent text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1"><Sparkles size={10}/> VIP</div>)}
+                  {ad.status === 'vendido' && (<div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white font-black text-xs tracking-widest uppercase rotate-[-15deg] border-2 border-white px-2 py-1">Vendido</span></div>)}
                 </Link>
 
-                {/* Detalhes */}
                 <div className="flex-1 w-full">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded">
-                      {ad.categoria}
-                    </span>
-                    <span className={`text-[10px] uppercase font-black px-2 py-1 rounded tracking-wider ${
-                      ad.status === 'ativo' ? 'bg-green-100 text-green-700' :
-                      ad.status === 'vendido' ? 'bg-gray-200 text-gray-700' :
-                      ad.status === 'pendente' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-600'
-                    }`}>
-                      {ad.status}
-                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded">{ad.categoria}</span>
+                    <span className={`text-[10px] uppercase font-black px-2 py-1 rounded tracking-wider ${ad.status === 'ativo' ? 'bg-green-100 text-green-700' : ad.status === 'vendido' ? 'bg-gray-200 text-gray-700' : ad.status === 'pendente' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>{ad.status}</span>
                   </div>
-                  
                   <Link href={`/anuncio/${ad.id}`}>
                     <h3 className={`text-lg font-bold leading-tight mb-1 transition-colors line-clamp-2 ${ad.status === 'vendido' ? 'text-gray-500 line-through' : 'text-gray-900 hover:text-primary'}`}>{ad.titulo}</h3>
                   </Link>
-
                   <div className="flex flex-col gap-1 mb-3">
                     <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                       <Calendar size={12} />
-                       <span>
-                          {ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds ? ad.criadoEm.seconds * 1000 : ad.criadoEm).toLocaleDateString('pt-BR')}` : 'Data de criação não disponível'}
-                       </span>
+                       <Calendar size={12} /><span>{ad.criadoEm ? `Criado em ${new Date(ad.criadoEm.seconds ? ad.criadoEm.seconds * 1000 : ad.criadoEm).toLocaleDateString('pt-BR')}` : 'Data não disponível'}</span>
                     </div>
-                    
                     {ad.status === 'vendido' && (
                        <div className="flex items-center gap-1.5 text-[11px] text-green-600 font-black uppercase tracking-wider bg-green-50 w-fit px-2 py-1 rounded-md">
-                          <CheckCircle size={12} />
-                          <span>{calcularDiasVenda(ad.criadoEm, ad.vendidoEm)}</span>
+                          <CheckCircle size={12} /><span>{calcularDiasVenda(ad.criadoEm, ad.vendidoEm)}</span>
                        </div>
                     )}
                   </div>
-                  
                   <div className="flex items-end justify-between mt-2">
-                    <p className={`text-2xl font-black ${ad.status === 'vendido' ? 'text-gray-400' : 'text-primary'}`}>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}
-                    </p>
-                    
+                    <p className={`text-2xl font-black ${ad.status === 'vendido' ? 'text-gray-400' : 'text-primary'}`}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}</p>
                     <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                       <Eye size={16} className="text-emerald-500" />
-                       <span className="text-sm font-bold">{ad.visualizacoes || 0}</span>
+                       <Eye size={16} className="text-emerald-500" /><span className="text-sm font-bold">{ad.visualizacoes || 0}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* 🚀 AÇÕES COM FOCO NO UPSELL E COMPRA DE DESTAQUES */}
                 <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[180px]">
-                  
                   {ad.status === 'ativo' && (
                      <>
-                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 animate-pulse hover:animate-none">
-                           <Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)
-                        </button>
-                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1">
-                           <Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)
-                        </button>
-                        <button onClick={() => handleImpulsionar(ad.id, 3)} className="w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1">
-                           <Sparkles size={14} className="shrink-0"/> Ouro (R$ 19,90)
-                        </button>
-
-                        <button onClick={() => handleMarkAsSold(ad.id)} className="mt-2 w-full text-center bg-green-100 hover:bg-green-200 text-green-700 font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2">
-                           <CheckCircle size={16}/> Já Vendi!
-                        </button>
+                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 animate-pulse hover:animate-none"><Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)</button>
+                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1"><Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)</button>
+                        <button onClick={() => handleImpulsionar(ad.id, 3)} className="w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1"><Sparkles size={14} className="shrink-0"/> Ouro (R$ 19,90)</button>
+                        <button onClick={() => handleMarkAsSold(ad.id)} className="mt-2 w-full text-center bg-green-100 hover:bg-green-200 text-green-700 font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2"><CheckCircle size={16}/> Já Vendi!</button>
                      </>
                   )}
-
                   {(ad.status === 'expirado' || ad.status === 'pendente') && (
                      <>
                         <p className="text-[10px] text-gray-500 font-bold uppercase text-center mb-1">Renove seu Anúncio:</p>
-                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1">
-                           <Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)
-                        </button>
-                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1">
-                           <Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)
-                        </button>
+                        <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1"><Rocket size={14} className="shrink-0"/> Topo (R$ 5,00)</button>
+                        <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1"><Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)</button>
                      </>
                   )}
-
                   <div className="flex gap-2 w-full mt-2">
-                    {ad.status !== 'vendido' && (
-                      <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs px-3 py-2 rounded-xl transition">
-                        <Edit size={14}/> Editar
-                      </Link>
-                    )}
-                    
-                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 font-bold text-xs px-3 py-2 rounded-xl transition">
-                      <Trash2 size={14}/> Excluir
-                    </button>
+                    {ad.status !== 'vendido' && <Link href={`/editar-anuncio/${ad.id}`} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs px-3 py-2 rounded-xl transition"><Edit size={14}/> Editar</Link>}
+                    <button onClick={() => handleDelete(ad.id)} className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 font-bold text-xs px-3 py-2 rounded-xl transition"><Trash2 size={14}/> Excluir</button>
                   </div>
                 </div>
 
