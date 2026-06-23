@@ -41,6 +41,7 @@ function formatTimeAgo(timestampSeconds: number) {
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
   const [vipAds, setVipAds] = useState<any[]>([]) 
+  const [storiesAds, setStoriesAds] = useState<any[]>([]) // Novo estado para os Stories
   const [busca, setBusca] = useState('')
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
@@ -107,6 +108,7 @@ export default function Home() {
         
         const listGeral: any[] = []
         const listCarrosselOuro: any[] = []
+        const listStoriesTurbo: any[] = []
         const agora = new Date()
 
         for (const document of snap.docs) {
@@ -127,33 +129,34 @@ export default function Home() {
 
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
-            listGeral.push(adFinal)
+            
+            // SEPARAÇÃO INTELIGENTE POR PLANO
             if (plano === 3) {
-              listCarrosselOuro.push(adFinal)
+              listCarrosselOuro.push(adFinal) // Ouro = Topo
+            } else if (plano === 2) {
+              listStoriesTurbo.push(adFinal) // Turbo = Stories
+            } else {
+              listGeral.push(adFinal) // Sobe pro Topo (1) e Grátis (0)
             }
           }
         }
-        
-        const getPesoPlano = (planoId: number) => {
-          if (planoId === 3) return 4;
-          if (planoId === 2 || planoId === 0) return 3;
-          if (planoId === 1) return 2;
-          return 1; 
-        };
 
         const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
-        const ordenarPorRelevancia = (a: any, b: any) => {
-          const pesoA = getPesoPlano(a.planoId);
-          const pesoB = getPesoPlano(b.planoId);
-          if (pesoA !== pesoB) return pesoB - pesoA;
-          return getTempo(b) - getTempo(a);
-        };
-
+        // Ordenação Ouro e Stories por data do pagamento/criação
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
-        listGeral.sort(ordenarPorRelevancia);
+        listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
+        
+        // ORDENAÇÃO GERAL: Plano 1 (Sobe pro topo) SEMPRE acima do Plano 0 (Grátis)
+        listGeral.sort((a, b) => {
+          if (a.planoId !== b.planoId) {
+             return b.planoId - a.planoId; // Retorna o 1 antes do 0
+          }
+          return getTempo(b) - getTempo(a); // Se for o mesmo plano, o mais recente ganha
+        });
         
         setVipAds(listCarrosselOuro.slice(0, 15)) 
+        setStoriesAds(listStoriesTurbo.slice(0, 20))
         setAds(listGeral.slice(0, 80)) 
       } catch (error) {
         console.error("Erro ao buscar anúncios:", error)
@@ -184,7 +187,6 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 HERO SECTION AJUSTADO: Fundo mais longo (pb-24) sem deixar margem gigante sobrando */}
       <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -217,7 +219,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 🚀 CATEGORIAS ALINHADAS: Margem negativa exata puxa as categorias pra cima do fundo roxo */}
       <div className="max-w-6xl mx-auto px-1 md:px-4 -mt-14 relative z-20">
         
         <div className="mb-8 px-2 md:px-0">
@@ -263,16 +264,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* BANNER ADSENSE */}
         <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
           <AdBanner dataAdSlot="8830353493" />
         </div>
 
-        {/* CARROSSEL OURO NO TOPO */}
+        {/* 1. CARROSSEL OURO NO TOPO MAXIMO (Plano 3) */}
         {!loading && vipAds.length > 0 && (
-          <div className="mb-12 mt-4 px-4 md:px-0">
+          <div className="mb-6 mt-4 px-4 md:px-0">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
-              <Sparkles className="text-amber-500"/> Super Destaques
+              <Sparkles className="text-amber-500"/> Ouro Urgente
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {vipAds.map(ad => (
@@ -299,13 +299,41 @@ export default function Home() {
           </div>
         )}
 
+        {/* 2. DESTAQUE TURBO ESTILO STORIES (Plano 2) */}
+        {!loading && storiesAds.length > 0 && (
+          <div className="mb-8 mt-2 px-4 md:px-0">
+            <h2 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
+              <Flame className="text-purple-500"/> Destaque Turbo
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {storiesAds.map(ad => (
+                <Link href={`/anuncio/${ad.id}`} key={`story-${ad.id}`} className="snap-start shrink-0 flex flex-col items-center gap-2 outline-none w-[76px] group">
+                  {/* Borda Estilo Instagram Stories */}
+                  <div className="w-[76px] h-[76px] rounded-full p-[3px] bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 shadow-sm group-active:scale-95 transition-transform">
+                    <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-50 relative">
+                      {ad.imagemUrl ? (
+                         <img src={ad.imagemUrl} className="w-full h-full object-cover" alt={ad.titulo} />
+                      ) : (
+                         <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-700 text-center line-clamp-2 leading-tight w-full px-1">
+                    {ad.titulo}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6 px-4 md:px-0 mt-8">
            <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
               Anúncios Recentes
            </h2>
         </div>
 
-        {/* LISTA GERAL DE ANÚNCIOS */}
+        {/* 3. LISTA GERAL (Sobe pro Topo Plano 1 sempre acima do Grátis Plano 0) */}
         <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
@@ -326,31 +354,15 @@ export default function Home() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
                 {ads.map((ad) => {
-                  const plano = Number(ad.planoId) || 0;
-                  const isOuro = plano === 3;
-                  const isTurbo = plano === 2 || plano === 0; 
-                  const isImpulsionado = plano === 1;
+                  const isSobeProTopo = Number(ad.planoId) === 1;
 
                   return (
                     <Link href={`/anuncio/${ad.id}`} key={`recent-${ad.id}`} className={`group rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative outline-none ${
-                      isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
-                      isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
-                      isImpulsionado ? 'border-green-200 bg-white hover:-translate-y-1' :
-                      'bg-white border-gray-100 hover:-translate-y-1'
+                      isSobeProTopo ? 'border-blue-200 bg-blue-50/20 hover:-translate-y-1' : 'bg-white border-gray-100 hover:-translate-y-1'
                     }`}>
                       
-                      {isOuro && (
-                         <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-                            <Sparkles size={10}/> Ouro
-                         </div>
-                      )}
-                      {isTurbo && !isOuro && (
+                      {isSobeProTopo && (
                          <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-                            <Flame size={10}/> Turbo
-                         </div>
-                      )}
-                      {isImpulsionado && (
-                         <div className="absolute top-2 left-2 z-10 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
                             <Rocket size={10}/> No Topo
                          </div>
                       )}
@@ -375,7 +387,7 @@ export default function Home() {
                           {ad.titulo}
                         </h3>
                         
-                        <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600' : isTurbo ? 'text-blue-600' : 'text-gray-900'}`}>
+                        <p className={`text-lg md:text-xl font-black mt-auto ${isSobeProTopo ? 'text-blue-600' : 'text-gray-900'}`}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                         </p>
                         
@@ -422,10 +434,7 @@ export default function Home() {
                   Classificados Online com Planos de Destaque no Piauí
                 </h2>
                 <p className="mb-4">
-                  O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se você possui itens em casa que não utiliza mais, como um celular antigo, roupas, móveis ou até mesmo um veículo, a nossa plataforma oferece o espaço ideal para criar anúncios e fechar negócios de forma direta, sem intermediários e sem taxas de comissão sobre a venda efetuada.
-                </p>
-                <p>
-                  Atendemos todas as principais regiões do estado do Piauí, incluindo a capital Teresina, além de Parnaíba, Picos, Floriano, Piripiri e Campo Maior. O comércio de proximidade fortalece a economia local e gera muito mais confiança entre quem vende e quem compra.
+                  O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se você possui itens em casa que não utiliza mais, a nossa plataforma oferece o espaço ideal para criar anúncios e fechar negócios de forma direta, sem taxas de comissão.
                 </p>
               </div>
               
@@ -434,10 +443,7 @@ export default function Home() {
                   Como Comprar e Vender com Segurança?
                 </h3>
                 <p className="mb-4">
-                  Para garantir uma excelente experiência no nosso marketplace, recomendamos sempre que os usuários realizem as suas negociações em locais públicos e movimentados, como praças, shopping centers ou postos de atendimento. Evite fazer depósitos ou pagamentos antecipados sem antes verificar o estado real do produto em mãos.
-                </p>
-                <p>
-                  Navegue pelas nossas diversas categorias, que cobrem desde o mercado imobiliário e automotivo até eletrônicos de última geração, ofertas de vagas de emprego, serviços autônomos e artigos de moda e beleza. Encontre tudo o que precisa pertinho de você!
+                  Recomendamos sempre que os usuários realizem as suas negociações em locais públicos e movimentados, como praças, shopping centers ou postos de atendimento. Evite fazer depósitos antecipados sem antes verificar o estado real do produto.
                 </p>
               </div>
             </div>

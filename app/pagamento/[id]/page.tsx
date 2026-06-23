@@ -8,10 +8,10 @@ import { Copy, CheckCircle, Loader2, ArrowLeft, AlertTriangle, Sparkles } from '
 
 // Novos Planos focados em Microtransações e Resultados
 const PLANOS = [
-  { id: 0, nome: 'Básico (Grátis)', dias: 30, valor: 0, fotos: 3, desc: 'Publicação simples' },
-  { id: 1, nome: 'Sobe pro Topo', dias: 1, valor: 2.99, fotos: 6, desc: 'Impulsionamento imediato' },
-  { id: 2, nome: 'Destaque Turbo', dias: 5, valor: 9.90, fotos: 10, desc: '5 dias com borda e destaque' },
-  { id: 3, nome: 'Ouro / Urgente', dias: 7, valor: 19.90, fotos: 15, desc: '7 dias no Carrossel Principal' }
+  { id: 0, nome: 'Básico (Grátis)', dias: 7, valor: 0, fotos: 5, desc: 'Válido por 7 dias na lista comum' },
+  { id: 1, nome: 'Sobe pro Topo', dias: 20, valor: 5.00, fotos: 10, desc: 'Sempre acima dos anúncios grátis' },
+  { id: 2, nome: 'Destaque Turbo', dias: 20, valor: 9.90, fotos: 10, desc: 'Formato Stories de Destaque' },
+  { id: 3, nome: 'Ouro / Urgente', dias: 20, valor: 19.90, fotos: 10, desc: '20 dias no Carrossel Principal' }
 ];
 
 export default function PagamentoPage() {
@@ -44,14 +44,14 @@ export default function PagamentoPage() {
         const planoEscolhido = PLANOS.find(p => p.id === anuncio.planoId) || PLANOS[1];
         setPlano(planoEscolhido)
 
-        // SE O PLANO FOR O BRINDE/GRÁTIS, APROVA AUTOMATICAMENTE
+        // SE O PLANO FOR O BRINDE/GRÁTIS, APROVA AUTOMATICAMENTE POR 7 DIAS
         if (planoEscolhido.valor === 0) {
-           const dias = planoEscolhido.dias || 30;
            const dataExp = new Date();
-           dataExp.setDate(dataExp.getDate() + dias); 
+           dataExp.setDate(dataExp.getDate() + planoEscolhido.dias); 
            
            await updateDoc(adDocRef, {
              status: 'ativo',
+             planoId: 0,
              expiraEm: dataExp.toISOString(),
              pagoEm: new Date().toISOString()
            });
@@ -91,14 +91,14 @@ export default function PagamentoPage() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/pix/status?id=${paymentData.id}&anuncioId=${params.id}&dias=${plano?.dias || 1}`);
+        // Agora o back-end que decide os dias, passamos o ID do pagamento e o anúncio.
+        const res = await fetch(`/api/pix/status?id=${paymentData.id}&anuncioId=${params.id}`);
         const data = await res.json();
         
         if (data.status === 'approved') {
           setPagamentoAprovado(true);
           clearInterval(interval);
 
-          // Redireciona o cliente para ver o anúncio no ar!
           setTimeout(() => {
             router.push(`/anuncio/${params.id}`);
           }, 3000); 
@@ -106,10 +106,10 @@ export default function PagamentoPage() {
       } catch (error) {
         console.error("Erro ao verificar pagamento:", error);
       }
-    }, 3000); // 3 em 3 segundos
+    }, 3000); 
 
     return () => clearInterval(interval);
-  }, [paymentData?.id, pagamentoAprovado, params.id, router, plano?.dias]);
+  }, [paymentData?.id, pagamentoAprovado, params.id, router]);
 
   async function gerarPix(anuncio: any, planoDb: any, email: string) {
     try {
@@ -121,7 +121,7 @@ export default function PagamentoPage() {
           description: `Plano ${planoDb.nome} - Desapego Piauí`,
           payerEmail: email,
           adId: anuncio.id,
-          planoId: planoDb.id // <-- ADICIONADO: O Back-end inteligente precisa dessa informação para renovar certo!
+          planoId: planoDb.id 
         })
       })
 
@@ -173,7 +173,6 @@ export default function PagamentoPage() {
     )
   }
 
-  // Define o valor a ser exibido. Se a API retornou o valor com a taxa embutida, mostra ele. Se não, mostra o valor base do plano.
   const valorExibicao = paymentData?.valor_cobrado || plano?.valor || 0;
 
   return (

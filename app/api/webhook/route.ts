@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import admin from 'firebase-admin';
 
-// Inicializa o Firebase Admin se ainda não estiver inicializado
 if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -13,17 +12,18 @@ if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
   });
 }
 
-// Tabela de dias caso precise de fallback
+// O BACKEND DECIDE OS DIAS (Inteligência e Segurança Máxima)
 const DIAS_POR_PLANO: Record<number, number> = {
-  5: 1, 1: 1, 2: 7, 3: 15, 4: 30
+  0: 7,   // Grátis = 7 dias
+  1: 20,  // Sobe pro Topo = 20 dias
+  2: 20,  // Destaque Turbo = 20 dias
+  3: 20   // Ouro Urgente = 20 dias
 };
 
 export async function POST(request: Request) {
   try {
     const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
     const body = await request.json();
-    
-    // O Mercado Pago envia o ID do pagamento de formas diferentes dependendo do evento
     const paymentId = body?.data?.id || body?.id;
 
     if (!paymentId) return NextResponse.json({ error: 'Faltam dados' }, { status: 400 });
@@ -35,7 +35,6 @@ export async function POST(request: Request) {
 
       if (paymentInfo.status === 'approved') {
         try {
-          // Pega as variáveis secretas que salvamos na hora de gerar o PIX
           const adId = paymentInfo.external_reference || paymentInfo.metadata?.ad_id;
           const planoIdPix = paymentInfo.metadata?.plano_id;
 
@@ -47,15 +46,13 @@ export async function POST(request: Request) {
             if (adSnap.exists) {
               const adData = adSnap.data();
               
-              // Verifica a mesma trava de segurança anti-duplicação
               if (adData?.ultimoPagamentoId !== String(paymentId)) {
                 
-                // Prioriza o plano do PIX (útil se for upgrade/troca de plano)
-                const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (adData?.planoId || 2);
-                const dias = DIAS_POR_PLANO[planoIdFinal] || 30;
+                const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (Number(adData.planoId) || 0);
+                const diasReais = DIAS_POR_PLANO[planoIdFinal] || 20;
                 
                 const dataExp = new Date();
-                dataExp.setDate(dataExp.getDate() + dias);
+                dataExp.setDate(dataExp.getDate() + diasReais);
 
                 await adRef.update({
                   status: 'ativo',
@@ -64,9 +61,9 @@ export async function POST(request: Request) {
                   pagoEm: new Date().toISOString(),
                   ultimoPagamentoId: String(paymentId) 
                 });
-                console.log(`✅ Sucesso Webhook: Anúncio ${adId} ativado/renovado em background!`);
+                console.log(`✅ Sucesso Webhook: Anúncio ${adId} ativado/renovado em background para o plano ${planoIdFinal}!`);
               } else {
-                console.log(`⚠️ Webhook ignorado: Pagamento ${paymentId} já processado via front-end para o anúncio ${adId}.`);
+                console.log(`⚠️ Webhook ignorado: Pagamento ${paymentId} já processado. (Idempotência Funcionando)`);
               }
             }
           }

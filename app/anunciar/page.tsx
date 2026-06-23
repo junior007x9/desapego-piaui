@@ -5,7 +5,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket, Info, Coins } from 'lucide-react'
+import { Camera, X, Loader2, AlertCircle, CheckCircle, Gift, MailWarning, MapPin, DollarSign, Store, Home, Car, Smartphone, Zap, Shirt, ShoppingBag, Wrench, Baby, Bike, Briefcase, Phone, User, Rocket, Info, Coins, Sparkles, Flame } from 'lucide-react'
 
 const CATEGORIAS = [
   "Imóveis", "Veículos", "Eletrônicos", "Para Casa", 
@@ -34,12 +34,14 @@ const PALAVRAS_PROIBIDAS = [
   'remédio', 'remedio', 'medicamento', 'receita médica', 'anabolizante', 'tarja preta', 'abortivo', 'sibutramina'
 ]
 
-// 🚀 PLANOS ATUALIZADOS (Sem o Básico de 30 dias)
+// 🚀 PLANOS ATUALIZADOS: Duração e Preços (O Back-end também forçará isso)
 const PLANOS_BASE = [
-  { id: 1, nome: 'Sobe pro Topo', dias: 1, valor: 2.99, desc: 'Seu anúncio vai para o 1º lugar agora' },
-  { id: 2, nome: 'Destaque Turbo', dias: 5, valor: 9.90, desc: '5 dias com borda e máxima visibilidade' },
-  { id: 3, nome: 'Ouro / Urgente', dias: 7, valor: 19.90, desc: '7 dias fixo no Carrossel Principal do site' }
+  { id: 1, nome: 'Sobe pro Topo', dias: 20, valor: 5.00, fotos: 10, desc: 'Sempre acima dos anúncios gratuitos' },
+  { id: 2, nome: 'Destaque Turbo', dias: 20, valor: 9.90, fotos: 10, desc: 'Aparece exclusivo no formato de Stories' },
+  { id: 3, nome: 'Ouro / Urgente', dias: 20, valor: 19.90, fotos: 10, desc: 'Fixo no Topo do site no Carrossel Principal' }
 ]
+const PLANO_PRESENTE = { id: 0, nome: 'Básico (Grátis)', dias: 7, valor: 0, fotos: 5, desc: 'Válido por 7 dias na lista comum' };
+
 
 const removerAcentos = (texto: string) => {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -183,17 +185,19 @@ export default function AnunciarPage() {
 
   const isFormIncompleto = !titulo.trim() || !descricao.trim() || !preco || !categoria || !localizacao.trim() || !telefone.trim() || !nomeAutor.trim() || planoId === null;
 
-  // 🚀 Presente para novos usuários: 5 dias de Destaque Turbo grátis
-  const PLANO_PRESENTE = { id: 0, nome: 'Boas-Vindas (Turbo)', dias: 5, valor: 0, desc: '5 dias Turbo VIP Grátis (Válido 1x)' };
   const planosDisponiveis = jaUsouGratis ? PLANOS_BASE : [PLANO_PRESENTE, ...PLANOS_BASE];
+  const maxFotosPermitidas = planoId === 0 ? 5 : 10;
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files)
-      if (fotos.length + selectedFiles.length > 10) {
-        alert("Você pode adicionar no máximo 10 fotos por anúncio.")
+      
+      // Inteligência da trava de fotos baseada no plano
+      if (fotos.length + selectedFiles.length > maxFotosPermitidas) {
+        alert(`Você pode adicionar no máximo ${maxFotosPermitidas} fotos para o plano selecionado. (Planos de Destaque permitem até 10 fotos).`)
         return
       }
+      
       setComprimindo(true)
       try {
         const compressedFiles = await Promise.all(selectedFiles.map(file => comprimirImagem(file)))
@@ -223,6 +227,11 @@ export default function AnunciarPage() {
 
     if (telefone.replace(/\D/g, '').length < 10) {
       alert("⚠️ Por favor, insira um número de WhatsApp válido com DDD.");
+      return;
+    }
+
+    if (planoId === 0 && fotos.length > 5) {
+      alert("O plano Grátis permite no máximo 5 fotos. Remova algumas fotos ou escolha um plano Destaque.");
       return;
     }
 
@@ -280,17 +289,15 @@ export default function AnunciarPage() {
       let statusFinal = 'pendente';
       if (planoId === 0) {
         if (jaUsouGratis) {
-          alert("Acesso negado: Você já usou o plano VIP grátis neste dispositivo ou conta.");
+          alert("Acesso negado: Você já possui um anúncio grátis recente. Escolha um plano de destaque para publicar imediatamente.");
           setLoading(false); return;
         }
         statusFinal = 'ativo'; 
         localStorage.setItem('jaUsouGratis_dev', 'true'); 
-      } else if (planoId === 99) {
-        statusFinal = 'ativo'; 
       }
 
       const planoEscolhido = planosDisponiveis.find(p => p.id === planoId);
-      const diasDuracao = planoEscolhido ? planoEscolhido.dias : 1;
+      const diasDuracao = planoEscolhido ? planoEscolhido.dias : 20; // 7 ou 20
       const dataCalculada = new Date();
       dataCalculada.setDate(dataCalculada.getDate() + diasDuracao);
 
@@ -328,7 +335,7 @@ export default function AnunciarPage() {
         }).catch(console.error);
       }
 
-      if (planoId === 0 || planoId === 99) { router.push('/meus-anuncios'); } 
+      if (planoId === 0) { router.push('/meus-anuncios'); } 
       else { router.push(`/pagamento/${docRef.id}`); }
       
     } catch (error) {
@@ -373,10 +380,12 @@ export default function AnunciarPage() {
           <div>
             <div className="flex justify-between items-end mb-4">
                <label className="block text-primary font-bold flex items-center gap-2">
-                 Fotos do produto (Opcional) 
+                 Fotos do produto 
                  {comprimindo && <Loader2 size={16} className="animate-spin text-accent"/>}
                </label>
-               <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">{fotos.length}/10 fotos</span>
+               <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">
+                 {fotos.length}/{maxFotosPermitidas} fotos
+               </span>
             </div>
             
             <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
@@ -386,7 +395,7 @@ export default function AnunciarPage() {
                   <button type="button" onClick={() => removeFoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md"><X size={14} strokeWidth={3}/></button>
                 </div>
               ))}
-              {fotos.length < 10 && (
+              {fotos.length < maxFotosPermitidas && (
                 <label className={`aspect-square border-2 border-dashed border-primary/30 rounded-xl flex flex-col items-center justify-center text-primary transition bg-gray-50 ${comprimindo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/5'}`}>
                   <Camera size={32} />
                   <span className="text-[10px] font-bold mt-1">{comprimindo ? 'PROCESSANDO...' : 'ADICIONAR'}</span>
@@ -491,20 +500,40 @@ export default function AnunciarPage() {
                  return (
                    <div 
                       key={p.id}
-                      onClick={() => setPlanoId(p.id)}
+                      onClick={() => {
+                         // Trava para impedir selecionar grátis com mais de 5 fotos
+                         if (p.id === 0 && fotos.length > 5) {
+                            alert(`O plano Grátis permite no máximo 5 fotos. Você enviou ${fotos.length}. Remova algumas fotos ou escolha um Plano Destaque.`);
+                            return;
+                         }
+                         setPlanoId(p.id);
+                      }}
                       className={`cursor-pointer border-2 rounded-2xl p-4 transition-all relative overflow-hidden ${planoId === p.id ? (isGratis ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]' : 'border-amber-400 bg-amber-50 shadow-md scale-[1.02]') : 'border-gray-100 hover:border-gray-300 bg-gray-50'}`}
                    >
-                      {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> Presente VIP</div>)}
-                      {p.id === 1 && (<div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Rocket size={12}/> Imediato</div>)}
+                      {p.id === 0 && (<div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Gift size={12}/> 7 Dias Grátis</div>)}
+                      {p.id === 1 && (<div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Rocket size={12}/> No Topo</div>)}
+                      {p.id === 2 && (<div className="absolute top-0 right-0 bg-purple-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Flame size={12}/> Stories</div>)}
+                      {p.id === 3 && (<div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-lg shadow-sm flex items-center gap-1"><Sparkles size={12}/> Ouro</div>)}
 
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-2 mt-2">
                          <h3 className={`font-bold ${isGratis ? 'text-green-700' : 'text-gray-800'}`}>{p.nome}</h3>
                          {planoId === p.id && <CheckCircle className={isGratis ? 'text-green-600' : 'text-amber-500'} size={20}/>}
                       </div>
                       <p className={`text-2xl font-black mb-1 ${isGratis ? 'text-green-600' : 'text-gray-900'}`}>
                         {isGratis ? 'Grátis' : `R$ ${p.valor.toFixed(2).replace('.', ',')}`}
                       </p>
-                      <p className={`text-sm font-medium ${isGratis ? 'text-green-600/80' : 'text-gray-500'}`}>{p.desc}</p>
+                      
+                      {/* Mostra a quantidade de fotos e dias de forma clara */}
+                      <div className="flex items-center gap-2 mb-2 mt-2">
+                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                            {p.dias} dias
+                         </span>
+                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isGratis ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                            {p.fotos} fotos
+                         </span>
+                      </div>
+                      
+                      <p className={`text-xs font-medium ${isGratis ? 'text-green-600/80' : 'text-gray-500'}`}>{p.desc}</p>
                    </div>
                  )
                })}
@@ -514,12 +543,7 @@ export default function AnunciarPage() {
              <div className="space-y-3">
                <div className="flex items-start gap-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-xs font-medium text-blue-800">
                  <Info className="shrink-0 mt-0.5 text-blue-500" size={16} />
-                 <p><strong>Taxas de Transação:</strong> Para planos pagos, uma pequena taxa de processamento financeiro do Mercado Pago será adicionada e informada a você com clareza na próxima tela antes do pagamento.</p>
-               </div>
-               
-               <div className="flex items-start gap-2 bg-amber-50/50 p-3 rounded-xl border border-amber-100 text-xs font-medium text-amber-800">
-                 <Coins className="shrink-0 mt-0.5 text-amber-500" size={16} />
-                 <p><strong>Sistema de Recompensas:</strong> O uso do site gera Moedas Virtuais sem valor financeiro (não conversíveis em dinheiro real). Elas servem apenas para resgatar Destaques Grátis. Consulte os <Link href="/termos" target="_blank" className="underline font-bold">Termos de Uso</Link>.</p>
+                 <p><strong>Taxas de Transação:</strong> Para planos pagos, a taxa de processamento financeiro será calculada para você na próxima tela (PIX).</p>
                </div>
              </div>
           </div>
