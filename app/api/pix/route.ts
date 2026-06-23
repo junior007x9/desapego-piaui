@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 
-// Defina a taxa do PIX no Mercado Pago (Geralmente é 0.99%, ou seja, 0.0099)
-const TAXA_MP_PIX = 0.0099; 
+const TAXA_MP_PIX = 0.0099; // Exemplo de taxa do Mercado Pago para PIX (0.99%)
 
-// Função para calcular o valor com o repasse da taxa
 function calcularValorComTaxa(valorDesejado: number): number {
   const valorComRepasse = valorDesejado / (1 - TAXA_MP_PIX);
   return Number(valorComRepasse.toFixed(2)); 
@@ -12,23 +10,30 @@ function calcularValorComTaxa(valorDesejado: number): number {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { amount, description, payerEmail, adId } = body;
+    const { amount, description, payerEmail, adId, planoId } = body;
 
-    // Calcula o valor final com a taxa embutida para que você receba o valor integral
+    if (!amount || !payerEmail || !adId || !planoId) {
+      return NextResponse.json({ error: 'Dados incompletos para gerar o PIX' }, { status: 400 });
+    }
+
     const valorParaCobrarCliente = calcularValorComTaxa(Number(amount));
 
-    // Conecta com a API do Mercado Pago
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`, // Token de Produção
+        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`, 
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `${adId}-${Date.now()}` // Evita pagamentos duplicados
+        'X-Idempotency-Key': `${adId}-${Date.now()}` 
       },
       body: JSON.stringify({
-        transaction_amount: valorParaCobrarCliente, // Enviando o valor com a taxa aplicada
-        description: description,
+        transaction_amount: valorParaCobrarCliente,
+        description: description || `Plano Desapego Piauí - Anúncio ${adId}`,
         payment_method_id: 'pix',
+        external_reference: String(adId), // Essencial para o Webhook achar o anúncio
+        metadata: {
+            ad_id: String(adId),
+            plano_id: Number(planoId) // Salva o plano para a renovação automática
+        },
         payer: {
           email: payerEmail
         }
@@ -40,14 +45,15 @@ export async function POST(request: Request) {
     if (data.status === 'pending') {
       return NextResponse.json({
         id: data.id,
-        qr_code: data.point_of_interaction.transaction_data.qr_code,
-        qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64,
-        valor_cobrado: valorParaCobrarCliente, // Opcional: enviando o valor final de volta para o front-end
+        qr_code: data.point_of_interaction?.transaction_data?.qr_code,
+        qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64,
+        valor_cobrado: valorParaCobrarCliente, 
       });
     }
 
-    return NextResponse.json({ error: 'Erro ao gerar PIX' }, { status: 400 });
+    return NextResponse.json({ error: 'Erro ao gerar PIX', details: data }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    console.error('Erro na geração do PIX:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

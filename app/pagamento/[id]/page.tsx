@@ -120,7 +120,8 @@ export default function PagamentoPage() {
           amount: planoDb.valor,
           description: `Plano ${planoDb.nome} - Desapego Piauí`,
           payerEmail: email,
-          adId: anuncio.id
+          adId: anuncio.id,
+          planoId: planoDb.id // <-- ADICIONADO: O Back-end inteligente precisa dessa informação para renovar certo!
         })
       })
 
