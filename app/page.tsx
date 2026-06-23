@@ -45,10 +45,8 @@ export default function Home() {
   const [userCity, setUserCity] = useState('sua região') 
   const [loading, setLoading] = useState(true)
   
-  // Estados para o Banner PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
-  
   const router = useRouter()
 
   useEffect(() => {
@@ -70,7 +68,6 @@ export default function Home() {
     }
     fetchCity();
 
-    // 🚀 Lógica Forçada do App (Garante que sempre apareça a menos que fechado)
     const bannerClosed = localStorage.getItem('app_banner_closed');
     if (!bannerClosed) {
        setShowInstallBanner(true); 
@@ -93,7 +90,6 @@ export default function Home() {
       }
       setDeferredPrompt(null);
     } else {
-      // 🚀 Fallback Premium (Para iOS e Navegadores que bloqueiam)
       alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar (quadrado com seta para cima) e selecione 'Adicionar à Tela de Início'.");
     }
   };
@@ -117,7 +113,6 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
-          
           const plano = Number(data.planoId) || 0;
 
           if (data.expiraEm) {
@@ -133,7 +128,6 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             listGeral.push(adFinal)
-            
             if (plano === 3) {
               listCarrosselOuro.push(adFinal)
             }
@@ -190,8 +184,8 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 HERO SECTION CORRIGIDA: Menos espaço em branco, layout exato */}
-      <div className="bg-gradient-to-br from-primary to-primary/90 pt-8 pb-16 md:pb-24 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
+      {/* 🚀 HERO SECTION AJUSTADO: Fundo mais longo (pb-24) sem deixar margem gigante sobrando */}
+      <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           
@@ -204,7 +198,7 @@ export default function Home() {
             O maior marketplace local. Compre e venda de forma segura em {userCity}.
           </p>
           
-          <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-2xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border-2 border-white/20 mb-2">
+          <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border border-white mb-0">
             <div className="hidden md:flex items-center pl-4 text-gray-400">
               <Search size={24} />
             </div>
@@ -223,21 +217,21 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 🚀 CATEGORIAS DIMINUÍDAS E SOBREPOSTAS CORRETAMENTE */}
-      <div className="max-w-6xl mx-auto px-0 md:px-4 -mt-8 md:-mt-12 relative z-20">
+      {/* 🚀 CATEGORIAS ALINHADAS: Margem negativa exata puxa as categorias pra cima do fundo roxo */}
+      <div className="max-w-6xl mx-auto px-1 md:px-4 -mt-14 relative z-20">
         
-        <div className="mb-6 md:mb-8 pl-4 pr-4 md:px-0">
+        <div className="mb-8 px-2 md:px-0">
           <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
               <Link 
                 href={`/todos-anuncios?categoria=${cat.slug}`} 
                 key={cat.nome} 
-                className="snap-start shrink-0 flex flex-col items-center gap-2 md:gap-3 group cursor-pointer w-[4.5rem] md:w-24 outline-none"
+                className="snap-start shrink-0 flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-24 outline-none"
               >
-                <div className={`relative w-14 h-14 md:w-20 md:h-20 rounded-[1rem] md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[4px] md:border-b-[6px] active:border-b-2 active:translate-y-[2px] transition-all duration-150 ${cat.cores}`}>
-                  <div className="scale-[0.8] md:scale-100">{cat.icon}</div>
+                <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[4px] md:border-b-[6px] active:border-b-2 active:translate-y-[2px] transition-all duration-150 bg-white ${cat.cores}`}>
+                  <div className="scale-90 md:scale-100">{cat.icon}</div>
                 </div>
-                <span className="text-[10px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
+                <span className="text-[11px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
                   {cat.nome}
                 </span>
               </Link>
@@ -245,7 +239,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 🚀 BANNER INSTALAÇÃO APP (PWA) FORÇADO */}
+        {/* BANNER INSTALAÇÃO APP (PWA) */}
         {showInstallBanner && (
           <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
@@ -276,7 +270,7 @@ export default function Home() {
 
         {/* CARROSSEL OURO NO TOPO */}
         {!loading && vipAds.length > 0 && (
-          <div className="mb-12 mt-8 px-4 md:px-0">
+          <div className="mb-12 mt-4 px-4 md:px-0">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
               <Sparkles className="text-amber-500"/> Super Destaques
             </h2>
@@ -333,7 +327,6 @@ export default function Home() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
                 {ads.map((ad) => {
                   const plano = Number(ad.planoId) || 0;
-                  
                   const isOuro = plano === 3;
                   const isTurbo = plano === 2 || plano === 0; 
                   const isImpulsionado = plano === 1;
