@@ -1,60 +1,61 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 'SUA_CHAVE_RESEND');
+// Inicializa o Resend com a sua chave secreta
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
-    const { emailDestino, mensagemOriginal, resposta } = await request.json();
+    const body = await request.json();
+    const { emailDestino, mensagemOriginal, resposta } = body;
 
-    if (!emailDestino) {
-      return NextResponse.json({ error: 'E-mail de destino obrigatório' }, { status: 400 });
+    if (!emailDestino || !mensagemOriginal || !resposta) {
+      return NextResponse.json({ error: 'Faltam dados para enviar o e-mail' }, { status: 400 });
     }
 
-    // 🚀 ENVIO SEGURO:
-    // Corrigido para "replyTo" (com T maiúsculo) para o TypeScript aprovar!
     const { data, error } = await resend.emails.send({
-      from: 'Desapego Piauí <onboarding@resend.dev>', 
+      // 🚀 AQUI ESTÁ A CORREÇÃO:
+      // Troque 'contato@desapegopiaui.com.br' pelo e-mail exato que você configurou no Resend.
+      // Atenção: Isso só vai funcionar APÓS você verificar o domínio no Passo 1.
+      from: 'Equipe Desapego Piauí <contato@desapegopiaui.com.br>', 
       to: [emailDestino],
-      replyTo: 'santos.junior12@hotmail.com',
-      subject: 'Resposta ao seu Feedback - Equipe Desapego Piauí',
+      subject: 'Resposta ao seu Feedback - Desapego Piauí',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
+        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px;">
+          <h2 style="color: #4c1d95; margin-bottom: 20px;">Olá! Temos uma resposta para você.</h2>
           
-          <h2 style="color: #4c1d95; margin-bottom: 24px; font-size: 24px;">Olá! Lemos o seu feedback.</h2>
-          
-          <p style="color: #374151; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
-            A nossa equipa analisou o que nos enviou e tem uma resposta para si:
+          <p style="color: #374151; font-size: 16px; line-height: 1.5;">
+            Muito obrigado por entrar em contato com a equipe do <strong>Desapego Piauí</strong>. Lemos a sua mensagem com atenção.
           </p>
 
-          <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
-            <p style="color: #166534; margin: 0; font-size: 16px; line-height: 1.5;">${resposta}</p>
+          <div style="background-color: #f9fafb; padding: 15px; border-left: 4px solid #7c3aed; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Você escreveu:</strong></p>
+            <p style="margin: 5px 0 0 0; color: #4b5563; font-style: italic;">"${mensagemOriginal}"</p>
           </div>
 
-          <div style="margin-bottom: 24px;">
-            <p style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">O QUE VOCÊ NOS ESCREVEU:</p>
-            <div style="background-color: #f3f4f6; padding: 12px; border-radius: 8px; font-style: italic;">
-              <p style="color: #6b7280; margin: 0; font-size: 14px;">"${mensagemOriginal}"</p>
-            </div>
-          </div>
+          <h3 style="color: #111827; margin-top: 20px;">Nossa Resposta:</h3>
+          <p style="color: #1f2937; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">
+            ${resposta}
+          </p>
 
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            Equipe de Suporte - Desapego Piauí<br>
-            Se desejar, pode responder diretamente a este e-mail.
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+          
+          <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+            Este é um e-mail automático. Se precisar de mais ajuda, acesse o nosso site.<br>
+            © ${new Date().getFullYear()} Desapego Piauí
           </p>
         </div>
-      `
+      `,
     });
 
     if (error) {
-       console.error("Erro do Resend:", error);
-       return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('Erro detalhado do Resend:', error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Erro ao enviar resposta do feedback:', error);
-    return NextResponse.json({ error: 'Erro interno ao enviar e-mail' }, { status: 500 });
+    console.error('Erro interno ao enviar e-mail:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
