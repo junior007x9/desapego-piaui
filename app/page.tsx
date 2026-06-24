@@ -130,10 +130,10 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            // TODOS os anúncios vão para a lista geral (para exibirmos os blocos separados na Home)
+            // TODOS os anúncios vão para a lista geral 
             listGeral.push(adFinal)
 
-            // Além da lista geral, eles ganham as vitrines VIP superiores
+            // Além da lista geral, os planos maiores ganham vitrines VIP
             if (plano === 3) {
               listCarrosselOuro.push(adFinal)
             } else if (plano === 2) {
@@ -148,12 +148,19 @@ export default function Home() {
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
         
-        // Ordenação da lista geral: Ouro > Turbo > Topo > Grátis
+        // 🚀 ORDENAÇÃO INTELIGENTE (Sem usar o <= 1 que ocultava os planos 99)
         listGeral.sort((a, b) => {
-          if (a.planoId !== b.planoId) {
-             return b.planoId - a.planoId; 
+          const planoA = Number(a.planoId) || 0;
+          const planoB = Number(b.planoId) || 0;
+          
+          // Peso Hierárquico
+          const pesoA = planoA === 3 ? 4 : (planoA === 2 ? 3 : (planoA === 1 ? 2 : 1));
+          const pesoB = planoB === 3 ? 4 : (planoB === 2 ? 3 : (planoB === 1 ? 2 : 1));
+
+          if (pesoA !== pesoB) {
+             return pesoB - pesoA; // O mais forte aparece primeiro
           }
-          return getTempo(b) - getTempo(a); 
+          return getTempo(b) - getTempo(a); // Desempate por data mais recente
         });
         
         setVipAds(listCarrosselOuro.slice(0, 15)) 
@@ -173,7 +180,7 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
-  // 🚀 COMPONENTE DE CARD REUTILIZÁVEL PARA GARANTIR LUXO E VISUAL IDÊNTICO
+  // COMPONENTE DE CARD REUTILIZÁVEL (Garante visual perfeito)
   const renderAdCard = (ad: any) => {
     const plano = Number(ad.planoId) || 0;
     const isOuro = plano === 3;
@@ -182,7 +189,6 @@ export default function Home() {
 
     return (
       <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group relative outline-none h-full flex flex-col">
-        {/* CAIXA COM BORDAS EFEITO INVEJA BASEADAS NO PLANO */}
         <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
           isOuro ? 'rounded-2xl p-[3px] bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-[0_4px_15px_rgba(251,191,36,0.3)] hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(251,191,36,0.5)]' :
           isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:-translate-y-1 hover:shadow-lg' :
@@ -262,6 +268,12 @@ export default function Home() {
       </div>
     </div>
   )
+
+  // 🚀 SEPARANDO OS BLOCOS PARA EXIBIÇÃO
+  const adsOuro = ads.filter(a => Number(a.planoId) === 3);
+  const adsTurbo = ads.filter(a => Number(a.planoId) === 2);
+  // Garante que QUALQUER coisa que não for Ouro ou Turbo (Topo, Grátis, 99, null) apareça na lista geral
+  const adsGerais = ads.filter(a => Number(a.planoId) !== 3 && Number(a.planoId) !== 2);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
@@ -346,7 +358,7 @@ export default function Home() {
         )}
 
         {/* BANNER DE MOEDAS E MISSÕES */}
-        <div className="px-4 md:px-0 mt-4 mb-8">
+        <div className="px-4 md:px-0 mt-4 mb-10">
           <Link href="/carteira" className="block bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all outline-none group relative overflow-hidden">
              <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
              <div className="flex items-center gap-4 relative z-10">
@@ -373,7 +385,7 @@ export default function Home() {
         {!loading && vipAds.length > 0 && (
           <div className="mb-6 mt-4 px-4 md:px-0">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
-              <Sparkles className="text-amber-500"/> Super Destaques
+              <Sparkles className="text-amber-500"/> Ouro Urgente
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 pt-2 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {vipAds.map(ad => (
@@ -428,16 +440,14 @@ export default function Home() {
           </div>
         )}
 
+        <div className="flex items-center justify-between mb-6 px-4 md:px-0 mt-8">
+           <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+              Anúncios Recentes
+           </h2>
+        </div>
 
-        {/* 3. LISTA GERAL DE ANÚNCIOS (Separados por Hierarquia visual) */}
-        <div className="px-4 md:px-0 mt-8">
-          
-          <div className="flex items-center justify-between mb-6">
-             <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-                Anúncios Recentes
-             </h2>
-          </div>
-
+        {/* 3. LISTA GERAL SEPARADA EM BLOCOS DE DESTAQUE */}
+        <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
@@ -457,36 +467,38 @@ export default function Home() {
             <div className="space-y-12">
               
               {/* BLOCO OURO NO GRID (Para quem pagou o plano Ouro) */}
-              {ads.filter(a => Number(a.planoId) === 3).length > 0 && (
+              {adsOuro.length > 0 && (
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-amber-500 flex items-center gap-2 mb-4"><Sparkles size={20}/> Vitrine Ouro</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {ads.filter(a => Number(a.planoId) === 3).map(ad => renderAdCard(ad))}
+                    {adsOuro.map(ad => renderAdCard(ad))}
                   </div>
                 </div>
               )}
 
               {/* BLOCO TURBO NO GRID (Para quem pagou o plano Turbo) */}
-              {ads.filter(a => Number(a.planoId) === 2).length > 0 && (
+              {adsTurbo.length > 0 && (
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-purple-600 flex items-center gap-2 mb-4"><Flame size={20}/> Vitrine Turbo</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {ads.filter(a => Number(a.planoId) === 2).map(ad => renderAdCard(ad))}
+                    {adsTurbo.map(ad => renderAdCard(ad))}
                   </div>
                 </div>
               )}
 
               {/* BLOCO GERAL (Sobe pro Topo e Grátis) */}
-              {ads.filter(a => Number(a.planoId) <= 1).length > 0 && (
+              {adsGerais.length > 0 && (
                 <div>
-                  <h3 className="text-lg md:text-xl font-black text-gray-800 mb-4">Mais Anúncios</h3>
+                  {(adsOuro.length > 0 || adsTurbo.length > 0) && (
+                     <h3 className="text-lg md:text-xl font-black text-gray-800 mb-4">Mais Anúncios</h3>
+                  )}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {ads.filter(a => Number(a.planoId) <= 1).map(ad => renderAdCard(ad))}
+                    {adsGerais.map(ad => renderAdCard(ad))}
                   </div>
                 </div>
               )}
 
-              {/* BOTÃO EXPLORAR TODOS */}
+              {/* BOTÃO EXPLORAR */}
               <div className="mt-12 hidden md:flex justify-center">
                 <Link 
                   href="/todos-anuncios" 
