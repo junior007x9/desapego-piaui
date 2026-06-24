@@ -5,6 +5,7 @@ import { collection, getDocs, query, where, doc, updateDoc, limit, startAfter, o
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, MapPin, ShoppingBag, SlidersHorizontal, ChevronLeft, Sparkles, X, Loader2, Flame, Rocket, Heart } from 'lucide-react'
+// import AdBanner from '@/components/AdBanner' // 🚀 ADSENSE REMOVIDO TEMPORARIAMENTE
 
 const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda e Beleza", "Serviços", "Bebês e Crianças", "Esportes", "Vagas de Emprego", "Outros"]
 
@@ -32,8 +33,6 @@ function SearchContent() {
 
   const [ads, setAds] = useState<any[]>([])
   const [filteredAds, setFilteredAds] = useState<any[]>([])
-  
-  // ESTADOS DO INFINITE SCROLL
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [lastVisible, setLastVisible] = useState<any>(null)
@@ -44,33 +43,18 @@ function SearchContent() {
   const [precoMin, setPrecoMin] = useState('')
   const [precoMax, setPrecoMax] = useState('')
   const [ordenacao, setOrdenacao] = useState('recentes')
-  
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
 
-  // FUNÇÃO DE BUSCA PAGINADA
   const fetchAds = async (isLoadMore = false) => {
     try {
       if (isLoadMore) setLoadingMore(true)
       else setLoading(true)
 
       const agora = new Date()
-      
-      // Carrega de 12 em 12, ordenando pelos mais recentes na base de dados
-      let q = query(
-        collection(db, 'anuncios'), 
-        where('status', '==', 'ativo'),
-        orderBy('criadoEm', 'desc'),
-        limit(12)
-      )
+      let q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), limit(12))
 
       if (isLoadMore && lastVisible) {
-        q = query(
-          collection(db, 'anuncios'), 
-          where('status', '==', 'ativo'),
-          orderBy('criadoEm', 'desc'),
-          startAfter(lastVisible),
-          limit(12)
-        )
+        q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), startAfter(lastVisible), limit(12))
       }
 
       const snap = await getDocs(q)
@@ -85,7 +69,6 @@ function SearchContent() {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
-
           const plano = Number(data.planoId) || 0;
 
           if (data.expiraEm) {
@@ -119,12 +102,10 @@ function SearchContent() {
     }
   }
 
-  // Carrega a primeira página ao entrar
   useEffect(() => {
     fetchAds()
   }, [])
 
-  // OBSERVAR O SCROLL (O espião do final da tela)
   const observer = useRef<IntersectionObserver | null>(null)
   const lastAdElementRef = useCallback((node: any) => {
     if (loading || loadingMore) return
@@ -132,15 +113,13 @@ function SearchContent() {
     
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
-        fetchAds(true) // Carrega a próxima página
+        fetchAds(true)
       }
     })
     
     if (node) observer.current.observe(node)
   }, [loading, loadingMore, hasMore, lastVisible])
 
-
-  // 🚀 FILTRAGEM INTELIGENTE
   useEffect(() => {
     let result = [...ads]
 
@@ -163,7 +142,6 @@ function SearchContent() {
       result = result.filter(ad => ad.preco <= parseFloat(precoMax))
     }
 
-    // Ordenação interna
     const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
     result.sort((a, b) => {
@@ -185,7 +163,7 @@ function SearchContent() {
     router.push('/todos-anuncios')
   }
 
-  // 🚀 COMPONENTE DO CARD (Evita repetição de código)
+  // 🚀 COMPONENTE DO CARD ATUALIZADO COM DESCRIÇÃO
   const renderAdCard = (ad: any, isLastElement: boolean) => {
     const plano = Number(ad.planoId) || 0;
     const isOuro = plano === 3;
@@ -204,28 +182,14 @@ function SearchContent() {
             'bg-white border-gray-100 shadow-sm hover:-translate-y-1'
         }`}
       >
-        {/* Selos de Destaque no Grid */}
-        {isOuro && (
-           <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Sparkles size={10}/> Ouro
-           </div>
-        )}
-        {isTurbo && (
-           <div className="absolute top-2 left-2 z-10 bg-purple-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Flame size={10}/> Turbo
-           </div>
-        )}
-        {isSobe && (
-           <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Rocket size={10}/> No Topo
-           </div>
-        )}
+        {isOuro && (<div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1"><Sparkles size={10}/> Ouro</div>)}
+        {isTurbo && (<div className="absolute top-2 left-2 z-10 bg-purple-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1"><Flame size={10}/> Turbo</div>)}
+        {isSobe && (<div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1"><Rocket size={10}/> No Topo</div>)}
 
         <div className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors">
           <Heart size={16} strokeWidth={2.5} />
         </div>
 
-        {/* Borda de luxo para Ouro e Turbo */}
         <div className={`aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50 ${isOuro ? 'border-b-4 border-amber-400' : isTurbo ? 'border-b-4 border-purple-400' : ''}`}>
            {ad.imagemUrl ? (
               <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -238,8 +202,15 @@ function SearchContent() {
           <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
             {ad.categoria}
           </span>
-          <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
+          <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
           
+          {/* 🚀 AQUI ENTRA O TEXTO DA DESCRIÇÃO PARA O GOOGLE LER! */}
+          {ad.descricao && (
+            <p className="text-[10px] md:text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed flex-1">
+              {ad.descricao}
+            </p>
+          )}
+
           <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
           </p>
@@ -310,7 +281,7 @@ function SearchContent() {
   )
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
+    <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
       <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-100 p-3 flex justify-between items-center shadow-sm">
         <button onClick={() => router.push('/')} className="flex items-center gap-1 bg-gray-100 p-2 pr-4 rounded-full text-gray-800 font-bold text-sm">
@@ -369,7 +340,6 @@ function SearchContent() {
           ) : (
             
             <div className="space-y-12">
-              {/* 🚀 BLOCO 1: OURO URGENTE (Separado na hierarquia máxima) */}
               {filteredAds.filter(a => Number(a.planoId) === 3).length > 0 && (
                 <div>
                   <h2 className="text-xl md:text-2xl font-black text-amber-500 flex items-center gap-2 mb-4">
@@ -377,14 +347,13 @@ function SearchContent() {
                   </h2>
                   <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
                     {filteredAds.filter(a => Number(a.planoId) === 3).map((ad, i, arr) => {
-                       const isLast = arr.length - 1 === i && filteredAds.length === arr.length; // Lógica para o paginador
+                       const isLast = arr.length - 1 === i && filteredAds.length === arr.length; 
                        return renderAdCard(ad, isLast);
                     })}
                   </div>
                 </div>
               )}
 
-              {/* 🚀 BLOCO 2: DESTAQUE TURBO (Abaixo do Ouro) */}
               {filteredAds.filter(a => Number(a.planoId) === 2).length > 0 && (
                 <div>
                   <h2 className="text-xl md:text-2xl font-black text-purple-600 flex items-center gap-2 mb-4">
@@ -399,7 +368,6 @@ function SearchContent() {
                 </div>
               )}
 
-              {/* 🚀 BLOCO 3: SOBE PRO TOPO & GERAIS */}
               {filteredAds.filter(a => Number(a.planoId) < 2).length > 0 && (
                 <div>
                   <h2 className="text-xl md:text-2xl font-black text-gray-800 flex items-center gap-2 mb-4">
