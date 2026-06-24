@@ -130,10 +130,10 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            // TODOS os anúncios vão para a lista geral para exibirmos as diferenças visuais lá também
+            // TODOS os anúncios vão para a lista geral (para exibirmos os blocos separados na Home)
             listGeral.push(adFinal)
 
-            // Além da lista geral, eles ganham posições de luxo exclusivas
+            // Além da lista geral, eles ganham as vitrines VIP superiores
             if (plano === 3) {
               listCarrosselOuro.push(adFinal)
             } else if (plano === 2) {
@@ -144,16 +144,16 @@ export default function Home() {
 
         const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
-        // Ordenação Ouro e Stories por data
+        // Ordenação Ouro e Stories do topo por data
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
         
-        // ORDENAÇÃO GERAL INTELIGENTE: Ouro > Turbo > Topo > Grátis
+        // Ordenação da lista geral: Ouro > Turbo > Topo > Grátis
         listGeral.sort((a, b) => {
           if (a.planoId !== b.planoId) {
-             return b.planoId - a.planoId; // Planos maiores ganham prioridade
+             return b.planoId - a.planoId; 
           }
-          return getTempo(b) - getTempo(a); // Desempate por data mais recente
+          return getTempo(b) - getTempo(a); 
         });
         
         setVipAds(listCarrosselOuro.slice(0, 15)) 
@@ -173,6 +173,84 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
+  // 🚀 COMPONENTE DE CARD REUTILIZÁVEL PARA GARANTIR LUXO E VISUAL IDÊNTICO
+  const renderAdCard = (ad: any) => {
+    const plano = Number(ad.planoId) || 0;
+    const isOuro = plano === 3;
+    const isTurbo = plano === 2; 
+    const isSobe = plano === 1;
+
+    return (
+      <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group relative outline-none h-full flex flex-col">
+        {/* CAIXA COM BORDAS EFEITO INVEJA BASEADAS NO PLANO */}
+        <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
+          isOuro ? 'rounded-2xl p-[3px] bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-[0_4px_15px_rgba(251,191,36,0.3)] hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(251,191,36,0.5)]' :
+          isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:-translate-y-1 hover:shadow-lg' :
+          isSobe ? 'rounded-2xl border-[3px] border-blue-400 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md' :
+          'rounded-2xl border border-gray-200 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md'
+        }`}>
+          
+          <div className="bg-white h-full flex flex-col rounded-xl overflow-hidden relative">
+            
+            {/* BADGES / TAGS */}
+            {isOuro && (
+               <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
+                  <Sparkles size={12}/> Ouro
+               </div>
+            )}
+            {isTurbo && (
+               <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
+                  <Flame size={12}/> Turbo
+               </div>
+            )}
+            {isSobe && (
+               <div className="absolute top-2 left-2 z-20 bg-blue-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
+                  <Rocket size={12}/> Topo
+               </div>
+            )}
+
+            {/* CORAÇÃO */}
+            <div className="absolute top-2 right-2 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm">
+              <Heart size={16} strokeWidth={2.5} />
+            </div>
+
+            {/* IMAGEM */}
+            <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative border-b border-gray-100">
+               {ad.imagemUrl ? (
+                  <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={ad.titulo} />
+               ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+               )}
+            </div>
+            
+            {/* INFORMAÇÕES */}
+            <div className="p-3 md:p-4 flex flex-col flex-1">
+              <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit mb-2">
+                {ad.categoria}
+              </span>
+              <h3 className="text-xs md:text-sm text-gray-800 line-clamp-2 mb-2 font-semibold group-hover:text-primary transition-colors leading-snug flex-1">
+                {ad.titulo}
+              </h3>
+              
+              <p className={`text-lg md:text-xl font-black mt-2 ${isOuro ? 'text-amber-600' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+              </p>
+              
+              <div className="mt-3 pt-3 text-[10px] text-gray-400 flex justify-between font-medium border-t border-gray-50">
+                <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
+                <span className="flex items-center gap-1 truncate max-w-[60%]">
+                   <MapPin size={10} className="text-gray-300 shrink-0"/> 
+                   <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
+                </span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
   const SkeletonCard = () => (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse flex flex-col h-full">
       <div className="aspect-[4/3] bg-gray-200"></div>
@@ -188,6 +266,7 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
+      {/* 🚀 HERO SECTION */}
       <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -220,6 +299,7 @@ export default function Home() {
         </div>
       </div>
 
+      {/* CATEGORIAS ALINHADAS */}
       <div className="max-w-6xl mx-auto px-1 md:px-4 -mt-14 relative z-20">
         
         <div className="mb-8 px-2 md:px-0">
@@ -265,6 +345,25 @@ export default function Home() {
           </div>
         )}
 
+        {/* BANNER DE MOEDAS E MISSÕES */}
+        <div className="px-4 md:px-0 mt-4 mb-8">
+          <Link href="/carteira" className="block bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all outline-none group relative overflow-hidden">
+             <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+             <div className="flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                   <Coins size={24} />
+                </div>
+                <div className="flex-1">
+                   <h3 className="text-amber-900 font-black text-base md:text-lg leading-tight">Central de Recompensas</h3>
+                   <p className="text-amber-700 text-[11px] md:text-sm font-medium leading-snug mt-0.5">Cumpra missões, acumule moedas virtuais e troque por destaques grátis!</p>
+                </div>
+                <div className="hidden sm:flex shrink-0">
+                   <span className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm">Ver Missões <ChevronRight size={16}/></span>
+                </div>
+             </div>
+          </Link>
+        </div>
+
         {/* BANNER ADSENSE */}
         <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
           <AdBanner dataAdSlot="8830353493" />
@@ -274,7 +373,7 @@ export default function Home() {
         {!loading && vipAds.length > 0 && (
           <div className="mb-6 mt-4 px-4 md:px-0">
             <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
-              <Sparkles className="text-amber-500"/> Ouro Urgente
+              <Sparkles className="text-amber-500"/> Super Destaques
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 pt-2 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {vipAds.map(ad => (
@@ -329,33 +428,16 @@ export default function Home() {
           </div>
         )}
 
-        {/* BANNER DE MOEDAS E MISSÕES */}
-        <div className="px-4 md:px-0 mt-4 mb-10">
-          <Link href="/carteira" className="block bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all outline-none group relative overflow-hidden">
-             <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
-             <div className="flex items-center gap-4 relative z-10">
-                <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                   <Coins size={24} />
-                </div>
-                <div className="flex-1">
-                   <h3 className="text-amber-900 font-black text-base md:text-lg leading-tight">Central de Recompensas</h3>
-                   <p className="text-amber-700 text-[11px] md:text-sm font-medium leading-snug mt-0.5">Cumpra missões, acumule moedas virtuais e troque por destaques grátis!</p>
-                </div>
-                <div className="hidden sm:flex shrink-0">
-                   <span className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm">Ver Missões <ChevronRight size={16}/></span>
-                </div>
-             </div>
-          </Link>
-        </div>
 
-        <div className="flex items-center justify-between mb-6 px-4 md:px-0">
-           <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-              Anúncios Recentes
-           </h2>
-        </div>
+        {/* 3. LISTA GERAL DE ANÚNCIOS (Separados por Hierarquia visual) */}
+        <div className="px-4 md:px-0 mt-8">
+          
+          <div className="flex items-center justify-between mb-6">
+             <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                Anúncios Recentes
+             </h2>
+          </div>
 
-        {/* 3. LISTA GERAL (Com designs visuais exclusivos por plano) */}
-        <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
@@ -372,88 +454,39 @@ export default function Home() {
                </Link>
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                {ads.map((ad) => {
-                  const plano = Number(ad.planoId) || 0;
-                  const isOuro = plano === 3;
-                  const isTurbo = plano === 2; 
-                  const isSobe = plano === 1;
+            <div className="space-y-12">
+              
+              {/* BLOCO OURO NO GRID (Para quem pagou o plano Ouro) */}
+              {ads.filter(a => Number(a.planoId) === 3).length > 0 && (
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-amber-500 flex items-center gap-2 mb-4"><Sparkles size={20}/> Vitrine Ouro</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                    {ads.filter(a => Number(a.planoId) === 3).map(ad => renderAdCard(ad))}
+                  </div>
+                </div>
+              )}
 
-                  return (
-                    <Link href={`/anuncio/${ad.id}`} key={`grid-${ad.id}`} className="group relative outline-none h-full flex flex-col">
-                      
-                      {/* CAIXA COM CORES BASEADAS NO PLANO */}
-                      <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
-                        isOuro ? 'rounded-2xl p-[3px] bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-[0_4px_15px_rgba(251,191,36,0.3)] hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(251,191,36,0.5)]' :
-                        isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:-translate-y-1 hover:shadow-lg' :
-                        isSobe ? 'rounded-2xl border-[3px] border-blue-400 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md' :
-                        'rounded-2xl border border-gray-200 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md'
-                      }`}>
-                        
-                        <div className="bg-white h-full flex flex-col rounded-xl overflow-hidden relative">
-                          
-                          {/* BADGES */}
-                          {isOuro && (
-                             <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
-                                <Sparkles size={12}/> Ouro
-                             </div>
-                          )}
-                          {isTurbo && (
-                             <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
-                                <Flame size={12}/> Turbo
-                             </div>
-                          )}
-                          {isSobe && (
-                             <div className="absolute top-2 left-2 z-20 bg-blue-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
-                                <Rocket size={12}/> Topo
-                             </div>
-                          )}
+              {/* BLOCO TURBO NO GRID (Para quem pagou o plano Turbo) */}
+              {ads.filter(a => Number(a.planoId) === 2).length > 0 && (
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-purple-600 flex items-center gap-2 mb-4"><Flame size={20}/> Vitrine Turbo</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                    {ads.filter(a => Number(a.planoId) === 2).map(ad => renderAdCard(ad))}
+                  </div>
+                </div>
+              )}
 
-                          {/* CORAÇÃO */}
-                          <div className="absolute top-2 right-2 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm">
-                            <Heart size={16} strokeWidth={2.5} />
-                          </div>
+              {/* BLOCO GERAL (Sobe pro Topo e Grátis) */}
+              {ads.filter(a => Number(a.planoId) <= 1).length > 0 && (
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-gray-800 mb-4">Mais Anúncios</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                    {ads.filter(a => Number(a.planoId) <= 1).map(ad => renderAdCard(ad))}
+                  </div>
+                </div>
+              )}
 
-                          {/* IMAGEM */}
-                          <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative border-b border-gray-100">
-                             {ad.imagemUrl ? (
-                                <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={ad.titulo} />
-                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
-                             )}
-                          </div>
-                          
-                          {/* INFO */}
-                          <div className="p-3 md:p-4 flex flex-col flex-1">
-                            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit mb-2">
-                              {ad.categoria}
-                            </span>
-                            <h3 className="text-xs md:text-sm text-gray-800 line-clamp-2 mb-2 font-semibold group-hover:text-primary transition-colors leading-snug flex-1">
-                              {ad.titulo}
-                            </h3>
-                            
-                            <p className={`text-lg md:text-xl font-black mt-2 ${isOuro ? 'text-amber-600' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                            </p>
-                            
-                            <div className="mt-3 pt-3 text-[10px] text-gray-400 flex justify-between font-medium border-t border-gray-50">
-                              <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
-                              <span className="flex items-center gap-1 truncate max-w-[60%]">
-                                 <MapPin size={10} className="text-gray-300 shrink-0"/> 
-                                 <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-
-              {/* BOTÃO EXPLORAR */}
+              {/* BOTÃO EXPLORAR TODOS */}
               <div className="mt-12 hidden md:flex justify-center">
                 <Link 
                   href="/todos-anuncios" 
@@ -471,7 +504,7 @@ export default function Home() {
                   Explorar Todos os Anúncios <ChevronRight size={20} />
                 </Link>
               </div>
-            </>
+            </div>
           )}
         </div>
 
