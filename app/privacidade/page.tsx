@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronLeft, ShieldCheck, Lock, Eye, Database, CreditCard, Coins } from 'lucide-react'
+import { ChevronLeft, ShieldCheck, Lock, Eye, Database, CreditCard, Coins, Mail } from 'lucide-react'
 
 export const metadata = {
   title: 'Política de Privacidade | Desapego Piauí',
@@ -31,67 +31,66 @@ export default function PrivacidadePage() {
               </h2>
               <p>Para fornecer nossos serviços de classificados e recompensas, coletamos os seguintes dados:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li><strong>Dados de Cadastro:</strong> Nome, endereço de e-mail e foto de perfil (coletados via Google ou fornecidos manualmente).</li>
-                <li><strong>Dados de Contato Profissional/Venda:</strong> Número de telefone/WhatsApp.</li>
-                <li><strong>Dados de Navegação:</strong> Informações técnicas como IP, tipo de navegador, localização aproximada (cidade) para filtros, e cookies para manter sua sessão ativa.</li>
-                <li><strong>Dados de Engajamento:</strong> Registramos suas interações diárias (como acessos e criação de anúncios) estritamente para contabilizar e distribuir suas <strong>Moedas Virtuais</strong> no nosso Sistema de Recompensas.</li>
+                <li><strong>Dados de Cadastro:</strong> Nome, endereço de e-mail e foto de perfil (coletados via provedores seguros ou fornecidos manualmente).</li>
+                <li><strong>Dados de Contato Profissional/Venda:</strong> Número de telefone/WhatsApp e cidade/bairro de atuação.</li>
+                <li><strong>Dados de Navegação:</strong> Informações técnicas e cookies estritamente necessários para manter sua sessão ativa e salvar suas preferências locais.</li>
+                <li><strong className="text-amber-600">Dados de Engajamento (Moedas):</strong> Registramos suas interações (como acessos diários e indicações) estritamente para contabilizar, gerar e distribuir as suas <strong>Moedas Virtuais</strong> no nosso Sistema de Recompensas.</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Eye className="text-accent" size={24} /> 2. Exibição Pública do WhatsApp (Sem Chat Interno)
+                <Eye className="text-accent" size={24} /> 2. Exibição Pública do WhatsApp
               </h2>
               <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
-                <p><strong>Atenção:</strong> O Desapego Piauí optou por <strong>não possuir um chat interno</strong> para garantir que você tenha conversas mais rápidas e diretas.</p>
-                <p className="mt-2">Ao criar um anúncio na nossa plataforma, o número de telefone/WhatsApp fornecido por você <strong>ficará visível publicamente</strong> para qualquer pessoa que acessar o seu anúncio. A base legal para esta exibição é o seu <strong>Consentimento</strong> e a <strong>Execução de Contrato</strong> (permitir que o comprador lhe encontre). Ao cadastrar o seu número, você concorda expressamente com esta exibição pública.</p>
+                <p><strong>Atenção:</strong> O Desapego Piauí optou por <strong>não possuir um chat interno</strong> para garantir que você tenha conversas mais rápidas e diretas de forma local.</p>
+                <p className="mt-2">Ao criar um anúncio na nossa plataforma, o número de WhatsApp fornecido por você ficará visível publicamente apenas durante o período de validade do seu anúncio (<strong>7 dias para anúncios Grátis</strong> ou <strong>20 dias para planos VIP</strong>). Ao cadastrar o seu número, você concorda expressamente com esta exibição para fins de execução de contrato (venda do produto).</p>
               </div>
             </section>
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <CreditCard className="text-blue-500" size={24} /> 3. Dados de Pagamento e Taxas (Mercado Pago)
+                <CreditCard className="text-blue-500" size={24} /> 3. Dados de Pagamento e Taxas
               </h2>
               <p>O Desapego Piauí <strong>não armazena nem tem acesso</strong> aos seus dados bancários, números de cartão de crédito ou chaves Pix pessoais.</p>
-              <p className="mt-2">Toda a infraestrutura de pagamento dos planos de destaque e o cálculo de taxas operacionais são processados diretamente pelo gateway do <strong>Mercado Pago</strong>, que possui os mais altos padrões de criptografia e conformidade legal. Apenas recebemos uma notificação informando se o pagamento foi aprovado ou recusado. Ressaltamos que a taxa de processamento cobrada pelo Mercado Pago é <strong>repassada ao usuário</strong>, sendo este valor sempre exibido de forma totalmente transparente no momento do checkout.</p>
+              <p className="mt-2">Toda a infraestrutura de pagamento dos planos de destaque (Topo, Turbo e Ouro) é processada externamente pelo gateway do <strong>Mercado Pago</strong>, que possui os mais altos padrões de criptografia. Apenas recebemos uma notificação informando se o pagamento do seu plano foi aprovado para ativarmos o destaque.</p>
             </section>
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Lock className="text-gray-800" size={24} /> 4. Como Protegemos e Compartilhamos Seus Dados
+                <Mail className="text-purple-500" size={24} /> 4. Comunicação e E-mails
               </h2>
-              <p>O Desapego Piauí <strong>não vende, não aluga e não repassa</strong> seus dados pessoais para empresas de marketing de terceiros.</p>
-              <p className="mt-2">Seus dados são armazenados em servidores seguros utilizando infraestrutura de ponta (Google Cloud / Firebase), com criptografia em trânsito e em repouso. Compartilhamos dados apenas em casos de ordem judicial ou solicitações de autoridades competentes para a investigação de fraudes e crimes cibernéticos.</p>
+              <p>Utilizamos a infraestrutura segura do <strong>Resend</strong> para o envio de e-mails transacionais (como links de verificação, recuperação de senha, suporte e confirmação de anúncios aprovados). Garantimos que <strong>não enviamos SPAM</strong> e não vendemos o seu endereço de e-mail para listas de terceiros.</p>
             </section>
 
             <section>
               <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
-                <Eye className="text-blue-500" size={24} /> 5. Publicidade e Google AdSense
+                <Lock className="text-gray-800" size={24} /> 5. Como Protegemos Seus Dados
               </h2>
-              <p>O Desapego Piauí utiliza o <strong>Google AdSense</strong> para exibir publicidade, o que nos ajuda a manter a plataforma gratuita. Em conformidade com as regras do Google, informamos que:</p>
+              <p>Seus dados são armazenados em servidores de altíssima segurança do <strong>Google (Firebase)</strong>, com criptografia ponta a ponta. Nossa equipe administrativa não possui acesso à sua senha em formato de texto. Compartilhamos dados apenas mediante ordem judicial ou solicitações de autoridades competentes para a investigação de fraudes.</p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                <Eye className="text-blue-500" size={24} /> 6. Publicidade e Google AdSense
+              </h2>
+              <p>O Desapego Piauí utiliza o <strong>Google AdSense</strong> para exibir publicidade, ajudando a manter a plataforma gratuita:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>Fornecedores de terceiros, incluindo o Google, utilizam cookies para veicular anúncios com base nas visitas anteriores que o usuário fez ao nosso site ou a outros sites na Internet.</li>
-                <li>O uso de cookies de publicidade permite que o Google e seus parceiros veiculem anúncios para os usuários com base na navegação.</li>
+                <li>O Google utiliza cookies para veicular anúncios com base nas suas visitas anteriores.</li>
                 <li>Você pode desativar a publicidade personalizada acessando as <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Configurações de Anúncios do Google</a>.</li>
-                <li>Para entender detalhadamente como o Google coleta e processa esses dados, acesse a página oficial: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Como o Google usa informações de sites ou apps que utilizam nossos serviços</a>.</li>
+                <li>Para entender como o Google coleta esses dados, acesse: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline">Como o Google usa informações de sites</a>.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">6. Retenção de Dados</h2>
-              <p>Manteremos seus dados pessoais apenas pelo tempo necessário para cumprir as finalidades descritas nesta política. Caso você exclua sua conta, seus dados pessoais e anúncios serão removidos permanentemente dos nossos bancos de dados ativos, exceto se houver obrigação legal de retenção por prazos estipulados no Marco Civil da Internet (Lei nº 12.965/2014).</p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 mb-4">7. Seus Direitos (Art. 18 da LGPD)</h2>
-              <p>Como titular dos dados, você tem o direito garantido por lei de solicitar a qualquer momento:</p>
+              <h2 className="text-xl font-black text-gray-900 mb-4">7. Seus Direitos e Retenção</h2>
+              <p>Manteremos seus dados apenas pelo tempo necessário. Como titular dos dados (Art. 18 da LGPD), você tem o direito garantido de solicitar:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li>Confirmação e acesso aos dados que possuímos sobre você.</li>
-                <li>Correção de dados incompletos, inexatos ou desatualizados (diretamente no seu painel de perfil).</li>
-                <li>Revogação do consentimento e a <strong>exclusão total</strong> da sua conta e dos seus dados pessoais.</li>
+                <li>O acesso ou a correção de dados incompletos ou inexatos (diretamente no seu painel "Minha Conta").</li>
+                <li>A <strong>exclusão total e irrevogável</strong> da sua conta, das suas moedas e dos seus dados pessoais dos nossos servidores.</li>
               </ul>
               <p className="mt-4 bg-gray-100 p-4 rounded-xl text-sm border border-gray-200">
-                Para exercer seus direitos, solicitar a exclusão de dados ou tirar dúvidas sobre privacidade, entre em contato com nosso Encarregado de Dados (DPO) através do e-mail: <strong>privacidade@desapegopiaui.com.br</strong>
+                Para exercer seus direitos, solicitar a exclusão de dados ou tirar dúvidas sobre privacidade, entre em contato através do e-mail: <strong>contato@desapegopiaui.com.br</strong>
               </p>
             </section>
           </div>

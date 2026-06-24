@@ -47,7 +47,7 @@ export default function TutorialPage() {
           <div>
             <h2 className="text-xl font-black text-gray-900 mb-2">2. Criando o seu Anúncio</h2>
             <p className="text-gray-600 font-medium leading-relaxed mb-3">
-              Clique no botão <strong>"+ Anunciar Grátis"</strong>. Preencha o título, categoria, coloque fotos nítidas do seu produto e um preço justo.
+              Clique no botão <strong>"+ Anunciar"</strong>. Preencha o título, categoria, coloque fotos nítidas do seu produto e um preço justo.
             </p>
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm text-gray-700">
               <strong className="text-primary block mb-1">Dica de Ouro:</strong>
@@ -64,7 +64,7 @@ export default function TutorialPage() {
           <div>
             <h2 className="text-xl font-black text-gray-900 mb-2">3. Vendendo mais Rápido (Planos VIP)</h2>
             <p className="text-gray-600 font-medium leading-relaxed mb-3">
-              Anunciar no plano Básico é 100% grátis. Mas, se você tem pressa, pode pagar uma pequena taxa via Pix (Mercado Pago) para destacar seu anúncio com os planos <strong>Turbo</strong> ou <strong>Ouro</strong>. Eles colocam seu produto no topo das buscas e no carrossel principal da tela inicial!
+              Anunciar no plano Básico é 100% grátis e dura <strong>7 dias</strong>. Mas, se você tem pressa para vender, pode destacar o seu produto com os nossos Planos VIP: <strong>Sobe pro Topo</strong>, <strong>Destaque Turbo</strong> ou <strong>Ouro Urgente</strong>. Os planos VIP dão exposição máxima para o seu produto na tela inicial e duram <strong>20 dias</strong>. O pagamento é feito via PIX com liberação imediata.
             </p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function TutorialPage() {
           <div>
             <h2 className="text-xl font-black text-gray-900 mb-2">4. Como ganhar Moedas Virtuais?</h2>
             <p className="text-gray-600 font-medium leading-relaxed">
-              Sempre que você entra no site ou cria bons anúncios, você ganha <strong>Moedas Virtuais</strong> na sua Carteira. Essas moedas não são dinheiro real, mas servem para você "comprar" destaques Turbo e Ouro para os seus anúncios sem pagar nada em Reais! É o nosso sistema de recompensa para usuários fiéis.
+              O nosso sistema de recompensas permite que você destaque seus anúncios sem gastar dinheiro! Ao criar a sua conta, você já ganha <strong>10 moedas</strong>. Se você indicar um amigo com seu link exclusivo, você ganha mais <strong>50 moedas</strong>. Juntando essas moedas, você pode resgatar pacotes Topo (50 moedas), Turbo (150 moedas) ou Ouro (400 moedas) de graça!
             </p>
           </div>
         </div>
