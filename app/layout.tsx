@@ -8,7 +8,8 @@ import CookieBanner from '@/components/CookieBanner'
 import FeedbackButton from '@/components/FeedbackButton'
 import Script from 'next/script'
 import { Toaster } from 'react-hot-toast' 
-import DailyCheckin from '@/components/DailyCheckin' // O componente foi importado aqui!
+import DailyCheckin from '@/components/DailyCheckin'
+import SolicitarNotificacao from '@/components/SolicitarNotificacao' // 🚀 IMPORTAÇÃO DO NOVO COMPONENTE DE NOTIFICAÇÃO!
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -81,16 +82,16 @@ export default function RootLayout({
         {/*
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-998KLBW15Q" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
-          {\`
+          {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-998KLBW15Q');
-          \`}
+          `}
         </Script>
 
         <Script id="meta-pixel" strategy="afterInteractive">
-          {\`
+          {`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -101,7 +102,7 @@ export default function RootLayout({
             'https://connect.facebook.net/en_US/fbevents.js');
             fbq('init', 'SEU_PIXEL_ID');
             fbq('track', 'PageView');
-          \`}
+          `}
         </Script>
 
         <Script
@@ -142,8 +143,11 @@ export default function RootLayout({
         <CookieBanner />
         <FeedbackButton />
         
-        {/* 👇 O componente está sendo usado aqui, agora a Vercel vai aprovar! 👇 */}
+        {/* O componente está sendo usado aqui, agora a Vercel vai aprovar! */}
         <DailyCheckin />
+
+        {/* 🚀 NOSSO NOVO COMPONENTE DE AVISOS PUSH! 🚀 */}
+        <SolicitarNotificacao />
         
         <Toaster position="top-right" toastOptions={{
           duration: 4000,
