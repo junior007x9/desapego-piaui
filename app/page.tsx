@@ -130,10 +130,8 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            // TODOS os anúncios vão para a lista geral 
             listGeral.push(adFinal)
 
-            // Além da lista geral, os planos maiores ganham vitrines VIP
             if (plano === 3) {
               listCarrosselOuro.push(adFinal)
             } else if (plano === 2) {
@@ -144,23 +142,20 @@ export default function Home() {
 
         const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
-        // Ordenação Ouro e Stories do topo por data
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
         
-        // 🚀 ORDENAÇÃO INTELIGENTE (Sem usar o <= 1 que ocultava os planos 99)
         listGeral.sort((a, b) => {
           const planoA = Number(a.planoId) || 0;
           const planoB = Number(b.planoId) || 0;
           
-          // Peso Hierárquico
           const pesoA = planoA === 3 ? 4 : (planoA === 2 ? 3 : (planoA === 1 ? 2 : 1));
           const pesoB = planoB === 3 ? 4 : (planoB === 2 ? 3 : (planoB === 1 ? 2 : 1));
 
           if (pesoA !== pesoB) {
-             return pesoB - pesoA; // O mais forte aparece primeiro
+             return pesoB - pesoA; 
           }
-          return getTempo(b) - getTempo(a); // Desempate por data mais recente
+          return getTempo(b) - getTempo(a); 
         });
         
         setVipAds(listCarrosselOuro.slice(0, 15)) 
@@ -180,7 +175,7 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
-  // COMPONENTE DE CARD REUTILIZÁVEL (Garante visual perfeito)
+  // 🚀 COMPONENTE DE CARD ATUALIZADO COM VISUAL DE ALTÍSSIMO LUXO PRO OURO
   const renderAdCard = (ad: any) => {
     const plano = Number(ad.planoId) || 0;
     const isOuro = plano === 3;
@@ -188,20 +183,22 @@ export default function Home() {
     const isSobe = plano === 1;
 
     return (
-      <Link href={`/anuncio/${ad.id}`} key={ad.id} className="group relative outline-none h-full flex flex-col">
+      <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group relative outline-none h-full flex flex-col transition-all duration-300 ${isOuro ? 'hover:-translate-y-2 z-10' : 'hover:-translate-y-1'}`}>
+        
+        {/* BORDA DE LUXO NO CARD OURO */}
         <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
-          isOuro ? 'rounded-2xl p-[3px] bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 shadow-[0_4px_15px_rgba(251,191,36,0.3)] hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(251,191,36,0.5)]' :
-          isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:-translate-y-1 hover:shadow-lg' :
-          isSobe ? 'rounded-2xl border-[3px] border-blue-400 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md' :
-          'rounded-2xl border border-gray-200 bg-white shadow-sm hover:-translate-y-1 hover:shadow-md'
+          isOuro ? 'rounded-2xl p-[4px] bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-[0_0_20px_rgba(251,191,36,0.4)] hover:shadow-[0_0_30px_rgba(251,191,36,0.6)] ring-4 ring-amber-400/20' :
+          isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:shadow-lg' :
+          isSobe ? 'rounded-2xl border-[3px] border-blue-400 bg-white shadow-sm hover:shadow-md' :
+          'rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md'
         }`}>
           
-          <div className="bg-white h-full flex flex-col rounded-xl overflow-hidden relative">
+          <div className={`h-full flex flex-col rounded-xl overflow-hidden relative ${isOuro ? 'bg-gradient-to-b from-amber-50 to-white' : 'bg-white'}`}>
             
-            {/* BADGES / TAGS */}
+            {/* BADGES / TAGS PULSANTES */}
             {isOuro && (
-               <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1">
-                  <Sparkles size={12}/> Ouro
+               <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded shadow-lg flex items-center gap-1 border border-amber-300 animate-pulse">
+                  <Sparkles size={12}/> Ouro VIP
                </div>
             )}
             {isTurbo && (
@@ -215,13 +212,11 @@ export default function Home() {
                </div>
             )}
 
-            {/* CORAÇÃO */}
             <div className="absolute top-2 right-2 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm">
               <Heart size={16} strokeWidth={2.5} />
             </div>
 
-            {/* IMAGEM */}
-            <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative border-b border-gray-100">
+            <div className={`aspect-[4/3] bg-gray-50 overflow-hidden relative border-b ${isOuro ? 'border-amber-200' : 'border-gray-100'}`}>
                {ad.imagemUrl ? (
                   <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={ad.titulo} />
                ) : (
@@ -229,23 +224,29 @@ export default function Home() {
                )}
             </div>
             
-            {/* INFORMAÇÕES */}
+            {/* TEXTOS DIFERENCIADOS PARA O OURO */}
             <div className="p-3 md:p-4 flex flex-col flex-1">
-              <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit mb-2">
+              <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded w-fit mb-2 ${isOuro ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
                 {ad.categoria}
               </span>
-              <h3 className="text-xs md:text-sm text-gray-800 line-clamp-2 mb-2 font-semibold group-hover:text-primary transition-colors leading-snug flex-1">
+              <h3 className={`text-xs md:text-sm line-clamp-2 mb-1 font-black transition-colors leading-snug ${isOuro ? 'text-amber-950 group-hover:text-amber-600' : 'text-gray-800 group-hover:text-primary'}`}>
                 {ad.titulo}
               </h3>
               
-              <p className={`text-lg md:text-xl font-black mt-2 ${isOuro ? 'text-amber-600' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
+              {ad.descricao && (
+                <p className={`text-[10px] md:text-xs line-clamp-2 mb-2 leading-relaxed flex-1 font-medium ${isOuro ? 'text-amber-700/80' : 'text-gray-500'}`}>
+                  {ad.descricao}
+                </p>
+              )}
+              
+              <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600 drop-shadow-sm text-2xl' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
               </p>
               
-              <div className="mt-3 pt-3 text-[10px] text-gray-400 flex justify-between font-medium border-t border-gray-50">
+              <div className={`mt-3 pt-3 text-[10px] flex justify-between font-medium border-t ${isOuro ? 'border-amber-100 text-amber-700' : 'border-gray-50 text-gray-400'}`}>
                 <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
                 <span className="flex items-center gap-1 truncate max-w-[60%]">
-                   <MapPin size={10} className="text-gray-300 shrink-0"/> 
+                   <MapPin size={10} className={isOuro ? "text-amber-500 shrink-0" : "text-gray-300 shrink-0"}/> 
                    <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
                 </span>
               </div>
@@ -269,16 +270,13 @@ export default function Home() {
     </div>
   )
 
-  // 🚀 SEPARANDO OS BLOCOS PARA EXIBIÇÃO
   const adsOuro = ads.filter(a => Number(a.planoId) === 3);
   const adsTurbo = ads.filter(a => Number(a.planoId) === 2);
-  // Garante que QUALQUER coisa que não for Ouro ou Turbo (Topo, Grátis, 99, null) apareça na lista geral
   const adsGerais = ads.filter(a => Number(a.planoId) !== 3 && Number(a.planoId) !== 2);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 HERO SECTION */}
       <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -311,7 +309,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CATEGORIAS ALINHADAS */}
       <div className="max-w-6xl mx-auto px-1 md:px-4 -mt-14 relative z-20">
         
         <div className="mb-8 px-2 md:px-0">
@@ -333,7 +330,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BANNER INSTALAÇÃO APP (PWA) */}
         {showInstallBanner && (
           <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
@@ -357,7 +353,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* BANNER DE MOEDAS E MISSÕES */}
         <div className="px-4 md:px-0 mt-4 mb-10">
           <Link href="/carteira" className="block bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all outline-none group relative overflow-hidden">
              <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
@@ -376,33 +371,33 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* BANNER ADSENSE */}
-        <div className="mt-2 mb-6 w-full max-w-4xl mx-auto px-4">
-          <AdBanner dataAdSlot="8830353493" />
-        </div>
-
-        {/* 1. CARROSSEL OURO NO TOPO MAXIMO (Plano 3) */}
+        {/* 🚀 1. CARROSSEL OURO NO TOPO MAXIMO (Plano 3) GIGANTE E LUXUOSO */}
         {!loading && vipAds.length > 0 && (
-          <div className="mb-6 mt-4 px-4 md:px-0">
-            <h2 className="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
-              <Sparkles className="text-amber-500"/> Ouro Urgente
+          <div className="mb-10 mt-6 px-4 md:px-0">
+            <h2 className="text-2xl md:text-3xl font-black text-amber-500 flex items-center gap-2 tracking-tight mb-4 drop-shadow-sm">
+              <Sparkles className="text-amber-500" size={32} /> Ouro VIP - Super Destaques
             </h2>
-            <div className="flex gap-4 overflow-x-auto pb-6 pt-2 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex gap-6 overflow-x-auto pb-8 pt-4 px-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {vipAds.map(ad => (
-                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[240px] md:w-[260px] bg-white rounded-2xl border-2 border-amber-400 hover:border-amber-500 shadow-[0_4px_15px_rgba(251,191,36,0.3)] hover:shadow-[0_8px_25px_rgba(251,191,36,0.5)] hover:-translate-y-1 transition-all overflow-hidden flex flex-col group relative outline-none">
-                  <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md shadow-md z-10 flex items-center gap-1">
-                    <Sparkles size={10}/> Ouro
+                <Link href={`/anuncio/${ad.id}`} key={`vip-${ad.id}`} className="snap-start shrink-0 w-[280px] sm:w-[320px] md:w-[380px] bg-white rounded-[2rem] border-[4px] border-amber-400 hover:border-amber-500 shadow-[0_10px_30px_rgba(251,191,36,0.4)] hover:shadow-[0_15px_40px_rgba(251,191,36,0.6)] hover:-translate-y-2 transition-all duration-300 overflow-hidden flex flex-col group relative outline-none ring-4 ring-amber-400/20">
+                  <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-400 to-amber-600 text-white text-xs font-black uppercase px-4 py-1.5 rounded-lg shadow-lg z-10 flex items-center gap-1.5 animate-pulse border border-amber-300">
+                    <Sparkles size={14}/> Ouro VIP
                   </div>
                   <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative">
                      {ad.imagemUrl ? (
                         <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={ad.titulo} />
                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={40}/></div>
                      )}
                   </div>
-                  <div className="p-4 flex flex-col flex-1 bg-gradient-to-b from-amber-50/40 to-white">
-                    <h3 className="text-sm text-gray-800 line-clamp-2 mb-2 font-bold group-hover:text-amber-600 transition-colors h-10">{ad.titulo}</h3>
-                    <p className="text-xl font-black text-amber-600 mt-auto">
+                  <div className="p-5 md:p-6 flex flex-col flex-1 bg-gradient-to-b from-amber-50 to-white">
+                    <h3 className="text-base md:text-lg text-amber-950 line-clamp-2 mb-2 font-black group-hover:text-amber-600 transition-colors h-12 md:h-14 leading-snug">{ad.titulo}</h3>
+                    {ad.descricao && (
+                      <p className="text-xs text-amber-700/80 line-clamp-2 mb-4 leading-relaxed flex-1 font-medium">
+                        {ad.descricao}
+                      </p>
+                    )}
+                    <p className="text-2xl md:text-3xl font-black text-amber-600 mt-auto drop-shadow-sm">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
                     </p>
                   </div>
@@ -421,7 +416,6 @@ export default function Home() {
             <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {storiesAds.map(ad => (
                 <Link href={`/anuncio/${ad.id}`} key={`story-${ad.id}`} className="snap-start shrink-0 flex flex-col items-center gap-2 outline-none w-[76px] md:w-[86px] group">
-                  {/* Borda Estilo Instagram Stories */}
                   <div className="w-[76px] h-[76px] md:w-[86px] md:h-[86px] rounded-full p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md group-active:scale-95 transition-transform">
                     <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-50 relative">
                       {ad.imagemUrl ? (
@@ -446,7 +440,6 @@ export default function Home() {
            </h2>
         </div>
 
-        {/* 3. LISTA GERAL SEPARADA EM BLOCOS DE DESTAQUE */}
         <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
@@ -469,14 +462,14 @@ export default function Home() {
               {/* BLOCO OURO NO GRID (Para quem pagou o plano Ouro) */}
               {adsOuro.length > 0 && (
                 <div>
-                  <h3 className="text-lg md:text-xl font-black text-amber-500 flex items-center gap-2 mb-4"><Sparkles size={20}/> Vitrine Ouro</h3>
+                  <h3 className="text-lg md:text-xl font-black text-amber-500 flex items-center gap-2 mb-4"><Sparkles size={20}/> Vitrine Ouro VIP</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
                     {adsOuro.map(ad => renderAdCard(ad))}
                   </div>
                 </div>
               )}
 
-              {/* BLOCO TURBO NO GRID (Para quem pagou o plano Turbo) */}
+              {/* BLOCO TURBO NO GRID */}
               {adsTurbo.length > 0 && (
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-purple-600 flex items-center gap-2 mb-4"><Flame size={20}/> Vitrine Turbo</h3>
@@ -486,7 +479,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* BLOCO GERAL (Sobe pro Topo e Grátis) */}
+              {/* BLOCO GERAL */}
               {adsGerais.length > 0 && (
                 <div>
                   {(adsOuro.length > 0 || adsTurbo.length > 0) && (
@@ -498,7 +491,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* BOTÃO EXPLORAR */}
               <div className="mt-12 hidden md:flex justify-center">
                 <Link 
                   href="/todos-anuncios" 
