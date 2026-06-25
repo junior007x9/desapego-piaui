@@ -10,7 +10,6 @@ const CATEGORIAS = ["Imóveis", "Veículos", "Eletrônicos", "Para Casa", "Moda 
 
 function formatTimeAgo(timestampSeconds: number) {
   if (!timestampSeconds) return 'Data desconhecida';
-  
   const now = new Date();
   const date = new Date(timestampSeconds * 1000);
   const diffInTime = now.getTime() - date.getTime();
@@ -23,6 +22,20 @@ function formatTimeAgo(timestampSeconds: number) {
   return date.toLocaleDateString('pt-BR');
 }
 
+// 🚀 FUNÇÃO BLINDADA IGUAL A DA HOME
+function getPlanoVal(val: any): number {
+  if (val === 3 || val === '3') return 3;
+  if (val === 2 || val === '2') return 2;
+  if (val === 1 || val === '1') return 1;
+  if (typeof val === 'string') {
+    const str = val.toLowerCase();
+    if (str.includes('ouro') || str.includes('3')) return 3;
+    if (str.includes('turbo') || str.includes('2')) return 2;
+    if (str.includes('topo') || str.includes('1')) return 1;
+  }
+  return Number(val) || 0;
+}
+
 function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -32,8 +45,6 @@ function SearchContent() {
 
   const [ads, setAds] = useState<any[]>([])
   const [filteredAds, setFilteredAds] = useState<any[]>([])
-  
-  // ESTADOS DO INFINITE SCROLL
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [lastVisible, setLastVisible] = useState<any>(null)
@@ -44,33 +55,19 @@ function SearchContent() {
   const [precoMin, setPrecoMin] = useState('')
   const [precoMax, setPrecoMax] = useState('')
   const [ordenacao, setOrdenacao] = useState('recentes')
-  
   const [showFiltersMobile, setShowFiltersMobile] = useState(false)
 
-  // FUNÇÃO DE BUSCA PAGINADA
   const fetchAds = async (isLoadMore = false) => {
     try {
       if (isLoadMore) setLoadingMore(true)
       else setLoading(true)
 
       const agora = new Date()
-      
-      // Carrega de 12 em 12, ordenando pelos mais recentes na base de dados
-      let q = query(
-        collection(db, 'anuncios'), 
-        where('status', '==', 'ativo'),
-        orderBy('criadoEm', 'desc'),
-        limit(12)
-      )
+      // Pegamos mais de 12 por vez para garantir que todos os Ouros subam pra tela na hora
+      let q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), limit(60))
 
       if (isLoadMore && lastVisible) {
-        q = query(
-          collection(db, 'anuncios'), 
-          where('status', '==', 'ativo'),
-          orderBy('criadoEm', 'desc'),
-          startAfter(lastVisible),
-          limit(12)
-        )
+        q = query(collection(db, 'anuncios'), where('status', '==', 'ativo'), orderBy('criadoEm', 'desc'), startAfter(lastVisible), limit(60))
       }
 
       const snap = await getDocs(q)
@@ -85,8 +82,8 @@ function SearchContent() {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
-
-          const plano = Number(data.planoId) || 0;
+          
+          const plano = getPlanoVal(data.planoId); // Lendo da forma blindada
 
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
@@ -108,7 +105,7 @@ function SearchContent() {
         setAds(prev => [...prev, ...list])
       } else {
         setAds(list)
-        setHasMore(snap.docs.length === 12)
+        setHasMore(snap.docs.length === 60)
       }
 
     } catch (error) {
@@ -119,12 +116,10 @@ function SearchContent() {
     }
   }
 
-  // Carrega a primeira página ao entrar
   useEffect(() => {
     fetchAds()
   }, [])
 
-  // OBSERVAR O SCROLL (O espião do final da tela)
   const observer = useRef<IntersectionObserver | null>(null)
   const lastAdElementRef = useCallback((node: any) => {
     if (loading || loadingMore) return
@@ -132,15 +127,13 @@ function SearchContent() {
     
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
-        fetchAds(true) // Carrega a próxima página
+        fetchAds(true)
       }
     })
     
     if (node) observer.current.observe(node)
   }, [loading, loadingMore, hasMore, lastVisible])
 
-
-  // 🚀 FILTRAGEM INTELIGENTE
   useEffect(() => {
     let result = [...ads]
 
@@ -163,11 +156,16 @@ function SearchContent() {
       result = result.filter(ad => ad.preco <= parseFloat(precoMax))
     }
 
-    // Ordenação interna
     const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
+    // 🚀 ORDENAÇÃO MATADORA PARA O OURO SUBIR PRA INDEX 0
     result.sort((a, b) => {
-      if (ordenacao === 'recentes') return getTempo(b) - getTempo(a);
+      if (ordenacao === 'recentes') {
+         const pesoA = a.planoId === 3 ? 4 : (a.planoId === 2 ? 3 : (a.planoId === 1 ? 2 : 1));
+         const pesoB = b.planoId === 3 ? 4 : (b.planoId === 2 ? 3 : (b.planoId === 1 ? 2 : 1));
+         if (pesoA !== pesoB) return pesoB - pesoA;
+         return getTempo(b) - getTempo(a);
+      }
       if (ordenacao === 'menor_preco') return a.preco - b.preco;
       if (ordenacao === 'maior_preco') return b.preco - a.preco;
       return 0;
@@ -185,9 +183,9 @@ function SearchContent() {
     router.push('/todos-anuncios')
   }
 
-  // 🚀 COMPONENTE DO CARD (Evita repetição de código)
+  // 🚀 O CARD COM VISUAL DE LUXO
   const renderAdCard = (ad: any, isLastElement: boolean) => {
-    const plano = Number(ad.planoId) || 0;
+    const plano = getPlanoVal(ad.planoId);
     const isOuro = plano === 3;
     const isTurbo = plano === 2; 
     const isSobe = plano === 1;
@@ -197,59 +195,55 @@ function SearchContent() {
         ref={isLastElement ? lastAdElementRef : null} 
         href={`/anuncio/${ad.id}`} 
         key={ad.id} 
-        className={`group rounded-xl md:rounded-2xl border hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative ${
-            isOuro ? 'border-amber-300 bg-amber-50/20 hover:-translate-y-1' :
-            isTurbo ? 'border-blue-300 bg-blue-50/20 hover:-translate-y-1' :
-            isSobe ? 'border-green-200 bg-white hover:-translate-y-1' :
-            'bg-white border-gray-100 shadow-sm hover:-translate-y-1'
-        }`}
+        className={`group relative outline-none h-full flex flex-col transition-all duration-300 ${isOuro ? 'hover:-translate-y-2 z-10' : 'hover:-translate-y-1'}`}
       >
-        {/* Selos de Destaque no Grid */}
-        {isOuro && (
-           <div className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Sparkles size={10}/> Ouro
-           </div>
-        )}
-        {isTurbo && (
-           <div className="absolute top-2 left-2 z-10 bg-purple-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Flame size={10}/> Turbo
-           </div>
-        )}
-        {isSobe && (
-           <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
-              <Rocket size={10}/> No Topo
-           </div>
-        )}
-
-        <div className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors">
-          <Heart size={16} strokeWidth={2.5} />
-        </div>
-
-        {/* Borda de luxo para Ouro e Turbo */}
-        <div className={`aspect-square bg-gray-50 overflow-hidden relative border-b border-gray-50 ${isOuro ? 'border-b-4 border-amber-400' : isTurbo ? 'border-b-4 border-purple-400' : ''}`}>
-           {ad.imagemUrl ? (
-              <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-           ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
-           )}
-        </div>
-        
-        <div className={`p-3 md:p-4 flex flex-col flex-1 ${isOuro ? 'bg-amber-50/30' : isTurbo ? 'bg-purple-50/10' : 'bg-white'}`}>
-          <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded w-fit mb-2">
-            {ad.categoria}
-          </span>
-          <h3 className="text-xs md:text-sm text-gray-700 line-clamp-2 mb-1.5 md:mb-2 h-8 md:h-10 font-bold group-hover:text-primary transition-colors leading-snug">{ad.titulo}</h3>
+        <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
+          isOuro ? 'rounded-2xl p-[4px] bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-[0_0_20px_rgba(251,191,36,0.4)] hover:shadow-[0_0_30px_rgba(251,191,36,0.6)] ring-4 ring-amber-400/20' :
+          isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:shadow-lg' :
+          isSobe ? 'rounded-2xl border-[3px] border-blue-400 bg-white shadow-sm hover:shadow-md' :
+          'rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md'
+        }`}>
           
-          <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-          </p>
-          
-          <div className="mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] text-gray-400 flex justify-between uppercase font-black tracking-wider border-t border-gray-50">
-            <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
-            <span className="flex items-center gap-0.5 truncate max-w-[60%]">
-               <MapPin size={10} className="text-accent shrink-0"/> 
-               <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
-            </span>
+          <div className={`h-full flex flex-col rounded-xl overflow-hidden relative ${isOuro ? 'bg-gradient-to-b from-amber-50 to-white' : 'bg-white'}`}>
+            
+            {isOuro && (<div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded shadow-lg flex items-center gap-1 border border-amber-300 animate-pulse"><Sparkles size={12}/> Ouro VIP</div>)}
+            {isTurbo && (<div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1"><Flame size={12}/> Turbo</div>)}
+            {isSobe && (<div className="absolute top-2 left-2 z-20 bg-blue-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded shadow-md flex items-center gap-1"><Rocket size={12}/> Topo</div>)}
+
+            <div className="absolute top-2 right-2 z-20 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm"><Heart size={16} strokeWidth={2.5} /></div>
+
+            <div className={`aspect-square bg-gray-50 overflow-hidden relative border-b ${isOuro ? 'border-amber-200' : 'border-gray-50'}`}>
+               {ad.imagemUrl ? (
+                  <img src={ad.imagemUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+               ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={32}/></div>
+               )}
+            </div>
+            
+            <div className={`p-3 md:p-4 flex flex-col flex-1 ${isOuro ? 'bg-gradient-to-b from-amber-50/50 to-transparent' : ''}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded w-fit mb-2 ${isOuro ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'}`}>
+                {ad.categoria}
+              </span>
+              <h3 className={`text-xs md:text-sm line-clamp-2 mb-1.5 font-bold transition-colors leading-snug ${isOuro ? 'text-amber-950 group-hover:text-amber-600' : 'text-gray-700 group-hover:text-primary'}`}>{ad.titulo}</h3>
+              
+              {ad.descricao && (
+                <p className={`text-[10px] md:text-xs line-clamp-2 mb-2 leading-relaxed flex-1 font-medium ${isOuro ? 'text-amber-700/80' : 'text-gray-500'}`}>
+                  {ad.descricao}
+                </p>
+              )}
+
+              <p className={`text-lg md:text-xl font-black mt-auto ${isOuro ? 'text-amber-600 drop-shadow-sm text-2xl' : isTurbo ? 'text-purple-600' : isSobe ? 'text-blue-600' : 'text-gray-900'}`}>
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
+              </p>
+              
+              <div className={`mt-2 md:mt-3 pt-2 text-[9px] md:text-[10px] flex justify-between uppercase font-black tracking-wider border-t ${isOuro ? 'border-amber-100 text-amber-700' : 'border-gray-50 text-gray-400'}`}>
+                <span>{ad.pagoEm ? formatTimeAgo(new Date(ad.pagoEm).getTime() / 1000) : (ad.criadoEm ? formatTimeAgo(ad.criadoEm.seconds) : 'Hoje')}</span>
+                <span className="flex items-center gap-0.5 truncate max-w-[60%]">
+                   <MapPin size={10} className={isOuro ? "text-amber-500 shrink-0" : "text-accent shrink-0"}/> 
+                   <span className="truncate">{ad.cidade || ad.localizacao || 'Piauí'}</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </Link>
@@ -361,61 +355,20 @@ function SearchContent() {
             <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100">
                <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4"><Search size={40} /></div>
                <h3 className="text-xl font-black text-gray-800 mb-2">Nenhum resultado</h3>
-               <p className="text-gray-500 mb-6 max-w-md mx-auto">Não encontramos anúncios com os filtros selecionados ou não há mais anúncios.</p>
-               <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md">
+               <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md mt-4">
                   Limpar todos os filtros
                </button>
             </div>
           ) : (
             
             <div className="space-y-12">
-              {/* 🚀 BLOCO 1: OURO URGENTE (Separado na hierarquia máxima) */}
-              {filteredAds.filter(a => Number(a.planoId) === 3).length > 0 && (
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-amber-500 flex items-center gap-2 mb-4">
-                    <Sparkles size={24}/> Ouro Urgente
-                  </h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
-                    {filteredAds.filter(a => Number(a.planoId) === 3).map((ad, i, arr) => {
-                       const isLast = arr.length - 1 === i && filteredAds.length === arr.length; // Lógica para o paginador
-                       return renderAdCard(ad, isLast);
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 🚀 BLOCO 2: DESTAQUE TURBO (Abaixo do Ouro) */}
-              {filteredAds.filter(a => Number(a.planoId) === 2).length > 0 && (
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-purple-600 flex items-center gap-2 mb-4">
-                    <Flame size={24}/> Destaque Turbo
-                  </h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
-                    {filteredAds.filter(a => Number(a.planoId) === 2).map((ad, i, arr) => {
-                       const isLast = arr.length - 1 === i && filteredAds.filter(a => Number(a.planoId) > 2).length === 0 && filteredAds.length === arr.length;
-                       return renderAdCard(ad, isLast);
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 🚀 BLOCO 3: SOBE PRO TOPO & GERAIS */}
-              {filteredAds.filter(a => Number(a.planoId) < 2).length > 0 && (
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-gray-800 flex items-center gap-2 mb-4">
-                    Mais Anúncios
-                  </h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
-                    {filteredAds.filter(a => Number(a.planoId) === 1).map((ad, i, arr) => {
-                       return renderAdCard(ad, false);
-                    })}
-                    {filteredAds.filter(a => Number(a.planoId) === 0 || Number(a.planoId) === 99).map((ad, i, arr) => {
-                       const isLast = arr.length - 1 === i;
-                       return renderAdCard(ad, isLast);
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* 🚀 GRADE ÚNICA COM OURO NO TOPO ABSOLUTO */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+                {filteredAds.map((ad, index) => {
+                  const isLastElement = filteredAds.length === index + 1;
+                  return renderAdCard(ad, isLastElement);
+                })}
+              </div>
 
               {loadingMore && (
                 <div className="flex justify-center py-10 border-t border-gray-200 mt-10">

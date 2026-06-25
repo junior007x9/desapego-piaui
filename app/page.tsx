@@ -38,6 +38,20 @@ function formatTimeAgo(timestampSeconds: number) {
   return date.toLocaleDateString('pt-BR');
 }
 
+// 🚀 FUNÇÃO BLINDADA: Lê o plano mesmo se o Admin salvar como texto (ex: "OURO / URGENTE")
+function getPlanoVal(val: any): number {
+  if (val === 3 || val === '3') return 3;
+  if (val === 2 || val === '2') return 2;
+  if (val === 1 || val === '1') return 1;
+  if (typeof val === 'string') {
+    const str = val.toLowerCase();
+    if (str.includes('ouro') || str.includes('3')) return 3;
+    if (str.includes('turbo') || str.includes('2')) return 2;
+    if (str.includes('topo') || str.includes('1')) return 1;
+  }
+  return Number(val) || 0;
+}
+
 export default function Home() {
   const [ads, setAds] = useState<any[]>([])
   const [vipAds, setVipAds] = useState<any[]>([]) 
@@ -70,9 +84,7 @@ export default function Home() {
     fetchCity();
 
     const bannerClosed = localStorage.getItem('app_banner_closed');
-    if (!bannerClosed) {
-       setShowInstallBanner(true); 
-    }
+    if (!bannerClosed) setShowInstallBanner(true); 
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -91,7 +103,7 @@ export default function Home() {
       }
       setDeferredPrompt(null);
     } else {
-      alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar (quadrado com seta para cima) e selecione 'Adicionar à Tela de Início'.");
+      alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar e selecione 'Adicionar à Tela de Início'.");
     }
   };
 
@@ -115,7 +127,9 @@ export default function Home() {
           const data = document.data()
           let statusFinal = data.status
           let isExpired = false;
-          const plano = Number(data.planoId) || 0;
+          
+          // Usa a função blindada que entende o painel admin
+          const plano = getPlanoVal(data.planoId);
 
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
@@ -130,13 +144,10 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            listGeral.push(adFinal)
+            listGeral.push(adFinal) // Todos caem na lista geral
 
-            if (plano === 3) {
-              listCarrosselOuro.push(adFinal)
-            } else if (plano === 2) {
-              listStoriesTurbo.push(adFinal)
-            }
+            if (plano === 3) listCarrosselOuro.push(adFinal)
+            else if (plano === 2) listStoriesTurbo.push(adFinal)
           }
         }
 
@@ -145,16 +156,12 @@ export default function Home() {
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
         
+        // ORDENAÇÃO MATADORA: Ouro absoluto no topo da lista geral
         listGeral.sort((a, b) => {
-          const planoA = Number(a.planoId) || 0;
-          const planoB = Number(b.planoId) || 0;
-          
-          const pesoA = planoA === 3 ? 4 : (planoA === 2 ? 3 : (planoA === 1 ? 2 : 1));
-          const pesoB = planoB === 3 ? 4 : (planoB === 2 ? 3 : (planoB === 1 ? 2 : 1));
+          const pesoA = a.planoId === 3 ? 4 : (a.planoId === 2 ? 3 : (a.planoId === 1 ? 2 : 1));
+          const pesoB = b.planoId === 3 ? 4 : (b.planoId === 2 ? 3 : (b.planoId === 1 ? 2 : 1));
 
-          if (pesoA !== pesoB) {
-             return pesoB - pesoA; 
-          }
+          if (pesoA !== pesoB) return pesoB - pesoA; 
           return getTempo(b) - getTempo(a); 
         });
         
@@ -175,9 +182,8 @@ export default function Home() {
     if (busca.trim()) router.push(`/todos-anuncios?q=${encodeURIComponent(busca)}`)
   }
 
-  // 🚀 COMPONENTE DE CARD ATUALIZADO COM VISUAL DE ALTÍSSIMO LUXO PRO OURO
   const renderAdCard = (ad: any) => {
-    const plano = Number(ad.planoId) || 0;
+    const plano = getPlanoVal(ad.planoId);
     const isOuro = plano === 3;
     const isTurbo = plano === 2; 
     const isSobe = plano === 1;
@@ -185,7 +191,6 @@ export default function Home() {
     return (
       <Link href={`/anuncio/${ad.id}`} key={ad.id} className={`group relative outline-none h-full flex flex-col transition-all duration-300 ${isOuro ? 'hover:-translate-y-2 z-10' : 'hover:-translate-y-1'}`}>
         
-        {/* BORDA DE LUXO NO CARD OURO */}
         <div className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${
           isOuro ? 'rounded-2xl p-[4px] bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-[0_0_20px_rgba(251,191,36,0.4)] hover:shadow-[0_0_30px_rgba(251,191,36,0.6)] ring-4 ring-amber-400/20' :
           isTurbo ? 'rounded-2xl p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md hover:shadow-lg' :
@@ -195,7 +200,6 @@ export default function Home() {
           
           <div className={`h-full flex flex-col rounded-xl overflow-hidden relative ${isOuro ? 'bg-gradient-to-b from-amber-50 to-white' : 'bg-white'}`}>
             
-            {/* BADGES / TAGS PULSANTES */}
             {isOuro && (
                <div className="absolute top-2 left-2 z-20 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded shadow-lg flex items-center gap-1 border border-amber-300 animate-pulse">
                   <Sparkles size={12}/> Ouro VIP
@@ -224,7 +228,6 @@ export default function Home() {
                )}
             </div>
             
-            {/* TEXTOS DIFERENCIADOS PARA O OURO */}
             <div className="p-3 md:p-4 flex flex-col flex-1">
               <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded w-fit mb-2 ${isOuro ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
                 {ad.categoria}
@@ -270,42 +273,26 @@ export default function Home() {
     </div>
   )
 
-  const adsOuro = ads.filter(a => Number(a.planoId) === 3);
-  const adsTurbo = ads.filter(a => Number(a.planoId) === 2);
-  const adsGerais = ads.filter(a => Number(a.planoId) !== 3 && Number(a.planoId) !== 2);
-
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
       <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          
           <ContadorEstatisticas />
-
           <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight leading-tight mt-2">
             O que você está procurando no <span className="text-accent underline decoration-4 underline-offset-4">Piauí?</span>
           </h1>
           <p className="text-primary-100 font-medium mb-6 md:mb-8 text-sm md:text-lg px-2">
             O maior marketplace local. Compre e venda de forma segura em {userCity}.
           </p>
-          
           <form onSubmit={handleSearch} className="flex bg-white p-1.5 md:p-2 rounded-2xl shadow-xl max-w-2xl mx-auto focus-within:ring-4 focus-within:ring-accent/50 transition-all border border-white mb-0">
-            <div className="hidden md:flex items-center pl-4 text-gray-400">
-              <Search size={24} />
-            </div>
-            <input 
-              type="text" 
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              placeholder={`Buscar carros, imóveis...`} 
-              className="w-full py-3 px-3 md:py-4 md:px-4 outline-none text-gray-800 font-medium text-sm md:text-lg bg-transparent placeholder:text-sm md:placeholder:text-lg"
-            />
+            <div className="hidden md:flex items-center pl-4 text-gray-400"><Search size={24} /></div>
+            <input type="text" value={busca} onChange={e => setBusca(e.target.value)} placeholder={`Buscar carros, imóveis...`} className="w-full py-3 px-3 md:py-4 md:px-4 outline-none text-gray-800 font-medium text-sm md:text-lg bg-transparent placeholder:text-sm md:placeholder:text-lg" />
             <button type="submit" className="bg-accent hover:bg-accent-dark text-white font-black px-4 md:px-10 py-3 md:py-4 rounded-xl transition-transform active:scale-95 shadow-sm flex items-center gap-2 outline-none">
               <Search className="md:hidden" size={20} /> <span className="hidden md:inline">Pesquisar</span>
             </button>
           </form>
-
         </div>
       </div>
 
@@ -314,17 +301,11 @@ export default function Home() {
         <div className="mb-8 px-2 md:px-0">
           <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
-              <Link 
-                href={`/todos-anuncios?categoria=${cat.slug}`} 
-                key={cat.nome} 
-                className="snap-start shrink-0 flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-24 outline-none"
-              >
+              <Link href={`/todos-anuncios?categoria=${cat.slug}`} key={cat.nome} className="snap-start shrink-0 flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-24 outline-none">
                 <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[4px] md:border-b-[6px] active:border-b-2 active:translate-y-[2px] transition-all duration-150 bg-white ${cat.cores}`}>
                   <div className="scale-90 md:scale-100">{cat.icon}</div>
                 </div>
-                <span className="text-[11px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">
-                  {cat.nome}
-                </span>
+                <span className="text-[11px] md:text-sm font-black text-gray-700 text-center tracking-tight leading-tight group-active:text-primary transition-colors">{cat.nome}</span>
               </Link>
             ))}
           </div>
@@ -334,44 +315,20 @@ export default function Home() {
           <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
              <div className="flex items-center gap-3 md:gap-4 relative z-10">
-                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed] shrink-0">
-                   <Download size={24} strokeWidth={2.5} />
-                </div>
+                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed] shrink-0"><Download size={24} strokeWidth={2.5} /></div>
                 <div>
                    <h3 className="text-white font-black text-sm md:text-lg leading-tight">Baixe nosso App!</h3>
                    <p className="text-purple-100 text-[10px] md:text-sm font-medium mt-0.5 leading-snug">Rápido, leve e não gasta memória.</p>
                 </div>
              </div>
              <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0 ml-2">
-                <button onClick={closeBanner} className="text-white/60 hover:text-white p-1 sm:p-2 outline-none">
-                   <X size={20} />
-                </button>
-                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">
-                   Instalar
-                </button>
+                <button onClick={closeBanner} className="text-white/60 hover:text-white p-1 sm:p-2 outline-none"><X size={20} /></button>
+                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">Instalar</button>
              </div>
           </div>
         )}
 
-        <div className="px-4 md:px-0 mt-4 mb-10">
-          <Link href="/carteira" className="block bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all outline-none group relative overflow-hidden">
-             <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
-             <div className="flex items-center gap-4 relative z-10">
-                <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                   <Coins size={24} />
-                </div>
-                <div className="flex-1">
-                   <h3 className="text-amber-900 font-black text-base md:text-lg leading-tight">Central de Recompensas</h3>
-                   <p className="text-amber-700 text-[11px] md:text-sm font-medium leading-snug mt-0.5">Cumpra missões, acumule moedas virtuais e troque por destaques grátis!</p>
-                </div>
-                <div className="hidden sm:flex shrink-0">
-                   <span className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1 shadow-sm">Ver Missões <ChevronRight size={16}/></span>
-                </div>
-             </div>
-          </Link>
-        </div>
-
-        {/* 🚀 1. CARROSSEL OURO NO TOPO MAXIMO (Plano 3) GIGANTE E LUXUOSO */}
+        {/* CARROSSEL OURO NO TOPO MAXIMO */}
         {!loading && vipAds.length > 0 && (
           <div className="mb-10 mt-6 px-4 md:px-0">
             <h2 className="text-2xl md:text-3xl font-black text-amber-500 flex items-center gap-2 tracking-tight mb-4 drop-shadow-sm">
@@ -392,14 +349,8 @@ export default function Home() {
                   </div>
                   <div className="p-5 md:p-6 flex flex-col flex-1 bg-gradient-to-b from-amber-50 to-white">
                     <h3 className="text-base md:text-lg text-amber-950 line-clamp-2 mb-2 font-black group-hover:text-amber-600 transition-colors h-12 md:h-14 leading-snug">{ad.titulo}</h3>
-                    {ad.descricao && (
-                      <p className="text-xs text-amber-700/80 line-clamp-2 mb-4 leading-relaxed flex-1 font-medium">
-                        {ad.descricao}
-                      </p>
-                    )}
-                    <p className="text-2xl md:text-3xl font-black text-amber-600 mt-auto drop-shadow-sm">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}
-                    </p>
+                    {ad.descricao && <p className="text-xs text-amber-700/80 line-clamp-2 mb-4 leading-relaxed flex-1 font-medium">{ad.descricao}</p>}
+                    <p className="text-2xl md:text-3xl font-black text-amber-600 mt-auto drop-shadow-sm">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco)}</p>
                   </div>
                 </Link>
               ))}
@@ -407,7 +358,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* 2. DESTAQUE TURBO ESTILO STORIES (Plano 2) */}
+        {/* DESTAQUE TURBO ESTILO STORIES */}
         {!loading && storiesAds.length > 0 && (
           <div className="mb-8 mt-2 px-4 md:px-0">
             <h2 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-2 tracking-tight mb-4">
@@ -418,16 +369,10 @@ export default function Home() {
                 <Link href={`/anuncio/${ad.id}`} key={`story-${ad.id}`} className="snap-start shrink-0 flex flex-col items-center gap-2 outline-none w-[76px] md:w-[86px] group">
                   <div className="w-[76px] h-[76px] md:w-[86px] md:h-[86px] rounded-full p-[3px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shadow-md group-active:scale-95 transition-transform">
                     <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-50 relative">
-                      {ad.imagemUrl ? (
-                         <img src={ad.imagemUrl} className="w-full h-full object-cover" alt={ad.titulo} />
-                      ) : (
-                         <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>
-                      )}
+                      {ad.imagemUrl ? <img src={ad.imagemUrl} className="w-full h-full object-cover" alt={ad.titulo} /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24}/></div>}
                     </div>
                   </div>
-                  <span className="text-[10px] md:text-xs font-bold text-gray-700 text-center line-clamp-2 leading-tight w-full px-1">
-                    {ad.titulo}
-                  </span>
+                  <span className="text-[10px] md:text-xs font-bold text-gray-700 text-center line-clamp-2 leading-tight w-full px-1">{ad.titulo}</span>
                 </Link>
               ))}
             </div>
@@ -435,11 +380,10 @@ export default function Home() {
         )}
 
         <div className="flex items-center justify-between mb-6 px-4 md:px-0 mt-8">
-           <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-              Anúncios Recentes
-           </h2>
+           <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Anúncios Recentes</h2>
         </div>
 
+        {/* 🚀 GRADE ÚNICA DE ANÚNCIOS (OURO SOBE AUTOMÁTICO) */}
         <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
@@ -447,64 +391,24 @@ export default function Home() {
             </div>
           ) : ads.length === 0 ? (
             <div className="text-center py-20 px-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
-               <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-6 text-primary/40">
-                  <ShoppingBag size={48} strokeWidth={1.5} />
-               </div>
+               <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mb-6 text-primary/40"><ShoppingBag size={48} strokeWidth={1.5} /></div>
                <h3 className="text-xl font-black text-gray-900 mb-2">Nenhum anúncio por aqui (ainda!)</h3>
-               <p className="text-gray-500 font-medium max-w-sm mb-6">Que tal ser o primeiro a faturar vendendo algo que você não usa mais?</p>
-               <Link href="/anunciar" className="bg-accent hover:bg-accent-dark text-white font-black px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95">
-                  Anunciar Grátis Agora
-               </Link>
+               <Link href="/anunciar" className="bg-accent hover:bg-accent-dark text-white font-black px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95">Anunciar Grátis Agora</Link>
             </div>
           ) : (
             <div className="space-y-12">
-              
-              {/* BLOCO OURO NO GRID (Para quem pagou o plano Ouro) */}
-              {adsOuro.length > 0 && (
-                <div>
-                  <h3 className="text-lg md:text-xl font-black text-amber-500 flex items-center gap-2 mb-4"><Sparkles size={20}/> Vitrine Ouro VIP</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {adsOuro.map(ad => renderAdCard(ad))}
-                  </div>
-                </div>
-              )}
-
-              {/* BLOCO TURBO NO GRID */}
-              {adsTurbo.length > 0 && (
-                <div>
-                  <h3 className="text-lg md:text-xl font-black text-purple-600 flex items-center gap-2 mb-4"><Flame size={20}/> Vitrine Turbo</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {adsTurbo.map(ad => renderAdCard(ad))}
-                  </div>
-                </div>
-              )}
-
-              {/* BLOCO GERAL */}
-              {adsGerais.length > 0 && (
-                <div>
-                  {(adsOuro.length > 0 || adsTurbo.length > 0) && (
-                     <h3 className="text-lg md:text-xl font-black text-gray-800 mb-4">Mais Anúncios</h3>
-                  )}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                    {adsGerais.map(ad => renderAdCard(ad))}
-                  </div>
-                </div>
-              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                {ads.map(ad => renderAdCard(ad))}
+              </div>
 
               <div className="mt-12 hidden md:flex justify-center">
-                <Link 
-                  href="/todos-anuncios" 
-                  className="bg-primary hover:bg-primary-dark text-white font-black px-8 py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 active:scale-95 text-base outline-none"
-                >
+                <Link href="/todos-anuncios" className="bg-primary hover:bg-primary-dark text-white font-black px-8 py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 active:scale-95 text-base outline-none">
                   Explorar Todos os Anúncios <ChevronRight size={20} />
                 </Link>
               </div>
 
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 md:hidden z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-                <Link 
-                  href="/todos-anuncios" 
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg active:scale-95 transition-all outline-none"
-                >
+                <Link href="/todos-anuncios" className="flex items-center justify-center gap-2 w-full py-4 bg-primary hover:bg-primary-dark text-white font-black rounded-xl shadow-lg active:scale-95 transition-all outline-none">
                   Explorar Todos os Anúncios <ChevronRight size={20} />
                 </Link>
               </div>
@@ -516,21 +420,12 @@ export default function Home() {
           <div className="bg-white rounded-[2rem] p-6 md:p-10 border border-gray-100 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-600 font-medium text-sm md:text-base leading-relaxed">
               <div>
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
-                  Classificados Online com Planos de Destaque no Piauí
-                </h2>
-                <p className="mb-4">
-                  O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se você possui itens em casa que não utiliza mais, a nossa plataforma oferece o espaço ideal para criar anúncios e fechar negócios de forma direta, sem taxas de comissão.
-                </p>
+                <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">Classificados Online com Planos de Destaque no Piauí</h2>
+                <p className="mb-4">O <strong>Desapego Piauí</strong> é um portal de classificados focado em aproximar compradores e vendedores em todo o estado. Se você possui itens em casa que não utiliza mais, a nossa plataforma oferece o espaço ideal para criar anúncios e fechar negócios de forma direta, sem taxas de comissão.</p>
               </div>
-              
               <div>
-                <h3 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">
-                  Como Comprar e Vender com Segurança?
-                </h3>
-                <p className="mb-4">
-                  Recomendamos sempre que os usuários realizem as suas negociações em locais públicos e movimentados, como praças, shopping centers ou postos de atendimento. Evite fazer depósitos antecipados sem antes verificar o estado real do produto.
-                </p>
+                <h3 className="text-xl md:text-2xl font-black text-gray-900 mb-4 uppercase tracking-tight">Como Comprar e Vender com Segurança?</h3>
+                <p className="mb-4">Recomendamos sempre que os usuários realizem as suas negociações em locais públicos e movimentados, como praças, shopping centers ou postos de atendimento. Evite fazer depósitos antecipados sem antes verificar o estado real do produto.</p>
               </div>
             </div>
           </div>
