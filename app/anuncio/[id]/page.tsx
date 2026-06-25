@@ -3,20 +3,21 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import DetalhesClient from './DetalhesClient'
 
-// Note que este arquivo NÃO possui a tag 'use client'
-// Isso transforma ele em um Server Component (Invisível pro cliente, mas que o Google ama)
-
+// A atualização do Next.js exige que params seja uma Promise
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-// 🚀 A MÁGICA ACONTECE AQUI: Geração de SEO Dinâmico
+// 🚀 A MÁGICA DO SEO ACONTECE AQUI
 export async function generateMetadata(
-  { params }: Props,
+  props: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
-    const id = params.id
+    // Agora o servidor "espera" o ID da URL carregar corretamente
+    const params = await props.params;
+    const id = params.id;
+    
     const adDocRef = doc(db, 'anuncios', id)
     const adSnapshot = await getDoc(adDocRef)
 
@@ -28,13 +29,12 @@ export async function generateMetadata(
 
     const adData = adSnapshot.data()
     const titulo = adData.titulo || 'Anúncio'
-    // Pega as primeiras 160 letras da descrição para o Google ler
     const descricao = adData.descricao ? adData.descricao.substring(0, 160) + '...' : `Confira os detalhes de ${titulo} no Desapego Piauí. Compre e venda de forma segura.`
 
     return {
       title: `${titulo} | Desapego Piauí`,
       description: descricao,
-      keywords: [adData.categoria, adData.cidade, 'Desapego Piauí', 'Classificados', 'Comprar', 'Vender', titulo.split(' ').slice(0, 3).join(', ')].filter(Boolean),
+      keywords: [adData.categoria, adData.cidade, 'Desapego Piauí', 'Classificados', 'Comprar', 'Vender'].filter(Boolean),
       openGraph: {
         title: `${titulo} | Desapego Piauí`,
         description: descricao,
@@ -52,7 +52,10 @@ export async function generateMetadata(
   }
 }
 
-// O Servidor simplesmente renderiza a tela que criamos no Passo 1 passando o ID
-export default function AnuncioPage({ params }: Props) {
+// 🚀 AQUI ELE REPASSA O ID PARA A TELA DO USUÁRIO
+export default async function AnuncioPage(props: Props) {
+  // Esperamos o ID carregar antes de chamar o Cliente
+  const params = await props.params;
+  
   return <DetalhesClient id={params.id} />
 }
