@@ -7,7 +7,6 @@ import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc, query, where } 
 import { ShoppingBag, CheckCircle, Trash2, Loader2, AlertTriangle, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Clock, Reply, Send, Users, Phone, Search, Activity, Gift, Power, Coins, Flame, Rocket, Sparkles, Mail } from 'lucide-react'
 import Link from 'next/link'
 
-// 🚀 ATUALIZADO: Identidade Visual e Nomenclatura dos Novos Planos
 const getInfoPlano = (planoId: number) => {
   if (planoId === 3) return { nome: 'Ouro / Urgente', cor: 'bg-amber-100 text-amber-700 border-amber-300' }
   if (planoId === 2) return { nome: 'Destaque Turbo', cor: 'bg-purple-100 text-purple-700 border-purple-300' }
@@ -121,10 +120,12 @@ export default function AdminPage() {
 
         const plano = Number(data.planoId) || 0;
 
-        // 🚀 ATUALIZADO: Cálculo com os valores novos do sistema
-        if (plano > 0 && plano !== 99 && (data.status === 'ativo' || data.status === 'vendido' || data.status === 'expirado')) {
+        // 🚀 CORREÇÃO DO CÁLCULO DE RECEITA
+        // Agora, se existe 'pagoEm', a receita é somada para sempre, independente se o anúncio expirar.
+        // Os valores (2.99, 9.90, 19.90) foram atualizados para refletir o seu novo menu de preços.
+        if (data.pagoEm && plano > 0 && plano !== 99) {
            contagemPagos++
-           if (plano === 1) { totalMovimentado += 5.00; pTopo++ } 
+           if (plano === 1) { totalMovimentado += 2.99; pTopo++ } 
            else if (plano === 2) { totalMovimentado += 9.90; pTurbo++ } 
            else if (plano === 3) { totalMovimentado += 19.90; pOuro++ } 
         }
@@ -193,7 +194,6 @@ export default function AdminPage() {
     }
   }
 
-  // 🚀 ATIVAR FORÇADO PELO PAINEL DO USUÁRIO
   const handleForcarAtivacao = async (ad: any, dias: number, novoPlanoId: number) => {
     if (!confirm(`Ativar o plano ${getInfoPlano(novoPlanoId).nome} para este anúncio com validade de ${dias} dias?`)) return;
     try {
@@ -214,12 +214,11 @@ export default function AdminPage() {
     }
   }
 
-  // 🚀 ALTERAR PLANO GLOBAL (MENU DE BENEFÍCIOS)
   const handleMudarPlano = async (adId: string, novoPlanoId: number) => {
     if (!window.confirm(`Deseja alterar este anúncio para o plano ${getInfoPlano(novoPlanoId).nome}? Ele receberá nova data de expiração.`)) return;
 
     try {
-      const dias = novoPlanoId === 0 ? 7 : 20; // Aplica a regra de dias (7 para grátis, 20 para pagos)
+      const dias = novoPlanoId === 0 ? 7 : 20; 
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
 
@@ -252,7 +251,6 @@ export default function AdminPage() {
     } catch (error) { alert("Erro ao excluir anúncio.") }
   }
 
-  // 🚀 APROVAÇÃO INTELIGENTE DE PIX
   const handleAprovarPix = async (ad: any) => {
     const plano = Number(ad.planoId) || 0;
     const nomePlano = getInfoPlano(plano).nome;
@@ -260,7 +258,6 @@ export default function AdminPage() {
     if (!confirm(`Aprovar o PIX e ativar o plano ${nomePlano} para o anúncio "${ad.titulo}"?`)) return;
     
     try {
-      // Regra de Dias
       const dias = plano === 0 ? 7 : 20;
 
       const dataExp = new Date();
@@ -337,7 +334,6 @@ export default function AdminPage() {
   return (
     <div className="bg-gray-50 min-h-screen py-10 relative">
       
-      {/* MODAL DE FEEDBACK */}
       {replyingTo && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl relative animate-in fade-in zoom-in duration-200">
@@ -402,7 +398,6 @@ export default function AdminPage() {
            </button>
         </div>
         
-        {/* CARDS DE ESTATÍSTICAS */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 flex flex-col justify-center">
             <div className="flex items-center gap-3 mb-2 text-purple-600">
@@ -437,14 +432,13 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* TABELA DE APROVAÇÃO RÁPIDA (PIX) */}
         {adsPendentes.length > 0 && (
           <div className="bg-amber-50 rounded-2xl shadow-lg border-2 border-amber-200 overflow-hidden mb-10">
             <div className="p-6 bg-amber-100 border-b border-amber-200 flex items-center gap-3">
               <Clock className="text-amber-600 animate-pulse" size={28} />
               <div>
                 <h2 className="text-xl font-black text-amber-800">Aprovação de PIX Pendente</h2>
-                <p className="text-sm font-bold text-amber-700">Verifique se o valor caiu na sua conta antes de aprovar.</p>
+                <p className="text-sm font-bold text-amber-700">A aprovação agora é automática, mas caso ocorra alguma falha na integração com o banco, aprove por aqui.</p>
               </div>
             </div>
             <div className="overflow-x-auto bg-white">
@@ -497,7 +491,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* LISTA COMPLETA DE USUÁRIOS E PESQUISA */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div className="flex items-center gap-3">
@@ -637,7 +630,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* AUDITORIA E LOGS GLOBAIS */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div className="flex items-center gap-3">
@@ -685,7 +677,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* DESEMPENHO DOS PLANOS */}
         <div className="mb-10">
           <h2 className="text-lg font-black text-gray-800 mb-4 px-2">Desempenho dos Planos VIP</h2>
           <div className="grid grid-cols-3 gap-4">
@@ -707,7 +698,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* TABELA DE ANÚNCIOS GERAIS + MENU DE UPGRADE/BENEFÍCIO */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h2 className="text-xl font-black text-gray-800 whitespace-nowrap">Anúncios Globais ({adsFiltrados.length})</h2>
@@ -760,7 +750,6 @@ export default function AdminPage() {
                           {formatarData(ad.criadoEm)}
                         </td>
                         <td className="p-4 text-center">
-                           {/* DROP DOWN DE UPGRADES RÁPIDOS */}
                            <select 
                               onChange={(e) => {
                                  if(e.target.value !== "") {
@@ -789,7 +778,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* FEEDBACKS (INALTERADO) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
             <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">

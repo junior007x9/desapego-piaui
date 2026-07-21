@@ -1,68 +1,60 @@
 import { NextResponse } from 'next/server';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
-import admin from 'firebase-admin';
-
-if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const DIAS_POR_PLANO: Record<number, number> = { 0: 7, 1: 20, 2: 20, 3: 20 };
+import { db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export async function POST(request: Request) {
   try {
-    const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
-    const body = await request.json();
-    const paymentId = body?.data?.id || body?.id;
+    const url = new URL(request.url);
+    // O Mercado Pago envia os IDs via Query Params dependendo de como você configurou o webhook no painel deles
+    const topic = url.searchParams.get('topic') || url.searchParams.get('type');
+    const id = url.searchParams.get('data.id') || url.searchParams.get('id');
 
-    if (!paymentId) return NextResponse.json({ error: 'Faltam dados' }, { status: 400 });
+    // Se for um aviso de atualização de pagamento, nós checamos o status lá no banco do Mercado Pago
+    if (topic === 'payment' && id) {
+      
+      // 1. Busca os detalhes do pagamento seguro direto na API do Mercado Pago
+      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` // Certifique-se que o token está no .env
+        }
+      });
+      
+      const paymentData = await mpResponse.json();
 
-    if (MP_ACCESS_TOKEN) {
-      const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
-      const payment = new Payment(client);
-      const paymentInfo = await payment.get({ id: Number(paymentId) });
+      // 2. Se o pagamento foi APROVADO
+      if (paymentData.status === 'approved') {
+        const adId = paymentData.external_reference; // O ID do anúncio que nós enviamos na hora de criar o QR Code
 
-      if (paymentInfo.status === 'approved') {
-        try {
-          const adId = paymentInfo.external_reference || paymentInfo.metadata?.ad_id;
-          const planoIdPix = paymentInfo.metadata?.plano_id;
+        if (adId) {
+          const adRef = doc(db, 'anuncios', adId);
+          const adSnap = await getDoc(adRef);
 
-          if (adId && admin.apps.length) {
-            const db = admin.firestore();
-            const adRef = db.collection('anuncios').doc(String(adId));
-            const adSnap = await adRef.get();
+          if (adSnap.exists()) {
+            const adInfo = adSnap.data();
+            const planoId = Number(adInfo.planoId) || 0;
+            
+            // Calcula os dias de validade baseado no plano comprado
+            // Se for grátis (0) = 7 dias, se for pago = 20 dias (ajuste se sua regra for diferente)
+            const dias = planoId === 0 ? 7 : 20; 
+            const dataExp = new Date();
+            dataExp.setDate(dataExp.getDate() + dias);
 
-            if (adSnap.exists) {
-              const adData = adSnap.data();
-              if (adData?.ultimoPagamentoId !== String(paymentId)) {
-                
-                const planoIdFinal = planoIdPix !== undefined ? Number(planoIdPix) : (Number(adData?.planoId) || 0);
-                const diasReais = DIAS_POR_PLANO[planoIdFinal] || 20;
-                
-                const dataExp = new Date();
-                dataExp.setDate(dataExp.getDate() + diasReais);
+            // 🚀 APROVAÇÃO AUTOMÁTICA DIRETO NO FIREBASE
+            await updateDoc(adRef, {
+              status: 'ativo',
+              pagoEm: new Date().toISOString(), // Grava a data do pagamento (Essa data que gera sua receita no Painel)
+              expiraEm: dataExp.toISOString()
+            });
 
-                await adRef.update({
-                  status: 'ativo',
-                  planoId: planoIdFinal, 
-                  expiraEm: dataExp.toISOString(),
-                  pagoEm: new Date().toISOString(),
-                  criadoEm: admin.firestore.FieldValue.serverTimestamp(), // 🚀 JOGA O ANÚNCIO PRO TOPO DA TELA INICIAL
-                  ultimoPagamentoId: String(paymentId) 
-                });
-              } 
-            }
+            console.log(`✅ Pagamento Confirmado! Anúncio ${adId} ativado automaticamente.`);
           }
-        } catch (fbError) { console.error("Erro Firebase Webhook:", fbError); }
+        }
       }
     }
-    return NextResponse.json({ success: true }, { status: 200 });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
+    console.error("Erro no Webhook de Aprovação Automática:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
