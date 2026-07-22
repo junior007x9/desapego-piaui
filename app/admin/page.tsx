@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc, query, where } from 'firebase/firestore'
+import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc, query, where, onSnapshot } from 'firebase/firestore'
 import { ShoppingBag, CheckCircle, Trash2, Loader2, AlertTriangle, LogOut, DollarSign, TrendingUp, MessageSquarePlus, Clock, Reply, Send, Users, Phone, Search, Activity, Gift, Power, Coins, Flame, Rocket, Sparkles, Mail } from 'lucide-react'
 import Link from 'next/link'
 
@@ -13,6 +13,20 @@ const getInfoPlano = (planoId: number) => {
   if (planoId === 1) return { nome: 'Sobe pro Topo', cor: 'bg-blue-100 text-blue-700 border-blue-300' }
   if (planoId === 0) return { nome: 'Básico (Grátis)', cor: 'bg-green-100 text-green-700 border-green-300' }
   return { nome: 'Desconhecido', cor: 'bg-gray-100 text-gray-500 border-gray-200' }
+}
+
+// 🚀 FUNÇÃO BLINDADA: Lê o plano corretamente em qualquer formato para não errar o cálculo
+const getPlanoVal = (val: any): number => {
+  if (val === 3 || val === '3') return 3;
+  if (val === 2 || val === '2') return 2;
+  if (val === 1 || val === '1') return 1;
+  if (typeof val === 'string') {
+    const str = val.toLowerCase();
+    if (str.includes('ouro') || str.includes('3')) return 3;
+    if (str.includes('turbo') || str.includes('2')) return 2;
+    if (str.includes('topo') || str.includes('1')) return 1;
+  }
+  return Number(val) || 0;
 }
 
 const formatarData = (timestamp: any) => {
@@ -52,6 +66,7 @@ export default function AdminPage() {
   const [replyMessage, setReplyMessage] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
 
+  // 1. Verifica quem está logado
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
@@ -60,7 +75,6 @@ export default function AdminPage() {
           const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid))
           if (adminDoc.exists()) {
             setIsAdmin(true)
-            fetchDados()
           } else {
             setIsAdmin(false)
             setLoadingAuth(false)
@@ -77,120 +91,133 @@ export default function AdminPage() {
     return () => unsubscribe()
   }, [])
 
-  async function fetchDados() {
-    try {
-      let contagemPagos = 0
-      let totalMovimentado = 0
-      let totalMoedasVirtual = 0
-      let pTopo = 0, pTurbo = 0, pOuro = 0
+  // 2. 🚀 INICIA O MODO TEMPO REAL (Se for Admin)
+  useEffect(() => {
+    if (!isAdmin) return;
 
-      const mapUsuarios = new Map();
-      try {
-         const snapshotUsuarios = await getDocs(collection(db, 'usuarios'))
-         snapshotUsuarios.forEach(doc => {
-            const uData = doc.data();
-            totalMoedasVirtual += (uData.moedas || 0); 
-            mapUsuarios.set(doc.id, { id: doc.id, ...uData })
-         })
-      } catch(e) { console.log("Coleção de usuários não encontrada.") }
+    let unsubAds: any = null;
+    let unsubUsers: any = null;
 
-      const snapshotAds = await getDocs(collection(db, 'anuncios'))
-      const listaAds: any[] = []
-      const listaPendentes: any[] = []
-      
-      snapshotAds.forEach(docSnap => {
-        const data = docSnap.data()
-        const idUsuarioDesteAnuncio = data.vendedorId || data.usuarioId;
-        const anuncioFormatado = { id: docSnap.id, ...data, vendedorId: idUsuarioDesteAnuncio };
-
-        if (data.status === 'em_analise' || data.status === 'pendente') {
-            listaPendentes.push(anuncioFormatado)
-        } else {
-            listaAds.push(anuncioFormatado)
-        }
-
-        if (idUsuarioDesteAnuncio && !mapUsuarios.has(idUsuarioDesteAnuncio)) {
-           mapUsuarios.set(idUsuarioDesteAnuncio, {
-              id: idUsuarioDesteAnuncio,
-              nome: data.autorNome || data.name || (data.email ? data.email.split('@')[0] : 'Anunciante Sem Perfil'),
-              email: data.email || 'Não informado',
-              telefone: data.telefone || ''
-           })
-        }
-
-        const plano = Number(data.planoId) || 0;
-
-        // 🚀 CORREÇÃO DO CÁLCULO DE RECEITA
-        // Agora, se existe 'pagoEm', a receita é somada para sempre, independente se o anúncio expirar.
-        // Os valores (2.99, 9.90, 19.90) foram atualizados para refletir o seu novo menu de preços.
-        if (data.pagoEm && plano > 0 && plano !== 99) {
-           contagemPagos++
-           if (plano === 1) { totalMovimentado += 2.99; pTopo++ } 
-           else if (plano === 2) { totalMovimentado += 9.90; pTurbo++ } 
-           else if (plano === 3) { totalMovimentado += 19.90; pOuro++ } 
-        }
-      })
-      
-      listaAds.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
-      listaPendentes.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
-      
-      setAds(listaAds)
-      setAdsPendentes(listaPendentes)
-      setAdsPagos(contagemPagos)
-      setReceitaTotal(totalMovimentado)
-      setMoedasSistema(totalMoedasVirtual)
-      setPlanosVendidos({ topo: pTopo, turbo: pTurbo, ouro: pOuro })
-      
-      setUsuarios(Array.from(mapUsuarios.values()))
-
+    async function carregarDadosEstaticosEOuvirRealTime() {
+      // DADOS ESTÁTICOS (Logs, Feedbacks)
       try {
          const snapshotLogs = await getDocs(collection(db, 'logs'))
          const listaLogs: any[] = []
-         snapshotLogs.forEach(doc => {
-            listaLogs.push({ id: doc.id, ...doc.data() })
-         })
+         snapshotLogs.forEach(doc => listaLogs.push({ id: doc.id, ...doc.data() }))
          listaLogs.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
          setLogs(listaLogs)
-      } catch(e) { console.log("Ainda não existem logs registrados.") }
+      } catch(e) {}
 
-      const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
-      const listaDenuncias: any[] = []
-      snapshotDenuncias.forEach(doc => {
-        if (doc.data().status === 'pendente') listaDenuncias.push({ id: doc.id, ...doc.data() })
-      })
-      setDenuncias(listaDenuncias)
+      try {
+         const snapshotDenuncias = await getDocs(collection(db, 'denuncias'))
+         const listaDenuncias: any[] = []
+         snapshotDenuncias.forEach(doc => {
+           if (doc.data().status === 'pendente') listaDenuncias.push({ id: doc.id, ...doc.data() })
+         })
+         setDenuncias(listaDenuncias)
+      } catch(e) {}
 
-      const snapshotFeedbacks = await getDocs(collection(db, 'feedbacks'))
-      const listaFeedbacks: any[] = []
-      snapshotFeedbacks.forEach(doc => listaFeedbacks.push({ id: doc.id, ...doc.data() }))
-      listaFeedbacks.sort((a, b) => {
-         if (a.respondido === b.respondido) return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
-         return a.respondido ? 1 : -1;
-      })
-      setFeedbacks(listaFeedbacks)
+      try {
+         const snapshotFeedbacks = await getDocs(collection(db, 'feedbacks'))
+         const listaFeedbacks: any[] = []
+         snapshotFeedbacks.forEach(doc => listaFeedbacks.push({ id: doc.id, ...doc.data() }))
+         listaFeedbacks.sort((a, b) => {
+            if (a.respondido === b.respondido) return (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0);
+            return a.respondido ? 1 : -1;
+         })
+         setFeedbacks(listaFeedbacks)
+      } catch(e) {}
 
-    } catch (error) {
-      console.error("Erro ao buscar dados admin", error)
-    } finally {
+      // 🚀 DADOS EM TEMPO REAL: Usuários
+      unsubUsers = onSnapshot(collection(db, 'usuarios'), (snap) => {
+         let totalMoedasVirtual = 0;
+         const mapUsuarios = new Map();
+         snap.forEach(doc => {
+            const uData = doc.data();
+            totalMoedasVirtual += (uData.moedas || 0); 
+            mapUsuarios.set(doc.id, { id: doc.id, ...uData })
+         });
+         setMoedasSistema(totalMoedasVirtual);
+         setUsuarios(Array.from(mapUsuarios.values()));
+
+         // 🚀 DADOS EM TEMPO REAL: Anúncios e Faturamento
+         unsubAds = onSnapshot(collection(db, 'anuncios'), (adSnap) => {
+            let contagemPagos = 0
+            let totalMovimentado = 0
+            let pTopo = 0, pTurbo = 0, pOuro = 0
+            const listaAds: any[] = []
+            const listaPendentes: any[] = []
+
+            adSnap.forEach(docSnap => {
+              const data = docSnap.data()
+              const idUsuarioDesteAnuncio = data.vendedorId || data.usuarioId;
+              const anuncioFormatado = { id: docSnap.id, ...data, vendedorId: idUsuarioDesteAnuncio };
+
+              // Atualiza o usuário caso seja um anunciante sem perfil criado formalmente
+              if (idUsuarioDesteAnuncio && !mapUsuarios.has(idUsuarioDesteAnuncio)) {
+                 mapUsuarios.set(idUsuarioDesteAnuncio, {
+                    id: idUsuarioDesteAnuncio,
+                    nome: data.autorNome || data.name || (data.email ? data.email.split('@')[0] : 'Anunciante Sem Perfil'),
+                    email: data.email || 'Não informado',
+                    telefone: data.telefone || ''
+                 })
+              }
+
+              if (data.status === 'em_analise' || data.status === 'pendente') {
+                  listaPendentes.push(anuncioFormatado)
+              } else {
+                  listaAds.push(anuncioFormatado)
+              }
+
+              const plano = getPlanoVal(data.planoId);
+
+              // REGRAS DE FATURAMENTO EM TEMPO REAL:
+              // Verifica se foi ativado/pago e não é o plano básico/grátis (99 ou 0)
+              if (plano > 0 && plano !== 99 && (data.pagoEm || ['ativo', 'vendido', 'expirado'].includes(data.status))) {
+                 contagemPagos++
+                 if (plano === 1) { totalMovimentado += 2.99; pTopo++ } 
+                 else if (plano === 2) { totalMovimentado += 9.90; pTurbo++ } 
+                 else if (plano === 3) { totalMovimentado += 19.90; pOuro++ } 
+              }
+            })
+            
+            listaAds.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
+            listaPendentes.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
+            
+            setAds(listaAds)
+            setAdsPendentes(listaPendentes)
+            setAdsPagos(contagemPagos)
+            setReceitaTotal(totalMovimentado)
+            setPlanosVendidos({ topo: pTopo, turbo: pTurbo, ouro: pOuro })
+            setUsuarios(Array.from(mapUsuarios.values()))
+         });
+      });
+
       setLoadingAuth(false)
     }
-  }
+
+    carregarDadosEstaticosEOuvirRealTime();
+
+    // Desliga os "ouvintes" quando o admin sai da página
+    return () => {
+       if (unsubAds) unsubAds();
+       if (unsubUsers) unsubUsers();
+    }
+  }, [isAdmin])
+
+  // Todas as funções de botão (como aprovar, mudar plano) NÃO precisam mais recarregar a tela (fetchDados)
+  // pois o Firestore já está em tempo real! A tela se atualiza sozinha no milissegundo seguinte.
 
   const handleZerarGratis = async (vendedorId: string) => {
     if (!confirm("Isto vai dar permissão para o usuário usar o Plano Presente Grátis novamente. Deseja confirmar?")) return;
     try {
-      setLoadingAuth(true);
       const q = query(collection(db, 'anuncios'), where('vendedorId', '==', vendedorId), where('planoId', '==', 0));
       const snap = await getDocs(q);
-      
       const promessas = snap.docs.map(docSnap => updateDoc(doc(db, 'anuncios', docSnap.id), { planoId: 99 }));
       await Promise.all(promessas);
-
       alert("🎉 Bônus grátis resetado! O usuário já pode publicar grátis de novo.");
-      fetchDados();
     } catch(e) {
       alert("Erro ao resetar o bônus.");
-      setLoadingAuth(false);
     }
   }
 
@@ -199,16 +226,13 @@ export default function AdminPage() {
     try {
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
-
       await updateDoc(doc(db, 'anuncios', ad.id), {
          status: 'ativo',
          planoId: novoPlanoId,
          expiraEm: dataExp.toISOString(),
          pagoEm: new Date().toISOString()
       });
-
       alert(`✅ Anúncio ativado com sucesso!`);
-      fetchDados(); 
     } catch(e) {
       alert("Erro ao ativar o anúncio.");
     }
@@ -216,23 +240,18 @@ export default function AdminPage() {
 
   const handleMudarPlano = async (adId: string, novoPlanoId: number) => {
     if (!window.confirm(`Deseja alterar este anúncio para o plano ${getInfoPlano(novoPlanoId).nome}? Ele receberá nova data de expiração.`)) return;
-
     try {
       const dias = novoPlanoId === 0 ? 7 : 20; 
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
-
       await updateDoc(doc(db, 'anuncios', adId), {
         planoId: novoPlanoId,
         status: 'ativo', 
         pagoEm: new Date().toISOString(),
         expiraEm: dataExp.toISOString()
       });
-
       alert(`Benefício concedido com sucesso! Válido por ${dias} dias.`);
-      fetchDados();
     } catch (error) {
-      console.error(error);
       alert("Erro ao mudar plano.");
     }
   };
@@ -246,31 +265,23 @@ export default function AdminPage() {
     if (!confirm("Tem a certeza que deseja excluir este anúncio permanentemente?")) return
     try {
       await deleteDoc(doc(db, 'anuncios', id))
-      setAds(ads.filter(ad => ad.id !== id))
-      setAdsPendentes(adsPendentes.filter(ad => ad.id !== id))
     } catch (error) { alert("Erro ao excluir anúncio.") }
   }
 
   const handleAprovarPix = async (ad: any) => {
     const plano = Number(ad.planoId) || 0;
     const nomePlano = getInfoPlano(plano).nome;
-    
     if (!confirm(`Aprovar o PIX e ativar o plano ${nomePlano} para o anúncio "${ad.titulo}"?`)) return;
-    
     try {
       const dias = plano === 0 ? 7 : 20;
-
       const dataExp = new Date();
       dataExp.setDate(dataExp.getDate() + dias);
-
       await updateDoc(doc(db, 'anuncios', ad.id), {
         status: 'ativo',
         expiraEm: dataExp.toISOString(),
         pagoEm: new Date().toISOString()
       });
-
       alert(`Pagamento Aprovado! Anúncio ativo por ${dias} dias.`);
-      fetchDados(); 
     } catch (error) {
       alert("Erro ao aprovar o pagamento.");
     }
@@ -279,7 +290,6 @@ export default function AdminPage() {
   const handleSendReply = async () => {
     if (!replyMessage.trim() || !replyingTo) return;
     setSendingReply(true);
-
     try {
       const response = await fetch('/api/responder-feedback', {
         method: 'POST',
@@ -290,9 +300,6 @@ export default function AdminPage() {
           resposta: replyMessage,
         }),
       });
-
-      const data = await response.json();
-
       if (response.ok) {
         await updateDoc(doc(db, 'feedbacks', replyingTo.id), { respondido: true });
         setFeedbacks(feedbacks.map(fb => fb.id === replyingTo.id ? { ...fb, respondido: true } : fb));
@@ -300,7 +307,7 @@ export default function AdminPage() {
         setReplyingTo(null);
         setReplyMessage('');
       } else {
-        alert(`Falha ao enviar e-mail: ${data.error}`);
+        alert(`Falha ao enviar e-mail`);
       }
     } catch (error) {
       alert("Erro ao processar o envio.");
@@ -310,7 +317,7 @@ export default function AdminPage() {
   }
 
   const adsFiltrados = ads.filter(ad => {
-    const plano = Number(ad.planoId) || 0;
+    const plano = getPlanoVal(ad.planoId);
     if (filtroPlano === 'todos') return true;
     if (filtroPlano === 'gratis') return plano === 99 || plano === 0;
     if (filtroPlano === '1') return plano === 1;
@@ -821,7 +828,6 @@ export default function AdminPage() {
                       <button onClick={async () => {
                             if(!confirm('Apagar esta mensagem de feedback?')) return;
                             await deleteDoc(doc(db, 'feedbacks', fb.id));
-                            setFeedbacks(feedbacks.filter(f => f.id !== fb.id));
                         }} 
                         title="Apagar" className="text-gray-400 hover:bg-red-100 hover:text-red-500 p-2 rounded-lg transition-colors" >
                         <Trash2 size={18} />
