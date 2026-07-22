@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, arrayUnion, arrayRemove, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { MapPin, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Flag, X, Maximize2, Share2, CheckCircle2, BadgeCheck, ShieldCheck } from 'lucide-react'
+import { MapPin, AlertTriangle, ChevronLeft, ChevronRight, Heart, Eye, Flag, X, Maximize2, Share2, CheckCircle2, BadgeCheck, ShieldCheck, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DetalhesClient({ id }: { id: string }) {
@@ -178,7 +178,8 @@ export default function DetalhesClient({ id }: { id: string }) {
   const anoRegistro = vendedor?.criadoEm?.toDate ? vendedor.criadoEm.toDate().getFullYear() : '2024';
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-10">
+    // 🚀 Ajustado o pb-28 para garantir que nada fique coberto pelo botão flutuante no celular
+    <div className="bg-gray-50 min-h-screen pb-28 md:pb-10">
       
       {isReportModalOpen && (
         <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-all">
@@ -248,27 +249,40 @@ export default function DetalhesClient({ id }: { id: string }) {
           
           <div className="lg:col-span-2 space-y-0 md:space-y-4">
             
-            <div className={`bg-black md:rounded-3xl relative h-[350px] sm:h-[450px] md:h-[550px] flex items-center justify-center ${ad.status === 'vendido' ? 'opacity-80 grayscale' : ''}`}>
+            {/* 🚀 CARROSSEL PREMIUM COM BOLINHAS */}
+            <div className={`bg-black md:rounded-3xl relative h-[350px] sm:h-[450px] md:h-[550px] flex items-center justify-center overflow-hidden group ${ad.status === 'vendido' ? 'opacity-80 grayscale' : ''}`}>
               {ad.fotos && ad.fotos.length > 0 ? (
                 <>
-                  <img src={ad.fotos[currentImageIndex]} className="w-full h-full object-contain cursor-zoom-in" alt={ad.titulo} onClick={() => setIsZoomOpen(true)} />
-                  <button onClick={() => setIsZoomOpen(true)} className="absolute bottom-4 right-4 bg-black/60 text-white p-3 rounded-full flex items-center justify-center hover:bg-black/80 transition outline-none">
+                  <img src={ad.fotos[currentImageIndex]} className="w-full h-full object-contain cursor-zoom-in transition-opacity duration-300" alt={ad.titulo} onClick={() => setIsZoomOpen(true)} />
+                  
+                  <button onClick={() => setIsZoomOpen(true)} className="absolute top-4 right-4 bg-black/60 text-white p-3 rounded-full flex items-center justify-center hover:bg-black/80 transition outline-none shadow-md">
                     <Maximize2 size={20} />
                   </button>
+                  
+                  {/* Bolinhas de navegação (Dots) */}
                   {ad.fotos.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest">
-                      {currentImageIndex + 1} / {ad.fotos.length}
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-2 z-10 px-4">
+                      {ad.fotos.map((_: any, index: number) => (
+                        <div 
+                           key={index} 
+                           className={`h-2 rounded-full transition-all duration-300 ${index === currentImageIndex ? 'w-6 bg-accent' : 'w-2 bg-white/50'}`} 
+                        />
+                      ))}
                     </div>
                   )}
+
                   {ad.fotos.length > 1 && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-full transition outline-none"><ChevronLeft size={24}/></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-2.5 rounded-full transition outline-none"><ChevronRight size={24}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); handlePrevImage(); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2.5 rounded-full transition outline-none backdrop-blur-sm"><ChevronLeft size={28}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleNextImage(); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2.5 rounded-full transition outline-none backdrop-blur-sm"><ChevronRight size={28}/></button>
                     </>
                   )}
                 </>
               ) : (
-                <div className="text-gray-500 font-medium">Sem fotos cadastradas</div>
+                <div className="text-gray-500 font-medium flex flex-col items-center gap-2">
+                   <AlertTriangle size={32} className="text-gray-600"/>
+                   Sem fotos cadastradas
+                </div>
               )}
             </div>
 
@@ -297,11 +311,16 @@ export default function DetalhesClient({ id }: { id: string }) {
               <p className="whitespace-pre-wrap text-gray-600 text-base leading-relaxed bg-gray-50 p-5 rounded-2xl border border-gray-100">{ad.descricao}</p>
               
               {ad.status !== 'vendido' && (
-                <div className="mt-6 bg-blue-50/50 border border-blue-100 p-5 rounded-2xl flex gap-4 text-sm text-blue-900 shadow-sm">
-                  <AlertTriangle className="shrink-0 text-blue-500 mt-0.5" size={24} />
+                // 🚀 CARD DE SEGURANÇA PREMIUM
+                <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row gap-4 items-start shadow-sm">
+                  <div className="bg-amber-100 text-amber-600 p-3 rounded-full shrink-0 shadow-inner">
+                    <ShieldAlert size={28} />
+                  </div>
                   <div>
-                    <h3 className="font-black mb-1">Dica de Segurança</h3>
-                    <p className="font-medium text-blue-800/80">Evite golpes! Nunca faça depósitos ou transferências antecipadas. Sempre negocie o pagamento pessoalmente, em locais públicos e movimentados no momento da entrega do produto.</p>
+                    <h3 className="font-black text-amber-900 mb-1.5 text-lg">Dica de Segurança Anti-Golpe</h3>
+                    <p className="font-medium text-amber-800/80 leading-relaxed text-sm">
+                      Nunca faça depósitos, transferências em PIX ou pagamentos antecipados sem antes <strong>ver o produto pessoalmente</strong>. Sempre negocie em locais públicos e movimentados (como shoppings ou praças).
+                    </p>
                   </div>
                 </div>
               )}
@@ -371,12 +390,15 @@ export default function DetalhesClient({ id }: { id: string }) {
                </Link>
             </div>
             
-            <div className="md:hidden mt-4 pb-20">
-               <ContactButtons />
-            </div>
           </div>
         </div>
       </div>
+
+      {/* 🚀 BOTÃO FLUTUANTE DE WHATSAPP NO CELULAR */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 md:hidden z-[60] shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+         <ContactButtons />
+      </div>
+
     </div>
   )
 }

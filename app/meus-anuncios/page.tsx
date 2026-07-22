@@ -5,6 +5,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import toast from 'react-hot-toast' // 🚀 Importando os avisos bonitos
 import { 
   Loader2, Eye, Trash2, Edit, ShoppingBag, Sparkles, PlusCircle, 
   Calendar, CheckCircle, Rocket, Flame, BarChart3, Activity, ChevronLeft, Package 
@@ -70,29 +71,38 @@ export default function MeusAnunciosPage() {
       setAds(list)
       setTotalViews(views)
       setActiveAds(ativos)
-    } catch (error) { console.error(error) } finally { setLoading(false) }
+    } catch (error) { 
+      console.error(error) 
+    } finally { 
+      setLoading(false) 
+    }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações. Deseja excluir mesmo assim?")) return;
+    if (!window.confirm("Aviso: Excluir este anúncio fará com que você perca todas as visualizações. Deseja excluir mesmo assim?")) return;
     try {
       const adToLog = ads.find(a => a.id === id);
       await deleteDoc(doc(db, 'anuncios', id))
       setAds(ads.filter(ad => ad.id !== id))
+      toast.success("Anúncio excluído com sucesso!");
       if (user) { try { await addDoc(collection(db, 'logs'), { usuarioId: user.uid, acao: 'EXCLUIU', tituloAnuncio: adToLog?.titulo || "Anúncio Removido", criadoEm: new Date() }); } catch (logError) {} }
-    } catch (error) { alert("Ocorreu um erro ao excluir.") }
+    } catch (error) { 
+      toast.error("Ocorreu um erro ao excluir.") 
+    }
   }
 
   const handleMarkAsSold = async (id: string) => {
-    if (!confirm("Marcar anúncio como VENDIDO?")) return;
+    if (!window.confirm("Tem certeza que deseja marcar este anúncio como VENDIDO?")) return;
     try {
       const adToLog = ads.find(a => a.id === id);
       const agora = new Date(); 
       await updateDoc(doc(db, 'anuncios', id), { status: 'vendido', vendidoEm: serverTimestamp() })
       setAds(ads.map(ad => ad.id === id ? { ...ad, status: 'vendido', vendidoEm: agora } : ad))
-      alert("Parabéns pela venda! 🎉")
+      toast.success("Parabéns pela venda! 🎉")
       if (user) { try { await addDoc(collection(db, 'logs'), { usuarioId: user.uid, acao: 'EDITOU', tituloAnuncio: adToLog?.titulo ? `${adToLog.titulo} (Vendido)` : "Marcado como Vendido", criadoEm: new Date() }); } catch (logError) {} }
-    } catch (error) { alert("Erro ao atualizar o anúncio.") }
+    } catch (error) { 
+      toast.error("Erro ao atualizar o anúncio.") 
+    }
   }
 
   const handleImpulsionar = async (id: string, tipoPlano: number) => {
@@ -110,17 +120,17 @@ export default function MeusAnunciosPage() {
 
       let usouCredito = false;
       if (tipoPlano === 1 && userData.creditosTopo > 0) {
-         if (confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
+         if (window.confirm("Você tem um crédito 'Sobe pro Topo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosTopo: userData.creditosTopo - 1 });
             usouCredito = true;
          }
       } else if (tipoPlano === 2 && userData.creditosTurbo > 0) {
-         if (confirm("Você tem um crédito 'Destaque Turbo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
+         if (window.confirm("Você tem um crédito 'Destaque Turbo' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosTurbo: userData.creditosTurbo - 1 });
             usouCredito = true;
          }
       } else if (tipoPlano === 3 && userData.creditosOuro > 0) {
-         if (confirm("Você tem um crédito 'Ouro' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
+         if (window.confirm("Você tem um crédito 'Ouro' na sua carteira! Deseja usá-lo agora gratuitamente?")) {
             await updateDoc(userRef, { creditosOuro: userData.creditosOuro - 1 });
             usouCredito = true;
          }
@@ -138,7 +148,7 @@ export default function MeusAnunciosPage() {
            criadoEm: serverTimestamp() 
          });
          
-         alert("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
+         toast.success("🚀 Sucesso! Seu anúncio foi impulsionado gratuitamente usando seus créditos.");
          fetchMyAds(user.uid); 
          return;
       }
@@ -147,7 +157,7 @@ export default function MeusAnunciosPage() {
       router.push(`/pagamento/${id}`);
 
     } catch (error) {
-      alert("Ocorreu um erro ao tentar impulsionar.");
+      toast.error("Ocorreu um erro ao tentar impulsionar.");
     }
   }
 
@@ -169,7 +179,7 @@ export default function MeusAnunciosPage() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      {/* 🚀 NOVO CABEÇALHO DASHBOARD */}
+      {/* 🚀 CABEÇALHO DASHBOARD */}
       <div className="bg-primary pt-8 pb-24 px-4 rounded-b-[2.5rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-5xl mx-auto relative z-10">
@@ -192,7 +202,7 @@ export default function MeusAnunciosPage() {
 
       <div className="max-w-5xl mx-auto px-4 -mt-12 relative z-20 space-y-6">
         
-        {/* 🚀 NOVOS CARDS DE ESTATÍSTICAS */}
+        {/* 🚀 CARDS DE ESTATÍSTICAS */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
           <div className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
             <div className="w-12 h-12 md:w-14 md:h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-3">
@@ -271,7 +281,7 @@ export default function MeusAnunciosPage() {
                         <p className={`text-2xl font-black ${ad.status === 'vendido' ? 'text-gray-400' : 'text-primary'}`}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ad.preco || 0)}</p>
                       </div>
 
-                      {/* 🚀 NOVA BARRINHA DE PERFORMANCE INSERIDA AQUI */}
+                      {/* 🚀 BARRINHA DE PERFORMANCE */}
                       <div className="mt-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                          <div className="flex justify-between text-[10px] font-black uppercase text-gray-500 mb-2 tracking-wider">
                            <span className="flex items-center gap-1"><Eye size={12}/> {views} Visitas</span>
@@ -287,7 +297,7 @@ export default function MeusAnunciosPage() {
                     <div className="w-full md:w-auto flex flex-col gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[180px]">
                       {ad.status === 'ativo' && (
                          <>
-                            <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 hover:animate-none outline-none"><Rocket size={14} className="shrink-0"/> Topo (R$ 5)</button>
+                            <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 hover:animate-none outline-none"><Rocket size={14} className="shrink-0"/> Topo (R$ 2,99)</button>
                             <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 outline-none"><Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)</button>
                             <button onClick={() => handleImpulsionar(ad.id, 3)} className="w-full text-center bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider px-3 py-2 rounded-xl transition shadow-md flex justify-center items-center gap-1 outline-none"><Sparkles size={14} className="shrink-0"/> Ouro (R$ 19,90)</button>
                             <button onClick={() => handleMarkAsSold(ad.id)} className="mt-2 w-full text-center bg-green-100 hover:bg-green-200 text-green-700 font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition shadow-sm flex justify-center items-center gap-2 outline-none"><CheckCircle size={16}/> Já Vendi!</button>
@@ -296,7 +306,7 @@ export default function MeusAnunciosPage() {
                       {(ad.status === 'expirado' || ad.status === 'pendente') && (
                          <>
                             <p className="text-[10px] text-gray-500 font-bold uppercase text-center mb-1">Renove seu Anúncio:</p>
-                            <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1 outline-none"><Rocket size={14} className="shrink-0"/> Topo (R$ 5)</button>
+                            <button onClick={() => handleImpulsionar(ad.id, 1)} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1 outline-none"><Rocket size={14} className="shrink-0"/> Topo (R$ 2,99)</button>
                             <button onClick={() => handleImpulsionar(ad.id, 2)} className="w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl transition shadow-md flex justify-center items-center gap-1 outline-none"><Flame size={14} className="shrink-0"/> Turbo (R$ 9,90)</button>
                          </>
                       )}

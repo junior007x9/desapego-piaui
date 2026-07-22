@@ -83,7 +83,7 @@ function SearchContent() {
           let statusFinal = data.status
           let isExpired = false;
           
-          const plano = getPlanoVal(data.planoId); // Lendo da forma blindada
+          const plano = getPlanoVal(data.planoId);
 
           if (data.expiraEm) {
             const dataExpiracao = new Date(data.expiraEm);
@@ -134,6 +134,7 @@ function SearchContent() {
     if (node) observer.current.observe(node)
   }, [loading, loadingMore, hasMore, lastVisible])
 
+  // 🚀 Famoso Filtro em Tempo Real (Não pisca a tela)
   useEffect(() => {
     let result = [...ads]
 
@@ -158,7 +159,6 @@ function SearchContent() {
 
     const getTempo = (ad: any) => ad.pagoEm ? new Date(ad.pagoEm).getTime() : (ad.criadoEm?.seconds * 1000 || 0);
 
-    // 🚀 ORDENAÇÃO MATADORA PARA O OURO SUBIR PRA INDEX 0
     result.sort((a, b) => {
       if (ordenacao === 'recentes') {
          const pesoA = a.planoId === 3 ? 4 : (a.planoId === 2 ? 3 : (a.planoId === 1 ? 2 : 1));
@@ -180,10 +180,23 @@ function SearchContent() {
     setPrecoMin('')
     setPrecoMax('')
     setOrdenacao('recentes')
-    router.push('/todos-anuncios')
+    // Substitui a rota suavemente para limpar parâmetros, sem causar reload forçado
+    router.replace('/todos-anuncios') 
   }
 
-  // 🚀 O CARD COM VISUAL DE LUXO
+  // 🚀 COMPONENTE SKELETON PARA CARREGAMENTO MODERNO
+  const SkeletonCard = () => (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-pulse flex flex-col h-full">
+      <div className="aspect-square bg-gray-200"></div>
+      <div className="p-4 flex flex-col flex-1 space-y-3">
+        <div className="h-3 bg-gray-200 rounded-full w-1/4"></div>
+        <div className="h-4 bg-gray-200 rounded-full w-full"></div>
+        <div className="h-4 bg-gray-200 rounded-full w-3/4"></div>
+        <div className="h-6 bg-gray-200 rounded-md w-1/2 mt-auto"></div>
+      </div>
+    </div>
+  )
+
   const renderAdCard = (ad: any, isLastElement: boolean) => {
     const plano = getPlanoVal(ad.planoId);
     const isOuro = plano === 3;
@@ -350,19 +363,28 @@ function SearchContent() {
           </div>
 
           {loading && ads.length === 0 ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={48} /></div>
+            // 🚀 SKELETON LOADING ENQUANTO BUSCA DADOS
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonCard key={i} />)}
+            </div>
           ) : filteredAds.length === 0 ? (
-            <div className="bg-white p-12 rounded-[2rem] text-center shadow-sm border border-gray-100">
-               <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4"><Search size={40} /></div>
-               <h3 className="text-xl font-black text-gray-800 mb-2">Nenhum resultado</h3>
-               <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md mt-4">
+            // 🚀 EMPTY STATE INTELIGENTE
+            <div className="bg-white p-8 md:p-12 rounded-[2rem] text-center shadow-sm border border-gray-100 flex flex-col items-center">
+               <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search size={40} />
+               </div>
+               <h3 className="text-xl font-black text-gray-800 mb-2">
+                 {busca ? `Poxa, não encontramos nada para "${busca}"` : "Nenhum anúncio encontrado"}
+               </h3>
+               <p className="text-gray-500 font-medium mb-6 max-w-md">
+                 Que tal tentar pesquisar por palavras diferentes, remover alguns filtros ou dar uma olhada em outras categorias?
+               </p>
+               <button onClick={clearFilters} className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-bold transition shadow-md active:scale-95">
                   Limpar todos os filtros
                </button>
             </div>
           ) : (
-            
             <div className="space-y-12">
-              {/* 🚀 GRADE ÚNICA COM OURO NO TOPO ABSOLUTO */}
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
                 {filteredAds.map((ad, index) => {
                   const isLastElement = filteredAds.length === index + 1;

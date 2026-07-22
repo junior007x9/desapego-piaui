@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const TAXA_MP_PIX = 0.0099; // Exemplo de taxa do Mercado Pago para PIX (0.99%)
+const TAXA_MP_PIX = 0.0099; // Taxa do Mercado Pago para PIX (0.99%)
 
 function calcularValorComTaxa(valorDesejado: number): number {
   const valorComRepasse = valorDesejado / (1 - TAXA_MP_PIX);
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`, 
+        'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`, // Certifique-se que no Webhook está com esse mesmo nome!
         'Content-Type': 'application/json',
         'X-Idempotency-Key': `${adId}-${Date.now()}` 
       },
@@ -29,10 +29,14 @@ export async function POST(request: Request) {
         transaction_amount: valorParaCobrarCliente,
         description: description || `Plano Desapego Piauí - Anúncio ${adId}`,
         payment_method_id: 'pix',
-        external_reference: String(adId), // Essencial para o Webhook achar o anúncio
+        external_reference: String(adId),
+        
+        // 🚀 A MÁGICA ACONTECE AQUI: Obriga o Mercado Pago a avisar seu site no exato milissegundo do pagamento
+        notification_url: 'https://www.desapegopiaui.com.br/api/webhook',
+        
         metadata: {
             ad_id: String(adId),
-            plano_id: Number(planoId) // Salva o plano para a renovação automática
+            plano_id: Number(planoId)
         },
         payer: {
           email: payerEmail

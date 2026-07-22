@@ -38,7 +38,7 @@ function formatTimeAgo(timestampSeconds: number) {
   return date.toLocaleDateString('pt-BR');
 }
 
-// 🚀 FUNÇÃO BLINDADA: Lê o plano mesmo se o Admin salvar como texto (ex: "OURO / URGENTE")
+// 🚀 FUNÇÃO BLINDADA: Lê o plano mesmo se o Admin salvar como texto
 function getPlanoVal(val: any): number {
   if (val === 3 || val === '3') return 3;
   if (val === 2 || val === '2') return 2;
@@ -83,13 +83,20 @@ export default function Home() {
     }
     fetchCity();
 
+    // 🚀 Lógica Aprimorada do PWA
+    // Verifica se já está rodando como app (Standalone)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
     const bannerClosed = localStorage.getItem('app_banner_closed');
-    if (!bannerClosed) setShowInstallBanner(true); 
+    
+    // Mostra o banner apenas se não estiver no app e o usuário não tiver fechado
+    if (!bannerClosed && !isStandalone) {
+       setShowInstallBanner(true); 
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (!bannerClosed) setShowInstallBanner(true);
+      if (!bannerClosed && !isStandalone) setShowInstallBanner(true);
     });
   }, []);
 
@@ -103,7 +110,7 @@ export default function Home() {
       }
       setDeferredPrompt(null);
     } else {
-      alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar e selecione 'Adicionar à Tela de Início'.");
+      alert("Para instalar:\n\n📱 No Android: Clique nos 3 pontinhos no navegador e escolha 'Adicionar à tela inicial'.\n\n🍏 No iPhone: Toque no botão de Compartilhar (quadrado com seta para cima) e selecione 'Adicionar à Tela de Início'.");
     }
   };
 
@@ -128,7 +135,6 @@ export default function Home() {
           let statusFinal = data.status
           let isExpired = false;
           
-          // Usa a função blindada que entende o painel admin
           const plano = getPlanoVal(data.planoId);
 
           if (data.expiraEm) {
@@ -144,7 +150,7 @@ export default function Home() {
           if (statusFinal === 'ativo') {
             const adFinal = { id: document.id, ...data, planoId: plano }
             
-            listGeral.push(adFinal) // Todos caem na lista geral
+            listGeral.push(adFinal) 
 
             if (plano === 3) listCarrosselOuro.push(adFinal)
             else if (plano === 2) listStoriesTurbo.push(adFinal)
@@ -156,7 +162,6 @@ export default function Home() {
         listCarrosselOuro.sort((a, b) => getTempo(b) - getTempo(a));
         listStoriesTurbo.sort((a, b) => getTempo(b) - getTempo(a));
         
-        // ORDENAÇÃO MATADORA: Ouro absoluto no topo da lista geral
         listGeral.sort((a, b) => {
           const pesoA = a.planoId === 3 ? 4 : (a.planoId === 2 ? 3 : (a.planoId === 1 ? 2 : 1));
           const pesoB = b.planoId === 3 ? 4 : (b.planoId === 2 ? 3 : (b.planoId === 1 ? 2 : 1));
@@ -276,7 +281,8 @@ export default function Home() {
   return (
     <div className="bg-gray-50 min-h-screen pb-28 md:pb-10 font-sans">
       
-      <div className="bg-gradient-to-br from-primary to-primary/90 pt-6 pb-24 md:pb-32 px-4 rounded-b-[2rem] md:rounded-b-[3rem] shadow-lg relative overflow-hidden">
+      {/* 🚀 HERO SECTION CORRIGIDA: MAIS ESPAÇO NO FUNDO */}
+      <div className="bg-gradient-to-br from-primary to-primary/90 pt-8 pb-40 md:pb-48 px-4 rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <ContadorEstatisticas />
@@ -296,12 +302,13 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-1 md:px-4 -mt-14 relative z-20">
+      {/* 🚀 CONTEÚDO PRINCIPAL COM MARGEM AJUSTADA */}
+      <div className="max-w-6xl mx-auto px-2 md:px-4 -mt-20 md:-mt-24 relative z-20">
         
         <div className="mb-8 px-2 md:px-0">
-          <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIAS_HOME.map(cat => (
-              <Link href={`/todos-anuncios?categoria=${cat.slug}`} key={cat.nome} className="snap-start shrink-0 flex flex-col items-center gap-2 group cursor-pointer w-20 md:w-24 outline-none">
+              <Link href={`/todos-anuncios?categoria=${cat.slug}`} key={cat.nome} className="snap-start shrink-0 flex flex-col items-center gap-2 group cursor-pointer w-[4.5rem] md:w-24 outline-none">
                 <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:shadow-md border-2 border-b-[4px] md:border-b-[6px] active:border-b-2 active:translate-y-[2px] transition-all duration-150 bg-white ${cat.cores}`}>
                   <div className="scale-90 md:scale-100">{cat.icon}</div>
                 </div>
@@ -311,11 +318,12 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 🚀 BANNER INSTALAÇÃO APP (PWA) BLINDADO NO TOPO */}
         {showInstallBanner && (
-          <div className="bg-gradient-to-r from-[#4c1d95] to-[#7c3aed] mx-4 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden animate-in fade-in slide-in-from-bottom-5">
+          <div className="bg-gradient-to-r from-primary to-purple-600 mx-2 md:mx-0 rounded-[1.5rem] p-4 mb-8 shadow-xl border border-white/10 flex items-center justify-between relative overflow-hidden z-30 animate-in fade-in slide-in-from-bottom-5">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none"></div>
              <div className="flex items-center gap-3 md:gap-4 relative z-10">
-                <div className="bg-white rounded-xl p-2.5 shadow-sm text-[#7c3aed] shrink-0"><Download size={24} strokeWidth={2.5} /></div>
+                <div className="bg-white rounded-xl p-2.5 shadow-sm text-primary shrink-0"><Download size={24} strokeWidth={2.5} /></div>
                 <div>
                    <h3 className="text-white font-black text-sm md:text-lg leading-tight">Baixe nosso App!</h3>
                    <p className="text-purple-100 text-[10px] md:text-sm font-medium mt-0.5 leading-snug">Rápido, leve e não gasta memória.</p>
@@ -323,7 +331,7 @@ export default function Home() {
              </div>
              <div className="flex items-center gap-1 sm:gap-2 relative z-10 shrink-0 ml-2">
                 <button onClick={closeBanner} className="text-white/60 hover:text-white p-1 sm:p-2 outline-none"><X size={20} /></button>
-                <button onClick={handleInstallClick} className="bg-white text-[#7c3aed] font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">Instalar</button>
+                <button onClick={handleInstallClick} className="bg-white text-primary font-black text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform outline-none">Instalar</button>
              </div>
           </div>
         )}
@@ -383,7 +391,7 @@ export default function Home() {
            <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Anúncios Recentes</h2>
         </div>
 
-        {/* 🚀 GRADE ÚNICA DE ANÚNCIOS (OURO SOBE AUTOMÁTICO) */}
+        {/* GRADE ÚNICA DE ANÚNCIOS */}
         <div className="px-4 md:px-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
