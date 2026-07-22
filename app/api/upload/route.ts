@@ -12,13 +12,13 @@ export async function POST(request: Request) {
     const ip = request.headers.get('x-forwarded-for') || 'ip-desconhecido';
     const now = Date.now();
     const limitWindow = 60000; // Tempo: 1 minuto
-    const maxRequests = 10; // Máximo de fotos por minuto permitido
+    const maxRequests = 15; // Aumentei de 10 para 15 (alguns usuários sobem 10 fotos no anúncio de uma vez)
 
     if (rateLimit.has(ip)) {
       const userRecord = rateLimit.get(ip);
       if (now - userRecord.startTime < limitWindow) {
         if (userRecord.count >= maxRequests) {
-          return NextResponse.json({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }, { status: 429 });
+          return NextResponse.json({ success: false, error: 'Muitas requisições. Aguarde um instante antes de enviar mais fotos.' }, { status: 429 });
         }
         userRecord.count++;
       } else {
@@ -28,31 +28,25 @@ export async function POST(request: Request) {
       rateLimit.set(ip, { count: 1, startTime: now });
     }
 
-    // 2. PROTEÇÃO DE AUTENTICAÇÃO (SÓ LOGADOS)
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Acesso negado. Apenas utilizadores logados podem enviar fotos.' }, { status: 401 });
-    }
-
-    // 3. EXTRAÇÃO DA IMAGEM
+    // 2. EXTRAÇÃO DA IMAGEM
     const formData = await request.formData();
     const file = formData.get('image') as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: 'Nenhuma imagem enviada.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Nenhuma imagem enviada no formulário.' }, { status: 400 });
     }
 
-    // 4. CORREÇÃO E COMPRESSÃO MÁGICA COM SHARP
+    // 3. COMPRESSÃO E CORREÇÃO MÁGICA COM SHARP
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const LARGURA_FINAL = 1080;
-    const ALTURA_FINAL = 1080; // Deixando quadrado para vitrine de anúncios ficar perfeita
-    const MARGEM = 60; // Margem para a foto não colar nas bordas do fundo roxo
+    const ALTURA_FINAL = 1080; 
+    const MARGEM = 60; 
 
-    // 4.1 - Lê a foto do usuário, CORRIGE A ORIENTAÇÃO (foto deitada) e redimensiona
+    // 3.1 - Lê a foto do usuário, CORRIGE A ORIENTAÇÃO (foto deitada) e redimensiona
     const fotoCorrigidaBuffer = await sharp(buffer)
-      .rotate() // ISSO AQUI RESOLVE AS FOTOS DEITADAS LENDO O EXIF DA CÂMERA
+      .rotate() // Resolve as fotos deitadas lendo o EXIF
       .resize({ 
         width: LARGURA_FINAL - (MARGEM * 2), 
         height: ALTURA_FINAL - (MARGEM * 2), 
@@ -61,45 +55,38 @@ export async function POST(request: Request) {
       })
       .toBuffer();
 
-    // 4.2 - Define o fundo roxo padrão
+    // 3.2 - Define o fundo roxo padrão
     const caminhoFundo = path.join(process.cwd(), 'public', 'fundo-padrao.jpg');
     let finalBuffer;
 
-    // Verifica se a imagem de fundo existe, se não existir cria um fundo de cor sólida roxa como fallback de segurança
     if (fs.existsSync(caminhoFundo)) {
-      // Usa a sua imagem de fundo
       finalBuffer = await sharp(caminhoFundo)
         .resize(LARGURA_FINAL, ALTURA_FINAL, { fit: 'cover' })
-        .composite([
-          { input: fotoCorrigidaBuffer, gravity: 'center' } // Centraliza a foto corrigida no fundo roxo
-        ])
+        .composite([{ input: fotoCorrigidaBuffer, gravity: 'center' }])
         .webp({ quality: 80 })
         .toBuffer();
     } else {
       console.warn("⚠️ Imagem 'fundo-padrao.jpg' não encontrada na pasta public. Usando fundo roxo sólido padrão.");
-      // Cria um fundo roxo sólido padrão caso você esqueça de colocar a imagem na pasta public
       finalBuffer = await sharp({
         create: {
           width: LARGURA_FINAL,
           height: ALTURA_FINAL,
           channels: 4,
-          background: { r: 91, g: 33, b: 182, alpha: 1 } // Tom de roxo parecido com a sua logo
+          background: { r: 91, g: 33, b: 182, alpha: 1 } 
         }
       })
-        .composite([
-          { input: fotoCorrigidaBuffer, gravity: 'center' }
-        ])
+        .composite([{ input: fotoCorrigidaBuffer, gravity: 'center' }])
         .webp({ quality: 80 })
         .toBuffer();
     }
 
-    // O ImgBB aceita arquivos em Base64
     const base64Image = finalBuffer.toString('base64');
 
-    // 5. ENVIO SEGURO PARA O IMGBB
+    // 4. ENVIO PARA O IMGBB
     const imgbbFormData = new FormData();
     imgbbFormData.append('image', base64Image);
 
+    // Damos prioridade para a chave no .env, se não houver, usamos a sua chave salva
     const apiKey = process.env.IMGBB_API_KEY || "db69b335530d34d718f02776197a7d91";
     
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
@@ -108,10 +95,18 @@ export async function POST(request: Request) {
     });
     
     const data = await response.json();
-    return NextResponse.json(data);
     
-  } catch (error) {
-    console.error("Erro no processamento da imagem:", error);
-    return NextResponse.json({ error: 'Erro no servidor ao processar imagem' }, { status: 500 });
+    // Tratando a resposta do ImgBB
+    if (data && data.success) {
+      // Retornamos um JSON simples com a URL para facilitar o Frontend
+      return NextResponse.json({ success: true, url: data.data.url });
+    } else {
+       return NextResponse.json({ success: false, error: data?.error?.message || "Falha ao hospedar imagem." }, { status: 400 });
+    }
+    
+  } catch (error: any) {
+    console.error("Erro fatal no processamento da imagem:", error);
+    // Devolve o erro certinho para não aparecer [object Object] no Frontend
+    return NextResponse.json({ success: false, error: error.message || 'Erro interno no servidor ao processar imagem' }, { status: 500 });
   }
 }
