@@ -12,13 +12,13 @@ export async function POST(request: Request) {
     const ip = request.headers.get('x-forwarded-for') || 'ip-desconhecido';
     const now = Date.now();
     const limitWindow = 60000; // Tempo: 1 minuto
-    const maxRequests = 15; // Aumentei de 10 para 15 (alguns usuários sobem 10 fotos no anúncio de uma vez)
+    const maxRequests = 15; 
 
     if (rateLimit.has(ip)) {
       const userRecord = rateLimit.get(ip);
       if (now - userRecord.startTime < limitWindow) {
         if (userRecord.count >= maxRequests) {
-          return NextResponse.json({ success: false, error: 'Muitas requisições. Aguarde um instante antes de enviar mais fotos.' }, { status: 429 });
+          return NextResponse.json({ success: false, error: 'Muitas requisições. Aguarde um instante.' }, { status: 429 });
         }
         userRecord.count++;
       } else {
@@ -44,9 +44,9 @@ export async function POST(request: Request) {
     const ALTURA_FINAL = 1080; 
     const MARGEM = 60; 
 
-    // 3.1 - Lê a foto do usuário, CORRIGE A ORIENTAÇÃO (foto deitada) e redimensiona
+    // Lê a foto, corrige a rotação (se tirada com telemóvel deitado) e ajusta o tamanho
     const fotoCorrigidaBuffer = await sharp(buffer)
-      .rotate() // Resolve as fotos deitadas lendo o EXIF
+      .rotate() 
       .resize({ 
         width: LARGURA_FINAL - (MARGEM * 2), 
         height: ALTURA_FINAL - (MARGEM * 2), 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       })
       .toBuffer();
 
-    // 3.2 - Define o fundo roxo padrão
+    // Aplica o fundo roxo padrão
     const caminhoFundo = path.join(process.cwd(), 'public', 'fundo-padrao.jpg');
     let finalBuffer;
 
@@ -66,7 +66,6 @@ export async function POST(request: Request) {
         .webp({ quality: 80 })
         .toBuffer();
     } else {
-      console.warn("⚠️ Imagem 'fundo-padrao.jpg' não encontrada na pasta public. Usando fundo roxo sólido padrão.");
       finalBuffer = await sharp({
         create: {
           width: LARGURA_FINAL,
@@ -80,14 +79,15 @@ export async function POST(request: Request) {
         .toBuffer();
     }
 
+    // Converte a imagem comprimida para Base64 para enviar ao ImgBB
     const base64Image = finalBuffer.toString('base64');
 
-    // 4. ENVIO PARA O IMGBB
+    // 4. ENVIO PARA O IMGBB 100% GRATUITO
     const imgbbFormData = new FormData();
     imgbbFormData.append('image', base64Image);
 
-    // Damos prioridade para a chave no .env, se não houver, usamos a sua chave salva
-    const apiKey = process.env.IMGBB_API_KEY || "db69b335530d34d718f02776197a7d91";
+    // 👇 A SUA NOVA CHAVE DO IMGBB APLICADA AQUI 👇
+    const apiKey = "b230defa681a676056fcc144d5a81459"; 
     
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
       method: 'POST',
@@ -96,9 +96,7 @@ export async function POST(request: Request) {
     
     const data = await response.json();
     
-    // Tratando a resposta do ImgBB
     if (data && data.success) {
-      // Retornamos um JSON simples com a URL para facilitar o Frontend
       return NextResponse.json({ success: true, url: data.data.url });
     } else {
        return NextResponse.json({ success: false, error: data?.error?.message || "Falha ao hospedar imagem." }, { status: 400 });
@@ -106,7 +104,6 @@ export async function POST(request: Request) {
     
   } catch (error: any) {
     console.error("Erro fatal no processamento da imagem:", error);
-    // Devolve o erro certinho para não aparecer [object Object] no Frontend
     return NextResponse.json({ success: false, error: error.message || 'Erro interno no servidor ao processar imagem' }, { status: 500 });
   }
 }
